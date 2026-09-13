@@ -1,9 +1,121 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-11T21:58:31.877Z",
-  "campaign_count": 177,
+  "generated_at": "2026-09-13T14:22:52.644Z",
+  "campaign_count": 179,
   "campaigns": [
+    {
+      "id": "youtube-les-invalides-paris-2026-09-13",
+      "source": "YouTube",
+      "title": "Les Invalides: Domes, Light and Quiet Details",
+      "description": "Twelve photographs explore Les Invalides in Paris: gilded details, stone arches, church interiors and the changing light beneath the dome. Explore the still photographs behind the film. Music: \"French France Paris Music\" by lNPLUSMUSIC via Pixabay.",
+      "date": "2026-09-13",
+      "href": "./campaign.html?c=youtube-les-invalides-paris-2026-09-13",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-les-invalides-paris-2026-09-13",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220506-044147-03105-2f7a1843b4_900.jpg",
+      "imageAlt": "Les Invalides, Paris",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220506-044147-03105-2f7a1843b4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-045037-03123-3dd017d077_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-051024-03188-26c219176a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-054411-03196-49e0fc3c0e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/1c3292c0-f4e9-4d88-980c-af58b2eece64-001-au8anglsq-f7yl2uxccavggiy-r8-0a11e4afb8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/tiftosr-v3aou-7da03ecb0a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/r0fqsion5ay-615c6811dc_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "W3OyIPbOR6I",
+        "shortId": "kqc0NMUAfhY",
+        "title": "Les Invalides: Domes, Light and Quiet Details | Photos By Elie",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/W3OyIPbOR6I?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/kqc0NMUAfhY?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=W3OyIPbOR6I",
+        "shortUrl": "https://youtube.com/shorts/kqc0NMUAfhY",
+        "visibility": "public"
+      },
+      "photoIds": [
+        "20220506-044147-03105-2f7a1843b4",
+        "20220506-045037-03123-3dd017d077",
+        "20220506-051024-03188-26c219176a",
+        "20220506-054411-03196-49e0fc3c0e",
+        "20220506-060627-03224-86e5202fb1",
+        "1c3292c0-f4e9-4d88-980c-af58b2eece64-001-au8anglsq-f7yl2uxccavggiy-r8-0a11e4afb8",
+        "tiftosr-v3aou-7da03ecb0a",
+        "r0fqsion5ay-615c6811dc",
+        "4725b796-8107-45f8-a31a-af2b4e5b785b-001-atc9nnr3cx-x-r3yammhzkhovahq-3830d0a346",
+        "20220506-151024-03375-3e4d581417",
+        "20220506-154558-03388-a887904b4b",
+        "m9mfci-6x6tqhfw2-16d0a7c68e"
+      ],
+      "compositePhotoIds": [
+        "20220506-044147-03105-2f7a1843b4",
+        "20220506-045037-03123-3dd017d077",
+        "20220506-051024-03188-26c219176a",
+        "20220506-054411-03196-49e0fc3c0e"
+      ],
+      "primaryPhotoCount": 12,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1789309372465
+    },
+    {
+      "id": "youtube-sintra-palaces-in-the-hills-2026-09-12",
+      "source": "YouTube",
+      "title": "Sintra: Palaces in the Hills",
+      "description": "Twelve photographs follow Sintra’s hilltop walls, palace courtyards, garden paths and quiet interiors. Explore the still photographs behind the film. Music: \"Cinematic Guitar Adventure\" by AbsoluteSound via Pixabay.",
+      "date": "2026-09-12",
+      "href": "./campaign.html?c=youtube-sintra-palaces-in-the-hills-2026-09-12",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-sintra-palaces-in-the-hills-2026-09-12",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/yt4jvkkyd6wlfac-96c0e2d7ec_900.jpg",
+      "imageAlt": "Wooden Walkway at Sintra, Portugal",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/yt4jvkkyd6wlfac-96c0e2d7ec_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/6mj9jlkzpxbepo84uauf894-03fa02d9d3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1403-00516-5b3fba25ea_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d705ce5f-bf4d-465f-9ba7-c715f7da8f07-001-aqm8lhce6ozx6qqrzgbpdo455xr6-b5ddecb3c6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/lkvwvmavhx1t70mkk69defo-f4244d76d2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/3d137a61-e353-4d5d-beea-0c5dbbec1148-001-adxwj-05kgnv9dl1u1ar7neribne-aa5d228da8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1522-00564-8ed80527e5_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "Wlagd044HFg",
+        "shortId": "YkNd6QoPOLo",
+        "title": "Sintra: Palaces in the Hills | Photos By Elie",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/Wlagd044HFg?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/YkNd6QoPOLo?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=Wlagd044HFg",
+        "shortUrl": "https://youtube.com/shorts/YkNd6QoPOLo",
+        "visibility": "public"
+      },
+      "photoIds": [
+        "yt4jvkkyd6wlfac-96c0e2d7ec",
+        "20180518-1343-00509-788722bc52",
+        "6mj9jlkzpxbepo84uauf894-03fa02d9d3",
+        "20180518-1403-00516-5b3fba25ea",
+        "d705ce5f-bf4d-465f-9ba7-c715f7da8f07-001-aqm8lhce6ozx6qqrzgbpdo455xr6-b5ddecb3c6",
+        "lkvwvmavhx1t70mkk69defo-f4244d76d2",
+        "3d137a61-e353-4d5d-beea-0c5dbbec1148-001-adxwj-05kgnv9dl1u1ar7neribne-aa5d228da8",
+        "20180518-1522-00564-8ed80527e5",
+        "094b9f97-5831-431c-8260-2fa97ad60be4-001-abex2rh1dgcgmb2zf22c6lwl8fbd-e0b1ff9a78",
+        "1c5f9915-6feb-46f1-92f2-fa334d4b129a-001-axl4djolvhkxflsvquaft015w0pp-1d052d91d7",
+        "s-358fbcf450",
+        "eq-fb960a9036"
+      ],
+      "compositePhotoIds": [
+        "yt4jvkkyd6wlfac-96c0e2d7ec",
+        "20180518-1343-00509-788722bc52",
+        "6mj9jlkzpxbepo84uauf894-03fa02d9d3",
+        "20180518-1403-00516-5b3fba25ea"
+      ],
+      "primaryPhotoCount": 12,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1789309372465
+    },
     {
       "id": "youtube-cascais-life-beside-the-atlantic-2026-09-11",
       "source": "YouTube",

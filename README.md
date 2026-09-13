@@ -33,7 +33,8 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v254.3`
+- Current visible version: `v256.0`
+- `v256.0` sends each All campaigns Watch on YouTube link to its matching public widescreen film. The vertical preview and still-photo detail remain unchanged. Future campaign pairs must retain the verified wide ID in `video.videoId` and portrait ID in `video.shortId`; the shared directory renderer uses the former for the external CTA.
 - `v254.3` keeps public YouTube Shorts on the All campaigns directory only.
   Their campaign detail links now open the public photo collection, with no
   embedded player; still-only subjects continue to require exactly four

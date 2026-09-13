@@ -801,7 +801,9 @@ Clock state: running
 | 2026-09-11 | 10:37 CEST | 10:52 CEST | 0:01 | Directed the PBE-203 All campaigns repair: vertical public YouTube Shorts and exact four-photo still collages; background implementation, test, and release runtime excluded. |
 | 2026-09-11 | 10:59 CEST | 11:01 CEST | 0:01 | Clarified that YouTube cards belong only in All campaigns; campaign details open their still-photo collections; background implementation, test, and release runtime excluded. |
 
+| 2026-09-13 | 16:00 CEST | 16:01 CEST | 0:01 | Directed the PBE-205 All campaigns link correction to matching wide YouTube videos while retaining portrait previews and still-photo details; background implementation, checks and release time excluded. |
+
 ## Totals
 
-Active collaboration time used: 38:49
+Active collaboration time used: 38:50
 Remaining budget: not set

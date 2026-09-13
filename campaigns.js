@@ -100,7 +100,8 @@
     card.append(frame, captionFor(campaign, [], { video }));
     const watch = document.createElement('a');
     watch.className = 'campaign-directory-watch';
-    watch.href = video.shortUrl || video.watchUrl;
+    // The preview stays vertical; the external CTA opens the matching wide film.
+    watch.href = video.watchUrl;
     watch.target = '_blank';
     watch.rel = 'noopener noreferrer';
     watch.textContent = 'Watch on YouTube';

@@ -14,6 +14,7 @@
 		0B83725363C2BA21579362B8 /* PhotoMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */; };
 		0C5F7E851942C2174FDD012C /* BackstageShutdownPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A3D3EB7797CBBB377F9F1C /* BackstageShutdownPrompt.swift */; };
 		0D6D680C053FFBFB4657F59A /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = F2E8ABD5924EC0AFD9546F75 /* manifest.json */; };
+		14D6C3C9201FC1A5C02656CE /* FixtureCullingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D7B0EB7FBB0F36E565B9BA /* FixtureCullingView.swift */; };
 		15E52E28E0ED05A3C4EAA160 /* CullingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27A5C736998E5CD0085DDFB /* CullingPreview.swift */; };
 		16DFF34B8B829850A2E846AA /* LocalFixtureReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FD2E316641B2E1B630A901 /* LocalFixtureReviewService.swift */; };
 		16E6283E9B3803D08B399ACD /* OwnerDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74871E8B7478FC401020DCB /* OwnerDatabase.swift */; };
@@ -32,8 +33,10 @@
 		23184594798D5C17668ED4ED /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */; };
 		24656154924A698C1CB836B8 /* MetadataGiveBackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0F0E197FD86EC46D20B800 /* MetadataGiveBackService.swift */; };
 		247B8222C7EDA683C961F047 /* OwnerReviewSQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */; };
+		24EB61A5F1E19F6D7922189B /* NativeUploadExecutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8B3EBE9F4A23D71834EF8E /* NativeUploadExecutionTests.swift */; };
 		26A15073D2A01FB5868A4DE2 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31D0E07A87397F37067AA7E /* UploadView.swift */; };
 		2828A466680049ACED77060E /* BackstageExternalEditWorkflowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318909B671149A59F8C67056 /* BackstageExternalEditWorkflowState.swift */; };
+		2A7B08BAFB3E63FA751B0D8D /* GalleryAuditPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7E4C6C8EEB120B3E49805E /* GalleryAuditPresentation.swift */; };
 		2B22F422E9747862C6D8F7E5 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88CB1E92117027223296FE1B /* Security.framework */; };
 		309259F87EBA513A4E816F0B /* PBEOwnerNativeSessionHTTPHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F545EA389652F817B21306E5 /* PBEOwnerNativeSessionHTTPHandler.swift */; };
 		35F785A271D05279001B0887 /* PBEOwnerNativeGalleryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F505E771E39A7C698C9501F /* PBEOwnerNativeGalleryService.swift */; };
@@ -44,6 +47,7 @@
 		3FF329DD3D1B10F90A06F627 /* OwnerCullingSQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05C1D90ED6B8C10A8628C093 /* OwnerCullingSQLiteStoreTests.swift */; };
 		40FCDE82D936CF0F2C7E4770 /* MetadataReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */; };
 		45D46449BC31E2C5E74B2EAA /* BackstageUpdateWorkflowStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F53AAC44CE780223676EEA6 /* BackstageUpdateWorkflowStateTests.swift */; };
+		45E7FF45ED945D9EC815DFC5 /* EditReturnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26EE608C16A0D20D125F0CB6 /* EditReturnsView.swift */; };
 		4628074BA54F4ECE704A7053 /* AccessControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */; };
 		475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */; };
 		490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */; };
@@ -61,8 +65,12 @@
 		63BF688462484BB8F8A76D90 /* BackstageAccessibilitySmokeModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 570AEC4EC0BF80E2996E2CA2 /* BackstageAccessibilitySmokeModeTests.swift */; };
 		64AA4D32E9F9D922B775FAA6 /* OwnerWorkflowRecoverySQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */; };
 		64B413FD3994202E49A1C3C0 /* SidecarDecisionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */; };
+		65D2C1B0BC02215FE3546021 /* OwnerReviewMutation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04D8A5F239195CDD2271AA9 /* OwnerReviewMutation.swift */; };
+		6B7C5BB61569A2A2F73FA958 /* FixtureAIProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EE29AD539BEB4B44F10E561 /* FixtureAIProgress.swift */; };
 		6BB0069568385FDADDE38818 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */; };
 		6BE053FCB45AE57072E5C5B5 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F254F524C1CA93D37BE6A86 /* PhotoLibraryService.swift */; };
+		6DC3B698D48357E0A898C590 /* ExternalEditReturnQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 415E8C234AE9BFBA6728CD3B /* ExternalEditReturnQueueStore.swift */; };
+		71CB99C7304E917BA5717900 /* NativeUploadExecutionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A770AD7C5FCA2FE36067B3A5 /* NativeUploadExecutionMonitor.swift */; };
 		72788A851F0AA8C16DC2462B /* RawRecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908336C3B2424F5514959765 /* RawRecoveryModels.swift */; };
 		78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */; };
 		796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */; };
@@ -81,6 +89,7 @@
 		8A2E0A2003BE8BD01AE3A7E1 /* BackstageAccessibilitySmokeMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D1B4B27EF2FAF2103206EF /* BackstageAccessibilitySmokeMode.swift */; };
 		8A483B3ECF615394AA36D3C4 /* PBEOwnerNativeHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */; };
 		8A8B14A00F1ACF83FE102CF2 /* PaidOrderRefund.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5D24676D6ECD6C8F953EAD /* PaidOrderRefund.swift */; };
+		8EBCCF56A725E4882133F603 /* BackstageRefundWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AFC234477A7D72095A4AB36 /* BackstageRefundWorkflow.swift */; };
 		8F1FF439EC9DE861565A9989 /* PBEOwnerNativeGalleryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38A9C4AC07A902382F048C7 /* PBEOwnerNativeGalleryTests.swift */; };
 		8F2AF79C0AA7F833EEF0A952 /* PBEOwnerNativeActionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E962736DDA05974041CE0AFE /* PBEOwnerNativeActionService.swift */; };
 		8FA02DD897A92112EBE914F1 /* PBEOwnerNativeActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8482A52D159E9B4DF4B96E32 /* PBEOwnerNativeActionTests.swift */; };
@@ -110,6 +119,7 @@
 		BF7D9009D5972716D802A4CC /* BackstagePhotosJobAuthorityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72FBBC4B7F109BF2BB12740 /* BackstagePhotosJobAuthorityTests.swift */; };
 		C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */; };
 		C31D0E151B48FE0E8FC32E32 /* OwnerEquipmentBackfillServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D450B202967CA5AB3A9AE141 /* OwnerEquipmentBackfillServiceTests.swift */; };
+		C4BB0181DEF4B9391A65246E /* CullingWindowQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B032FCE7E998FA0B10C178E /* CullingWindowQuery.swift */; };
 		C5BCA401374328E9CB09E289 /* MetadataProposalSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78C455DBAE695B921E2597D3 /* MetadataProposalSQLiteStore.swift */; };
 		C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */; };
 		C8D1C6D430B8838040D17405 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04733C0078B7BE63D367291F /* Quartz.framework */; };
@@ -130,6 +140,7 @@
 		DF59BAC48BF3C522B83B4DDE /* PBEOwnerNativeHostServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */; };
 		E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */; };
 		E391650A2878205E0719A648 /* OwnerCurrentImageSizeSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */; };
+		E4AE9D7D636D77CFBC8A0609 /* BackstageViewModel+EditReturns.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72CFA7241DFD5E52511D2B5 /* BackstageViewModel+EditReturns.swift */; };
 		E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */; };
 		EAB01D84897E968662999C7A /* ExternalEditJobStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EA25A52BFE800202A759A8 /* ExternalEditJobStore.swift */; };
 		EB5F3BB74623800A27583BC1 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
@@ -143,11 +154,6 @@
 		F8C417A77670F9D24B7082DB /* OwnerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		F933F5273FBCB6B7A2578C4E /* OwnerWorkflowRecoverySQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D38D7A974EE7EDE80F9EA8 /* OwnerWorkflowRecoverySQLiteStoreTests.swift */; };
 		FA61CFA63F49A08273BCF800 /* OwnerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		05269A13213088FCBE16B663 /* OwnerReviewMutation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40BBF07076E2BEAE89AEB302 /* OwnerReviewMutation.swift */; };
-		DCC7524B29EC9972A5902902 /* CullingWindowQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822A6AD99EB6EFC7E6E8CD3F /* CullingWindowQuery.swift */; };
-		55534B2014A8A2BFD6D1DAB6 /* BackstageRefundWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C686CA06FA29193E5AB150 /* BackstageRefundWorkflow.swift */; };
-		7AA25181599CA048F58AC159 /* FixtureAIProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */; };
-		ED40F521599B43E6BC558431 /* NativeUploadExecutionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -208,6 +214,7 @@
 		0A5D24676D6ECD6C8F953EAD /* PaidOrderRefund.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaidOrderRefund.swift; sourceTree = "<group>"; };
 		0CB6E2056746C1F076962053 /* OwnerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerModels.swift; sourceTree = "<group>"; };
 		0E452D40EBDBDBBC890AB0FD /* CustomerPhotoLinkSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerPhotoLinkSQLiteStore.swift; sourceTree = "<group>"; };
+		0EE29AD539BEB4B44F10E561 /* FixtureAIProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureAIProgress.swift; sourceTree = "<group>"; };
 		0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageViewModel.swift; sourceTree = "<group>"; };
 		10EACB0F350F72D4D702B495 /* BackstagePreviewIPCProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCProtocol.swift; sourceTree = "<group>"; };
 		177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageControlService.swift; sourceTree = "<group>"; };
@@ -216,6 +223,7 @@
 		1E33D7FE6451FAF98A76C968 /* BackstageShutdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageShutdown.swift; sourceTree = "<group>"; };
 		1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerWorkflowRecoverySQLiteStore.swift; sourceTree = "<group>"; };
 		2578FB791C0EF56084A5E52A /* FixturePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixturePicker.swift; sourceTree = "<group>"; };
+		26EE608C16A0D20D125F0CB6 /* EditReturnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditReturnsView.swift; sourceTree = "<group>"; };
 		2911D3BBE0DC89DD73BFF719 /* OwnerFixtureSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerFixtureSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		2B277D33018542D70869433C /* CustomerPhotoLinkSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerPhotoLinkSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		2E049889FFB8A0BF84C78303 /* owner-api-examples.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "owner-api-examples.json"; sourceTree = "<group>"; };
@@ -231,9 +239,12 @@
 		3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureSelectionCoordinator.swift; sourceTree = "<group>"; };
 		3F737F15C8FF2FEC96D0D532 /* BackstageLifecycleUploadWorkflowStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageLifecycleUploadWorkflowStateTests.swift; sourceTree = "<group>"; };
 		402ECBBE805854840F33033B /* PhotosByElieBackstageApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosByElieBackstageApp.swift; sourceTree = "<group>"; };
+		415E8C234AE9BFBA6728CD3B /* ExternalEditReturnQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalEditReturnQueueStore.swift; sourceTree = "<group>"; };
 		45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingWorkspace.swift; sourceTree = "<group>"; };
 		47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerHTTPRequestParser.swift; sourceTree = "<group>"; };
 		49137FE1D2EA2ED58819AC14 /* PhotosByElieBackstage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotosByElieBackstage.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFC234477A7D72095A4AB36 /* BackstageRefundWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageRefundWorkflow.swift; sourceTree = "<group>"; };
+		4B032FCE7E998FA0B10C178E /* CullingWindowQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingWindowQuery.swift; sourceTree = "<group>"; };
 		4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageUpdateService.swift; sourceTree = "<group>"; };
 		4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHeaderView.swift; sourceTree = "<group>"; };
 		4F505E771E39A7C698C9501F /* PBEOwnerNativeGalleryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeGalleryService.swift; sourceTree = "<group>"; };
@@ -247,6 +258,7 @@
 		61DB41B48614D37555A1B342 /* proposed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = proposed.png; sourceTree = "<group>"; };
 		67FD2E316641B2E1B630A901 /* LocalFixtureReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFixtureReviewService.swift; sourceTree = "<group>"; };
 		68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerConnectorIdentity.swift; sourceTree = "<group>"; };
+		6A7E4C6C8EEB120B3E49805E /* GalleryAuditPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryAuditPresentation.swift; sourceTree = "<group>"; };
 		6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoMetadataService.swift; sourceTree = "<group>"; };
 		6E8BC3BAFA9F5729FF5B49D3 /* VisualRepairProposalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualRepairProposalService.swift; sourceTree = "<group>"; };
 		6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessControlService.swift; sourceTree = "<group>"; };
@@ -277,8 +289,11 @@
 		9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerCloudSessionVerifier.swift; sourceTree = "<group>"; };
 		9EFF756CB24FBF86D119683F /* BackstageHoverHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelp.swift; sourceTree = "<group>"; };
 		A039B27E863969D86A80758E /* BackstageReviewWorkflowStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageReviewWorkflowStateTests.swift; sourceTree = "<group>"; };
+		A04D8A5F239195CDD2271AA9 /* OwnerReviewMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewMutation.swift; sourceTree = "<group>"; };
 		A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		A72FBBC4B7F109BF2BB12740 /* BackstagePhotosJobAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePhotosJobAuthorityTests.swift; sourceTree = "<group>"; };
+		A770AD7C5FCA2FE36067B3A5 /* NativeUploadExecutionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadExecutionMonitor.swift; sourceTree = "<group>"; };
+		A9D7B0EB7FBB0F36E565B9BA /* FixtureCullingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureCullingView.swift; sourceTree = "<group>"; };
 		AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelpTests.swift; sourceTree = "<group>"; };
 		AC5BEA77F78B6B15A631E14C /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
 		AF0A86D1BBD1742F20E172CD /* RawRecoveryBatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawRecoveryBatchService.swift; sourceTree = "<group>"; };
@@ -320,16 +335,13 @@
 		F38A9C4AC07A902382F048C7 /* PBEOwnerNativeGalleryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeGalleryTests.swift; sourceTree = "<group>"; };
 		F545EA389652F817B21306E5 /* PBEOwnerNativeSessionHTTPHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeSessionHTTPHandler.swift; sourceTree = "<group>"; };
 		F7096D9524886780AEB6F1FC /* BackstageReviewWorkflowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageReviewWorkflowState.swift; sourceTree = "<group>"; };
+		F72CFA7241DFD5E52511D2B5 /* BackstageViewModel+EditReturns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackstageViewModel+EditReturns.swift"; sourceTree = "<group>"; };
 		FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAuthenticationService.swift; sourceTree = "<group>"; };
 		FB8631671F3BA6322DB8E112 /* NativeUploadQueueContinuation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadQueueContinuation.swift; sourceTree = "<group>"; };
 		FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostDispatcher.swift; sourceTree = "<group>"; };
 		FE4C078FA6E36FFED05F4CB8 /* BackstagePhotosJobAuthority.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePhotosJobAuthority.swift; sourceTree = "<group>"; };
+		FF8B3EBE9F4A23D71834EF8E /* NativeUploadExecutionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadExecutionTests.swift; sourceTree = "<group>"; };
 		FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReviewService.swift; sourceTree = "<group>"; };
-		40BBF07076E2BEAE89AEB302 /* OwnerReviewMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewMutation.swift; sourceTree = "<group>"; };
-		822A6AD99EB6EFC7E6E8CD3F /* CullingWindowQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingWindowQuery.swift; sourceTree = "<group>"; };
-		A5C686CA06FA29193E5AB150 /* BackstageRefundWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageRefundWorkflow.swift; sourceTree = "<group>"; };
-		03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureAIProgress.swift; sourceTree = "<group>"; };
-		A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadExecutionMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -384,6 +396,7 @@
 				0925AD6797F8B51C52DBBFA0 /* ExternalEditJobStoreTests.swift */,
 				18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */,
 				2F3444A4411894A21B48E1B4 /* MetadataProposalSQLiteStoreTests.swift */,
+				FF8B3EBE9F4A23D71834EF8E /* NativeUploadExecutionTests.swift */,
 				924C633717A39517D632E28F /* NativeUploadQueueContinuationTests.swift */,
 				7EEA8352484A30C52C52D650 /* OwnerCoreTests.swift */,
 				05C1D90ED6B8C10A8628C093 /* OwnerCullingSQLiteStoreTests.swift */,
@@ -422,20 +435,23 @@
 				02F539FC0C296A59BF8538A6 /* BackstageGalleryWorkflowState.swift */,
 				9EFF756CB24FBF86D119683F /* BackstageHoverHelp.swift */,
 				D329154219521885A8103C01 /* BackstageLifecycleUploadWorkflowState.swift */,
+				4AFC234477A7D72095A4AB36 /* BackstageRefundWorkflow.swift */,
 				F7096D9524886780AEB6F1FC /* BackstageReviewWorkflowState.swift */,
 				1E33D7FE6451FAF98A76C968 /* BackstageShutdown.swift */,
 				77A3D3EB7797CBBB377F9F1C /* BackstageShutdownPrompt.swift */,
 				01441856D7903029CB4FF097 /* BackstageUpdateLauncher.swift */,
 				93CF13CF0FA671A4C45D6A51 /* BackstageUpdateWorkflowState.swift */,
 				0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */,
-				A5C686CA06FA29193E5AB150 /* BackstageRefundWorkflow.swift */,
 				076CDC5F6D2C41B81A76BB45 /* BackstageViewModel+AIJobSchedule.swift */,
+				F72CFA7241DFD5E52511D2B5 /* BackstageViewModel+EditReturns.swift */,
 				7502CEEFDBCC869E566BF28A /* BackstageWindowState.swift */,
 				B04312A3A24851AFB3EDB66D /* BackstageXcodeApp.swift */,
 				E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */,
 				F27A5C736998E5CD0085DDFB /* CullingPreview.swift */,
 				D74526F4B1ADCEAE9881A458 /* CullingView.swift */,
+				26EE608C16A0D20D125F0CB6 /* EditReturnsView.swift */,
 				2578FB791C0EF56084A5E52A /* FixturePicker.swift */,
+				6A7E4C6C8EEB120B3E49805E /* GalleryAuditPresentation.swift */,
 				BB8F0811D8436E623A6E2ADF /* LifecyclePreview.swift */,
 				5D933405E5F7B30618DC7F6B /* LifecycleTableScrollPosition.swift */,
 				FB8631671F3BA6322DB8E112 /* NativeUploadQueueContinuation.swift */,
@@ -507,35 +523,37 @@
 				E98B1C1FEDA37B4FB1019CD2 /* BackstageUpdateInstaller.swift */,
 				E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */,
 				4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */,
+				4B032FCE7E998FA0B10C178E /* CullingWindowQuery.swift */,
 				45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */,
 				0E452D40EBDBDBBC890AB0FD /* CustomerPhotoLinkSQLiteStore.swift */,
 				B9EA25A52BFE800202A759A8 /* ExternalEditJobStore.swift */,
+				415E8C234AE9BFBA6728CD3B /* ExternalEditReturnQueueStore.swift */,
+				0EE29AD539BEB4B44F10E561 /* FixtureAIProgress.swift */,
+				A9D7B0EB7FBB0F36E565B9BA /* FixtureCullingView.swift */,
 				8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */,
 				3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */,
 				928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */,
-				03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */,
-				A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */,
 				EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */,
 				3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */,
 				67FD2E316641B2E1B630A901 /* LocalFixtureReviewService.swift */,
 				8A0F0E197FD86EC46D20B800 /* MetadataGiveBackService.swift */,
 				78C455DBAE695B921E2597D3 /* MetadataProposalSQLiteStore.swift */,
 				FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */,
+				A770AD7C5FCA2FE36067B3A5 /* NativeUploadExecutionMonitor.swift */,
 				B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */,
 				7C246863F54D8DD907520A7F /* OwnerAPIClient.swift */,
 				C640424A3D6239F86E519E55 /* OwnerAssetSourceSQLiteStore.swift */,
 				FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */,
 				68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */,
 				CA1FB5719D1DED9B3990790E /* OwnerCullingSQLiteStore.swift */,
-				822A6AD99EB6EFC7E6E8CD3F /* CullingWindowQuery.swift */,
 				3D89FEC4BB9E6E6994912536 /* OwnerCurrentEquipmentSQLiteStore.swift */,
 				0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */,
 				E74871E8B7478FC401020DCB /* OwnerDatabase.swift */,
 				B71EE1A6BA297EE19B966B0F /* OwnerEquipmentBackfillService.swift */,
 				868995929E0CDCA67A31BF88 /* OwnerFixtureSQLiteStore.swift */,
 				0CB6E2056746C1F076962053 /* OwnerModels.swift */,
+				A04D8A5F239195CDD2271AA9 /* OwnerReviewMutation.swift */,
 				30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */,
-				40BBF07076E2BEAE89AEB302 /* OwnerReviewMutation.swift */,
 				85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */,
 				1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */,
 				0A5D24676D6ECD6C8F953EAD /* PaidOrderRefund.swift */,
@@ -699,20 +717,23 @@
 				022D620E5D93FAB1D2D9D2E4 /* BackstageGalleryWorkflowState.swift in Sources */,
 				2123229D75449CF4AC397DFC /* BackstageHoverHelp.swift in Sources */,
 				D1E70253F3ACFF9A93E26493 /* BackstageLifecycleUploadWorkflowState.swift in Sources */,
+				8EBCCF56A725E4882133F603 /* BackstageRefundWorkflow.swift in Sources */,
 				B5C3926DEE0767F23D7CA66D /* BackstageReviewWorkflowState.swift in Sources */,
 				B539431D3168AAE4969DCF00 /* BackstageShutdown.swift in Sources */,
 				0C5F7E851942C2174FDD012C /* BackstageShutdownPrompt.swift in Sources */,
 				8077F8898C21BE1C6B7D8BAD /* BackstageUpdateLauncher.swift in Sources */,
 				AD6B43FF1F33FCCFB3F24841 /* BackstageUpdateWorkflowState.swift in Sources */,
 				517FEDA23509727C30F1843B /* BackstageViewModel+AIJobSchedule.swift in Sources */,
+				E4AE9D7D636D77CFBC8A0609 /* BackstageViewModel+EditReturns.swift in Sources */,
 				5710E0E1DAD841A895A560A6 /* BackstageViewModel.swift in Sources */,
-				55534B2014A8A2BFD6D1DAB6 /* BackstageRefundWorkflow.swift in Sources */,
 				0813EF2D6E69FFFF8D06B161 /* BackstageWindowState.swift in Sources */,
 				019FD97632C33E0C21E8E07D /* BackstageXcodeApp.swift in Sources */,
 				E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */,
 				15E52E28E0ED05A3C4EAA160 /* CullingPreview.swift in Sources */,
 				18635E94AED6F0F74792CD27 /* CullingView.swift in Sources */,
+				45E7FF45ED945D9EC815DFC5 /* EditReturnsView.swift in Sources */,
 				F84DFB8C09A258C0A0A9D23A /* FixturePicker.swift in Sources */,
+				2A7B08BAFB3E63FA751B0D8D /* GalleryAuditPresentation.swift in Sources */,
 				A432BD062CDCA3172A96A542 /* LifecyclePreview.swift in Sources */,
 				D49A06829BA5CD124AC7BFBE /* LifecycleTableScrollPosition.swift in Sources */,
 				821B554D396CBB45E08A93A1 /* NativeUploadQueueContinuation.swift in Sources */,
@@ -744,6 +765,7 @@
 				214AFABE058087FA254F03C5 /* ExternalEditJobStoreTests.swift in Sources */,
 				AA8DFAFCDCA1BAD4790D3257 /* FixtureSelectionCoordinatorTests.swift in Sources */,
 				80D469D47D09F049F250BC2F /* MetadataProposalSQLiteStoreTests.swift in Sources */,
+				24EB61A5F1E19F6D7922189B /* NativeUploadExecutionTests.swift in Sources */,
 				EFC8F35BACB5990667B211AD /* NativeUploadQueueContinuationTests.swift in Sources */,
 				1A87044DE6560F9EDE957523 /* OwnerCoreTests.swift in Sources */,
 				3FF329DD3D1B10F90A06F627 /* OwnerCullingSQLiteStoreTests.swift in Sources */,
@@ -776,20 +798,23 @@
 				DB49694BAB103A90E0BA4043 /* BackstageUpdateInstaller.swift in Sources */,
 				490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */,
 				9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */,
+				C4BB0181DEF4B9391A65246E /* CullingWindowQuery.swift in Sources */,
 				85C552A4DC7DAE3B98B0D2CE /* CullingWorkspace.swift in Sources */,
 				180640AF2132F8E20BA82EBA /* CustomerPhotoLinkSQLiteStore.swift in Sources */,
 				EAB01D84897E968662999C7A /* ExternalEditJobStore.swift in Sources */,
+				6DC3B698D48357E0A898C590 /* ExternalEditReturnQueueStore.swift in Sources */,
+				6B7C5BB61569A2A2F73FA958 /* FixtureAIProgress.swift in Sources */,
+				14D6C3C9201FC1A5C02656CE /* FixtureCullingView.swift in Sources */,
 				C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */,
 				798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */,
 				1DC5B1F0D74089B35C517977 /* FixtureWorkflowService.swift in Sources */,
-				7AA25181599CA048F58AC159 /* FixtureAIProgress.swift in Sources */,
-				ED40F521599B43E6BC558431 /* NativeUploadExecutionMonitor.swift in Sources */,
 				475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */,
 				CE890E5906913FF1CEAB3B1A /* LifecycleService.swift in Sources */,
 				16DFF34B8B829850A2E846AA /* LocalFixtureReviewService.swift in Sources */,
 				24656154924A698C1CB836B8 /* MetadataGiveBackService.swift in Sources */,
 				C5BCA401374328E9CB09E289 /* MetadataProposalSQLiteStore.swift in Sources */,
 				40FCDE82D936CF0F2C7E4770 /* MetadataReviewService.swift in Sources */,
+				71CB99C7304E917BA5717900 /* NativeUploadExecutionMonitor.swift in Sources */,
 				21B5A107EDBB9257F55504E0 /* OwnerAPIClient.swift in Sources */,
 				78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */,
 				CFECE3B3F9C21CFCD5989E03 /* OwnerAssetSourceSQLiteStore.swift in Sources */,
@@ -797,15 +822,14 @@
 				DC6F2F319C249E05C19FA365 /* OwnerConnectorIdentity.swift in Sources */,
 				A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */,
 				61DA4C6715BB657A4D4DC325 /* OwnerCullingSQLiteStore.swift in Sources */,
-				DCC7524B29EC9972A5902902 /* CullingWindowQuery.swift in Sources */,
 				180FA330E5CFAF10C6427189 /* OwnerCurrentEquipmentSQLiteStore.swift in Sources */,
 				E391650A2878205E0719A648 /* OwnerCurrentImageSizeSQLiteStore.swift in Sources */,
 				16E6283E9B3803D08B399ACD /* OwnerDatabase.swift in Sources */,
 				D917125400F8168FCEB9E520 /* OwnerEquipmentBackfillService.swift in Sources */,
 				3E3EF6EFCCB7D245DC677579 /* OwnerFixtureSQLiteStore.swift in Sources */,
 				52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */,
+				65D2C1B0BC02215FE3546021 /* OwnerReviewMutation.swift in Sources */,
 				A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */,
-				05269A13213088FCBE16B663 /* OwnerReviewMutation.swift in Sources */,
 				C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */,
 				64AA4D32E9F9D922B775FAA6 /* OwnerWorkflowRecoverySQLiteStore.swift in Sources */,
 				796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */,
@@ -1050,7 +1074,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 332;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1060,7 +1084,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 230.16;
+				MARKETING_VERSION = 258.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -1073,7 +1097,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 332;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1083,7 +1107,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 230.16;
+				MARKETING_VERSION = 258.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

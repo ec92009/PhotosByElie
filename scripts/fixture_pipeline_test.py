@@ -2,6 +2,8 @@ import tempfile
 import unittest
 import json
 import hashlib
+import sqlite3
+import time
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -2140,6 +2142,40 @@ class FixturePipelineTest(unittest.TestCase):
                 (proposal_id,),
             ).fetchone()[0]
         self.assertEqual(accepted, "accepted")
+
+    def test_ai_status_does_not_wait_for_writer_or_initialize_schema(self):
+        self.seed_active_ai_run()
+        writer = sqlite3.connect(self.root / "assets/owner-actions/Owner.sqlite")
+        try:
+            for worker_state in (True, None):
+                with self.subTest(worker_state=worker_state):
+                    writer.execute("BEGIN IMMEDIATE")
+                    writer.execute("UPDATE asset_ai_runs SET proposed_count = 99 WHERE run_id = 'run-orphan'")
+                    started = time.monotonic()
+                    with patch("fixture_pipeline._ai_worker_process_alive", return_value=worker_state), patch(
+                        "fixture_pipeline.connect", side_effect=AssertionError("Status opened a schema-writing connection")
+                    ):
+                        status = ai_run_status(self.root)
+                    self.assertLess(time.monotonic() - started, 1)
+                    self.assertTrue(status["active"])
+                    self.assertEqual(status["run"]["proposed"], 1)
+                    self.assertEqual(status["ready"], 1)
+                    writer.rollback()
+            writer.execute("UPDATE asset_ai_runs SET status = 'completed' WHERE run_id = 'run-orphan'")
+            writer.commit()
+            writer.execute("BEGIN IMMEDIATE")
+            with patch("fixture_pipeline.connect", side_effect=AssertionError("Idle status requested a writer")):
+                self.assertFalse(ai_run_status(self.root)["active"])
+        finally:
+            writer.rollback()
+            writer.close()
+
+    def test_ai_status_rechecks_orphan_liveness_before_recovery(self):
+        self.seed_active_ai_run()
+        with patch("fixture_pipeline._ai_worker_process_alive", side_effect=[False, True]):
+            status = ai_run_status(self.root)
+        self.assertTrue(status["active"])
+        self.assertEqual(status["run"]["proposed"], 1)
 
     def test_ai_status_reconciles_dead_cancelled_worker_and_preserves_proposals(self):
         self.seed_active_ai_run(cancel_requested=True)

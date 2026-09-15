@@ -3708,9 +3708,27 @@ def _terminalize_orphaned_ai_run(
 def reconcile_orphaned_ai_runs(repo_root: Path) -> dict[str, Any]:
     """Terminalize active AI runs only when their recorded worker is gone."""
 
+    # Status polling must not initialize schemas or compete for the WAL writer
+    # while a healthy worker is generating proposals. Inspect first using a
+    # short-lived read-only connection; most polls return without any write.
+    reader = connect_read_only(repo_root)
+    try:
+        candidates = reader.execute(
+            "SELECT run_id, owner_pid FROM asset_ai_runs WHERE status IN ('queued', 'running')"
+        ).fetchall()
+    finally:
+        reader.close()
+    orphan_ids = [
+        str(row["run_id"]) for row in candidates
+        if _ai_worker_process_alive(row["owner_pid"]) is False
+    ]
+    if not orphan_ids:
+        return {"ok": True, "count": 0, "runs": []}
+
     timestamp = now_iso()
     reconciled: list[dict[str, str]] = []
     with connect(repo_root) as conn:
+        conn.execute("BEGIN IMMEDIATE")
         rows = conn.execute(
             """
             SELECT * FROM asset_ai_runs
@@ -3719,6 +3737,8 @@ def reconcile_orphaned_ai_runs(repo_root: Path) -> dict[str, Any]:
             """
         ).fetchall()
         for row in rows:
+            if str(row["run_id"]) not in orphan_ids:
+                continue
             if _ai_worker_process_alive(row["owner_pid"]) is not False:
                 continue
             terminal_status = _terminalize_orphaned_ai_run(

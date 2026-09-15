@@ -1382,6 +1382,7 @@ struct LifecycleView: View {
                 }
                 .width(100)
             }
+            .focusable()
             .background(
                 LifecycleTableScrollProbe(
                     position: lifecycleScrollPosition,
@@ -1643,6 +1644,7 @@ private struct FixtureWorkflowView: View {
                         TableColumn("Kind", value: \.mediaType)
                     }
                     .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
+                    .focusable()
                     .background {
                         BackstageTableQuickLookKeyHandler {
                             if quickLook.isVisible { quickLook.dismiss(); return }

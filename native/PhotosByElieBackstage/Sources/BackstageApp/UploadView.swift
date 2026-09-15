@@ -145,6 +145,11 @@ struct UploadView: View {
                         TableColumn("Error", value: \.errorText)
                     }
                     .frame(minHeight: 220)
+                    .focusable()
+                    .onKeyPress(.space) {
+                        toggleUploadQuickLook(in: plan)
+                        return .handled
+                    }
                     .onKeyPress("r") {
                         guard !model.selectedDeliveryIDs.isEmpty else { return .ignored }
                         confirmingReturnToReview = true

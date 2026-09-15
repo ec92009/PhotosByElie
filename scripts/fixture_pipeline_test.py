@@ -4,6 +4,7 @@ import json
 import hashlib
 import sqlite3
 import time
+import subprocess
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -53,7 +54,7 @@ from fixture_pipeline import (
     set_fixture_asset_state,
     editorial_version_hash,
 )
-from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
+from requested_ai_proposal_pass import _prompt, codex_proposer, run_requested_ai_pass
 from sidecar_state_db import (
     connect,
     is_jpeg_source_row,
@@ -62,6 +63,27 @@ from sidecar_state_db import (
     restore_heic_source_assets_missing_at,
     upsert_assets,
 )
+
+
+class CodexProposerFailureTests(unittest.TestCase):
+    def test_model_error_survives_verbose_prompt_and_shutdown_warnings(self):
+        error = 'ERROR: The model is not supported when using Codex with a ChatGPT account.'
+        transcript = "user\n" + "Private owner context\n" * 200 + error + "\n"
+        transcript += "WARN MCP shutdown failed\n" * 200
+        with tempfile.TemporaryDirectory() as temp_dir:
+            preview = Path(temp_dir) / "preview.jpg"
+            preview.write_bytes(b"bounded-preview")
+            item = {"previewPath": str(preview), "repoRoot": temp_dir}
+            for stdout, stderr in [("", transcript), (transcript, ""), ("", "")]:
+                with self.subTest(stderr=bool(stderr), stdout=bool(stdout)):
+                    result = subprocess.CompletedProcess([], 1, stdout=stdout, stderr=stderr)
+                    with patch("requested_ai_proposal_pass.subprocess.run", return_value=result), patch(
+                        "requested_ai_proposal_pass._prompt", return_value="Generate one proposal."
+                    ):
+                        with self.assertRaises(RuntimeError) as raised:
+                            codex_proposer(item)
+                    expected = error if stdout or stderr else "codex exec exited 1"
+                    self.assertEqual(str(raised.exception), expected)
 
 
 def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:

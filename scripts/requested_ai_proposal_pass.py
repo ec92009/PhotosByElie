@@ -252,11 +252,13 @@ def codex_proposer(item: dict[str, Any]) -> dict[str, Any]:
             check=False,
         )
         if completed.returncode != 0:
-            message = (
-                completed.stderr
-                or completed.stdout
-                or f"codex exec exited {completed.returncode}"
-            ).strip()
+            # Codex echoes the input before reporting failures. Keep the actual
+            # error ahead of the durable record's 2,000-character truncation,
+            # including when startup warnings follow the terminal error.
+            output = (completed.stderr or completed.stdout or "").strip()
+            errors = [line.strip() for line in output.splitlines() if line.lstrip().startswith("ERROR:")]
+            message = ("\n".join(dict.fromkeys(errors)) or output)[-2000:]
+            message = message or f"codex exec exited {completed.returncode}"
             raise RuntimeError(message)
         raw = output_path.read_text(encoding="utf-8") if output_path.exists() else completed.stdout
     return json.loads(raw)

@@ -38,59 +38,6 @@ private actor RecordingLocalFixtureReviewService: LocalFixtureReviewServing {
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
-    @Test("Upload table Space is scoped to its native focus and preserves text and other tables")
-    @MainActor
-    func uploadTableQuickLookFocusRouting() throws {
-        class TestWindow: NSWindow {
-            override var isKeyWindow: Bool { true }
-        }
-        class FocusableTable: NSTableView {
-            override var acceptsFirstResponder: Bool { true }
-            override func becomeFirstResponder() -> Bool { true }
-        }
-        let window = TestWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 600),
-            styleMask: [.titled], backing: .buffered, defer: false
-        )
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        let content = try #require(window.contentView)
-        let probe = BackstageTableQuickLookKeyView(frame: NSRect(x: 0, y: 300, width: 600, height: 300))
-        let uploads = FocusableTable(frame: probe.frame)
-        let legacy = FocusableTable(frame: NSRect(x: 0, y: 0, width: 600, height: 200))
-        content.addSubview(probe)
-        content.addSubview(uploads)
-        content.addSubview(legacy)
-        defer { probe.stopMonitoring() }
-        func event(_ modifiers: NSEvent.ModifierFlags = [], keyCode: UInt16 = 49) throws -> NSEvent {
-            try #require(NSEvent.keyEvent(
-                with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
-                windowNumber: window.windowNumber, context: nil, characters: " ",
-                charactersIgnoringModifiers: " ", isARepeat: false, keyCode: keyCode
-            ))
-        }
-        #expect(window.makeFirstResponder(uploads))
-        #expect(try event().window === window)
-        #expect(window.firstResponder === uploads)
-        #expect(probe.window === window)
-        #expect(!probe.isHiddenOrHasHiddenAncestor)
-        #expect(probe.bounds.intersects(probe.convert(uploads.bounds, from: uploads)))
-        #expect(probe.acceptsQuickLookEvent(try event()))
-        for modifier: NSEvent.ModifierFlags in [.command, .shift, .option, .control] {
-            #expect(!probe.acceptsQuickLookEvent(try event(modifier)))
-        }
-        #expect(!probe.acceptsQuickLookEvent(try event(keyCode: 125)))
-        #expect(window.makeFirstResponder(legacy))
-        #expect(!probe.acceptsQuickLookEvent(try event()))
-        let editor = NSTextView(frame: uploads.bounds)
-        uploads.addSubview(editor)
-        #expect(window.makeFirstResponder(editor))
-        #expect(!probe.acceptsQuickLookEvent(try event()))
-        #expect(window.makeFirstResponder(uploads))
-        probe.isHidden = true
-        #expect(!probe.acceptsQuickLookEvent(try event()))
-    }
-
     @Test("External edit controls name the exact single source and summarize composites")
     @MainActor
     func externalEditControlsNameTheirSources() {

@@ -1403,21 +1403,20 @@ struct LifecycleView: View {
                     )
                 }
             }
-            .background {
-                BackstageTableQuickLookKeyHandler {
-                    guard !isPreviewMode else { return }
-                    if quickLook.isVisible { quickLook.dismiss(); return }
-                    guard model.selectedLifecycleIDs.count == 1 else {
-                        model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
-                            ? "Select one Waste Basket item before opening Quick Look."
-                            : "Quick Look opens one selected Waste Basket item at a time."
-                        return
-                    }
-                    guard let item = sortedLifecycleItems.first(where: {
-                        model.selectedLifecycleIDs.contains($0.id)
-                    }) else { return }
-                    openQuickLook(for: item)
+            .onKeyPress(.space) {
+                guard !isPreviewMode else { return .handled }
+                if quickLook.isVisible { quickLook.dismiss(); return .handled }
+                guard model.selectedLifecycleIDs.count == 1 else {
+                    model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
+                        ? "Select one Waste Basket item before opening Quick Look."
+                        : "Quick Look opens one selected Waste Basket item at a time."
+                    return .handled
                 }
+                guard let item = sortedLifecycleItems.first(where: {
+                    model.selectedLifecycleIDs.contains($0.id)
+                }) else { return .handled }
+                openQuickLook(for: item)
+                return .handled
             }
         }
         .padding()
@@ -1651,15 +1650,14 @@ private struct FixtureWorkflowView: View {
                     .focusable()
                     .focused($isAssetTableFocused)
                     .simultaneousGesture(TapGesture().onEnded { isAssetTableFocused = true })
-                    .background {
-                        BackstageTableQuickLookKeyHandler {
-                            if quickLook.isVisible { quickLook.dismiss(); return }
-                            guard model.selectedFixtureAssetIDs.count == 1,
-                                  let item = model.fixtureAssets.first(where: {
-                                      model.selectedFixtureAssetIDs.contains($0.id)
-                                  }) else { return }
-                            presentFixtureQuickLook(item)
-                        }
+                    .onKeyPress(.space) {
+                        if quickLook.isVisible { quickLook.dismiss(); return .handled }
+                        guard model.selectedFixtureAssetIDs.count == 1,
+                              let item = model.fixtureAssets.first(where: {
+                                  model.selectedFixtureAssetIDs.contains($0.id)
+                              }) else { return .handled }
+                        presentFixtureQuickLook(item)
+                        return .handled
                     }
                     .overlay {
                         if model.isSearchingFixtureAssets && model.fixtureAssets.isEmpty {

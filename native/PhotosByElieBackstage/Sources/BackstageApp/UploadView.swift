@@ -163,11 +163,6 @@ struct UploadView: View {
                         confirmingUploadHide = true
                         return .handled
                     }
-                    .background {
-                        BackstageTableQuickLookKeyHandler {
-                            toggleUploadQuickLook(in: plan)
-                        }
-                    }
                     HStack {
                         Text("\(model.selectedDeliveryIDs.count.formatted()) selected")
                             .foregroundStyle(.secondary)

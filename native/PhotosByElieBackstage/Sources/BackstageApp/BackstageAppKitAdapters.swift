@@ -1,3 +1,4 @@
+import SwiftUI
 import AppKit
 import OwnerCore
 import Quartz
@@ -1017,5 +1018,70 @@ final class BackstageContextMenuFactory {
             menu.addItem(item)
         }
         return menu
+    }
+}
+
+
+/// SwiftUI Table's native responder consumes Space before onKeyPress. Intercept
+/// it only while the table covered by this background probe owns keyboard focus.
+struct BackstageTableQuickLookKeyHandler: NSViewRepresentable {
+    let onSpace: () -> Void
+
+    func makeNSView(context: Context) -> BackstageTableQuickLookKeyView {
+        let view = BackstageTableQuickLookKeyView()
+        view.onSpace = onSpace
+        return view
+    }
+
+    func updateNSView(_ view: BackstageTableQuickLookKeyView, context: Context) {
+        view.onSpace = onSpace
+    }
+
+    static func dismantleNSView(_ view: BackstageTableQuickLookKeyView, coordinator: ()) {
+        view.stopMonitoring()
+    }
+}
+
+final class BackstageTableQuickLookKeyView: NSView {
+    var onSpace: (() -> Void)?
+    private var monitor: Any?
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        stopMonitoring()
+        guard window != nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.acceptsQuickLookEvent(event) else { return event }
+            self.onSpace?()
+            return nil
+        }
+    }
+
+    func stopMonitoring() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+    }
+
+    func acceptsQuickLookEvent(_ event: NSEvent) -> Bool {
+        guard event.keyCode == 49,
+              event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
+              let window, event.window === window, window.isKeyWindow,
+              window.attachedSheet == nil, !isHiddenOrHasHiddenAncestor,
+              let focusedView = window.firstResponder as? NSView,
+              !(focusedView is NSTextView), !(focusedView is NSTextField)
+        else { return false }
+        var ancestor: NSView? = focusedView
+        while let view = ancestor {
+            if let table = view as? NSTableView {
+                // There may also be a legacy receipt table or Sidebar in this
+                // window. Only the table occupying this probe's bounds qualifies.
+                let viewport: NSView = table.enclosingScrollView ?? table
+                return bounds.intersects(convert(viewport.bounds, from: viewport))
+            }
+            ancestor = view.superview
+        }
+        return false
     }
 }

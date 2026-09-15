@@ -155,9 +155,10 @@ struct UploadView: View {
                         confirmingUploadHide = true
                         return .handled
                     }
-                    .onKeyPress(.space) {
-                        toggleUploadQuickLook(in: plan)
-                        return .handled
+                    .background {
+                        BackstageTableQuickLookKeyHandler {
+                            toggleUploadQuickLook(in: plan)
+                        }
                     }
                     HStack {
                         Text("\(model.selectedDeliveryIDs.count.formatted()) selected")
@@ -188,7 +189,7 @@ struct UploadView: View {
                         .disabled(model.selectedDeliveryIDs.isEmpty)
                         .backstageHelp("Deselect every Upload row without changing approval, visibility, or publication state.")
                         Spacer()
-                        Text("Use Command-click or Shift-click to adjust the selection; ⌘A selects all shown rows.")
+                        Text("Space previews • Arrows navigate • ⌘A selects all shown")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

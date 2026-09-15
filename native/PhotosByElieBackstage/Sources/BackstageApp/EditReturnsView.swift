@@ -18,6 +18,8 @@ struct EditReturnsView: View {
         .padding()
         .navigationTitle("Edit Returns")
         .task { model.loadExternalEditReturns() }
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
     }
 
     private var header: some View {
@@ -73,6 +75,7 @@ private struct EditReturnComparisonCard: View {
     let isDeciding: Bool
     @ObservedObject var quickLook: BackstageQuickLookCoordinator
     let resolve: (ExternalEditReturnDecision) -> Void
+    @FocusState private var focusedPreview: URL?
 
     var body: some View {
         BackstageSectionCard(cardTitle) {
@@ -160,6 +163,12 @@ private struct EditReturnComparisonCard: View {
                 }
             }
             .buttonStyle(.plain)
+            .focusable()
+            .focused($focusedPreview, equals: url)
+            .onKeyPress(.space) {
+                presentQuickLook(urls: [url], title: label)
+                return .handled
+            }
             .backstageHelp("Open \(label) in Quick Look.")
             .accessibilityLabel("Open \(label) in Quick Look")
         } else {
@@ -259,9 +268,25 @@ private struct EditReturnComparisonCard: View {
                 rating: 0,
                 color: "",
                 state: "Edit Return",
-                shortcutHint: "Edit Returns preview • Escape closes"
+                shortcutHint: "Edit Returns preview • ←/→/↑/↓ compare sources and return • Space or Escape closes"
             )],
-            presentation: presentation
+            presentation: presentation,
+            onShortcut: { shortcut, _ in
+                let delta: Int
+                switch shortcut {
+                case .previous, .previousRow: delta = -1
+                case .next, .nextRow: delta = 1
+                default: return false
+                }
+                let ordered = candidate.originalFileURLs + [candidate.returnedFileURL]
+                guard let current = urls.first,
+                      let index = ordered.firstIndex(of: current),
+                      ordered.indices.contains(index + delta) else { return true }
+                let next = ordered[index + delta]
+                focusedPreview = next
+                presentQuickLook(urls: [next], title: next.lastPathComponent)
+                return true
+            }
         )
     }
 }

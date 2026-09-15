@@ -1399,21 +1399,21 @@ struct LifecycleView: View {
                     )
                 }
             }
-            .onKeyPress(.space) {
-                guard !isPreviewMode else { return .handled }
-                guard model.selectedLifecycleIDs.count == 1 else {
-                    model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
-                        ? "Select one Waste Basket item before opening Quick Look."
-                        : "Quick Look opens one selected Waste Basket item at a time."
-                    return .handled
+            .background {
+                BackstageTableQuickLookKeyHandler {
+                    guard !isPreviewMode else { return }
+                    if quickLook.isVisible { quickLook.dismiss(); return }
+                    guard model.selectedLifecycleIDs.count == 1 else {
+                        model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
+                            ? "Select one Waste Basket item before opening Quick Look."
+                            : "Quick Look opens one selected Waste Basket item at a time."
+                        return
+                    }
+                    guard let item = sortedLifecycleItems.first(where: {
+                        model.selectedLifecycleIDs.contains($0.id)
+                    }) else { return }
+                    openQuickLook(for: item)
                 }
-                guard let item = sortedLifecycleItems.first(where: {
-                    model.selectedLifecycleIDs.contains($0.id)
-                }) else {
-                    return .ignored
-                }
-                openQuickLook(for: item)
-                return .handled
             }
         }
         .padding()
@@ -1421,6 +1421,8 @@ struct LifecycleView: View {
             guard !isPreviewMode else { return }
             await model.loadLifecycle()
         }
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
             "Empty Waste Basket?",
             isPresented: $confirmingEmpty
@@ -1544,6 +1546,7 @@ private struct ActivityView: View {
 @MainActor
 private struct FixtureWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @AppStorage(BackstagePanelPreferenceKey.fixturePlacementsExpanded)
     private var fixturePlacementsExpanded = false
 
@@ -1640,6 +1643,16 @@ private struct FixtureWorkflowView: View {
                         TableColumn("Kind", value: \.mediaType)
                     }
                     .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
+                    .background {
+                        BackstageTableQuickLookKeyHandler {
+                            if quickLook.isVisible { quickLook.dismiss(); return }
+                            guard model.selectedFixtureAssetIDs.count == 1,
+                                  let item = model.fixtureAssets.first(where: {
+                                      model.selectedFixtureAssetIDs.contains($0.id)
+                                  }) else { return }
+                            presentFixtureQuickLook(item)
+                        }
+                    }
                     .overlay {
                         if model.isSearchingFixtureAssets && model.fixtureAssets.isEmpty {
                             ProgressView("Loading fixture candidates…")
@@ -1942,6 +1955,44 @@ private struct FixtureWorkflowView: View {
                 await model.loadFixturePools()
                 await model.loadFixtureConfiguration()
             }
+        }
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
+    }
+
+    private func presentFixtureQuickLook(_ item: FixtureAsset) {
+        let presentation = quickLook.beginPresentation()
+        Task {
+            guard let url = await model.prepareMetadataQuickLookURL(
+                for: item.id, preferredIdentifier: item.photoLibraryIdentifier
+            ), quickLook.isCurrentPresentation(presentation) else { return }
+            quickLook.present(
+                urls: [url],
+                metadata: [BackstageQuickLookMetadata(
+                    assetID: item.id, filename: item.filename, title: item.title,
+                    keywords: item.keywords, locationLabel: item.locationLabel,
+                    capturedAt: item.capturedAt, cameraBody: item.cameraBody,
+                    lens: item.lens, focalLength: item.focalLength,
+                    rating: item.rating, color: item.color, state: "Fixture candidate",
+                    shortcutHint: "←/→/↑/↓ navigate • Space or Escape closes"
+                )],
+                presentation: presentation,
+                onShortcut: { shortcut, assetID in
+                    let delta: Int
+                    switch shortcut {
+                    case .previous, .previousRow: delta = -1
+                    case .next, .nextRow: delta = 1
+                    default: return false
+                    }
+                    let items = model.fixtureAssets
+                    guard let index = items.firstIndex(where: { $0.id == assetID }),
+                          items.indices.contains(index + delta) else { return true }
+                    let next = items[index + delta]
+                    model.selectedFixtureAssetIDs = [next.id]
+                    presentFixtureQuickLook(next)
+                    return true
+                }
+            )
         }
     }
 }
@@ -2406,6 +2457,11 @@ private struct MetadataGiveBackView: View {
             .clipShape(RoundedRectangle(cornerRadius: 5))
         }
         .buttonStyle(.plain)
+        .focusable()
+        .onKeyPress(.space) {
+            openMetadataQuickLook(assetID: assetID, title: title, keywords: keywords)
+            return .handled
+        }
         .accessibilityLabel(
             "Open preview for \(title.isEmpty ? assetID : title)"
         )

@@ -20,6 +20,7 @@ struct UploadView: View {
     @State private var confirmingCatalogRecovery = false
     @State private var confirmingReturnToReview = false
     @State private var confirmingUploadHide = false
+    @FocusState private var isUploadTableFocused: Bool
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
@@ -146,6 +147,8 @@ struct UploadView: View {
                     }
                     .frame(minHeight: 220)
                     .focusable()
+                    .focused($isUploadTableFocused)
+                    .simultaneousGesture(TapGesture().onEnded { isUploadTableFocused = true })
                     .onKeyPress(.space) {
                         toggleUploadQuickLook(in: plan)
                         return .handled

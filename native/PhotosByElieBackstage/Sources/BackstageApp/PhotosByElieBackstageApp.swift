@@ -977,6 +977,7 @@ private struct PublicationView: View {
 struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
+    @FocusState private var isLifecycleTableFocused: Bool
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @StateObject private var lifecycleScrollPosition = LifecycleTableScrollPosition()
     @State private var confirmingEmpty = false
@@ -1383,6 +1384,8 @@ struct LifecycleView: View {
                 .width(100)
             }
             .focusable()
+            .focused($isLifecycleTableFocused)
+            .simultaneousGesture(TapGesture().onEnded { isLifecycleTableFocused = true })
             .background(
                 LifecycleTableScrollProbe(
                     position: lifecycleScrollPosition,
@@ -1547,6 +1550,7 @@ private struct ActivityView: View {
 @MainActor
 private struct FixtureWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
+    @FocusState private var isAssetTableFocused: Bool
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @AppStorage(BackstagePanelPreferenceKey.fixturePlacementsExpanded)
     private var fixturePlacementsExpanded = false
@@ -1645,6 +1649,8 @@ private struct FixtureWorkflowView: View {
                     }
                     .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
                     .focusable()
+                    .focused($isAssetTableFocused)
+                    .simultaneousGesture(TapGesture().onEnded { isAssetTableFocused = true })
                     .background {
                         BackstageTableQuickLookKeyHandler {
                             if quickLook.isVisible { quickLook.dismiss(); return }

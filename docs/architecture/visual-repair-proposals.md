@@ -42,7 +42,13 @@ draft and creates a new attempt tied to the same source version. Rejected and
 superseded references are therefore discarded from comparison without any
 source rollback or media deletion operation.
 
-The RE Space-bar surface is a read-only comparison. Non-RE Quick Look and all
+Each RE Review photo has a Before / After button over its thumbnail. It opens
+a read-only overlay comparison with a draggable divider: original on the left,
+visual draft on the right. Both images retain their full fitted geometry as the
+mask moves. Left/right arrows and accessibility adjustment move the divider in
+five-percent steps. Space opens the same comparison for the focused photo.
+When no rendered proposal exists, only the original appears, labeled No after
+image yet; no divider or simulated result is shown. Non-RE Quick Look and all
 existing review actions retain their previous behavior.
 
 ## Disposable acceptance fixture

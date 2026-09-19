@@ -394,7 +394,11 @@ struct ReviewView: View {
                                     isFocused: model.reviewSelection.focusedID == item.id,
                                     hasDraftAIReason: false,
                                     hasProposalDraft: model.hasProposalDraft(for: item.id),
-                                    hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id)
+                                    hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id),
+                                    compare: model.isREReviewScope ? {
+                                        model.clickReviewItem(item.id, modifiers: [])
+                                        visualComparisonTarget = ReviewVisualComparisonTarget(id: item.id)
+                                    } : nil
                                 )
                                 .id(item.id)
                                 .contentShape(Rectangle())
@@ -696,6 +700,7 @@ private struct ReviewAssetRow: View {
     var hasDraftAIReason: Bool
     var hasProposalDraft: Bool
     var hasProposalConflict: Bool
+    var compare: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -717,6 +722,16 @@ private struct ReviewAssetRow: View {
             .overlay(alignment: .topTrailing) {
                 reviewStateBadge
                     .padding(8)
+            }
+            .overlay(alignment: .bottom) {
+                if let compare {
+                    Button("Before / After", action: compare)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .tint(.black.opacity(0.75))
+                        .backstageHelp("Compare this photo's original and visual draft with a sliding divider.")
+                        .padding(6)
+                }
             }
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
@@ -875,6 +890,7 @@ private struct VisualRepairComparisonView: View {
     let original: NSImage?
     let proposal: VisualRepairProposal?
     @Environment(\.dismiss) private var dismiss
+    @State private var beforeFraction: CGFloat = 0.5
 
     private var originalComparisonImage: NSImage? {
         if let original { return original }
@@ -913,7 +929,7 @@ private struct VisualRepairComparisonView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Visual repair comparison")
+                    Text("Before / After")
                         .font(.title2.bold())
                     Text(item.filename)
                         .font(.caption)
@@ -928,25 +944,10 @@ private struct VisualRepairComparisonView: View {
                     .backstageHelp("Close the read-only visual repair comparison without changing the Review item.")
             }
 
-            HStack(alignment: .top, spacing: 12) {
-                comparisonPanel(
-                    title: "Original · immutable",
-                    image: originalComparisonImage,
-                    symbol: "photo",
-                    detail: state.originalReference,
-                    accessibility: "Original immutable source image"
-                )
-                comparisonPanel(
-                    title: "Proposed · draft only",
-                    image: proposedImage,
-                    symbol: state.proposalAvailable ? "sparkles" : "questionmark.circle",
-                    detail: state.proposalAvailable
-                        ? state.proposedReference
-                        : "No rendered proposal is available",
-                    accessibility: "Proposed visual repair draft, read only"
-                )
-            }
-
+            comparisonImage
+                .frame(height: 420)
+                .background(.black.opacity(0.92))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             if let proposal {
                 Text(proposal.defectCategories.map(\.label).joined(separator: " · "))
                     .font(.caption.weight(.semibold))
@@ -967,44 +968,96 @@ private struct VisualRepairComparisonView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func comparisonPanel(
-        title: String,
-        image: NSImage?,
-        symbol: String,
-        detail: String,
-        accessibility: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-            Group {
-                if let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                } else {
-                    VStack(spacing: 10) {
-                        Image(systemName: symbol)
-                            .font(.system(size: 36))
-                        Text(detail)
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
+    @ViewBuilder
+    private var comparisonImage: some View {
+        if let before = originalComparisonImage, let after = proposedImage {
+            GeometryReader { geometry in
+                let split = geometry.size.width * beforeFraction
+                ZStack(alignment: .topLeading) {
+                    fittedImage(after, size: geometry.size)
+                    fittedImage(before, size: geometry.size)
+                        .mask(alignment: .leading) {
+                            Rectangle().frame(width: split)
+                        }
+                    HStack {
+                        imageLabel("Before")
+                        Spacer()
+                        imageLabel("After · draft")
                     }
-                    .frame(maxWidth: .infinity, minHeight: 250)
+                    .padding(12)
+                    Rectangle()
+                        .fill(.white)
+                        .frame(width: 2, height: geometry.size.height)
+                        .shadow(color: .black.opacity(0.6), radius: 2)
+                        .position(x: split, y: geometry.size.height / 2)
+                    Image(systemName: "arrow.left.and.right")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 38, height: 38)
+                        .background(.white, in: Circle())
+                        .shadow(color: .black.opacity(0.35), radius: 4)
+                        .position(x: split, y: geometry.size.height / 2)
+                }
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                    beforeFraction = min(1, max(0, value.location.x / max(1, geometry.size.width)))
+                })
+                .focusable()
+                .onMoveCommand { direction in
+                    switch direction {
+                    case .left: beforeFraction = max(0, beforeFraction - 0.05)
+                    case .right: beforeFraction = min(1, beforeFraction + 0.05)
+                    default: break
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Before / After divider")
+                .accessibilityValue("\(Int(beforeFraction * 100)) percent original")
+                .accessibilityHint("Original on the left, proposed draft on the right. Drag or use left and right arrows to compare.")
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: beforeFraction = min(1, beforeFraction + 0.05)
+                    case .decrement: beforeFraction = max(0, beforeFraction - 0.05)
+                    @unknown default: break
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 250, maxHeight: 300)
-            .background(.quaternary.opacity(0.35))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .accessibilityLabel(accessibility)
-            Text(detail)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+        } else if let before = originalComparisonImage {
+            Image(nsImage: before)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel("Before: original photo")
+                .overlay(alignment: .topLeading) {
+                    imageLabel("Before").padding(12)
+                }
+                .overlay(alignment: .bottom) {
+                    imageLabel("No after image yet").padding(12)
+                }
+        } else {
+            ContentUnavailableView("Original preview unavailable", systemImage: "photo")
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    /// Both layers keep their full fitted geometry; only the original's mask moves.
+    private func fittedImage(_ image: NSImage, size: CGSize) -> some View {
+        Image(nsImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size.width, height: size.height)
+    }
+
+    private func imageLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.7), in: Capsule())
+    }
+
 }
 
 private struct ReviewInspector: View {
@@ -1226,16 +1279,12 @@ private struct ReviewInspector: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Divider()
-                    Button(model.isREReviewScope ? "Compare original / proposal" : "Quick Look") {
-                        openQuickLook()
+                    if !model.isREReviewScope {
+                        Divider()
+                        Button("Quick Look", action: openQuickLook)
+                            .keyboardShortcut(.space, modifiers: [])
+                            .backstageHelp("Open the focused Review item in Quick Look without applying a Review action.")
                     }
-                    .keyboardShortcut(.space, modifiers: [])
-                    .backstageHelp(
-                        model.isREReviewScope
-                            ? "Open a read-only original versus visual proposal comparison without applying a Review action."
-                            : "Open the focused Review item in Quick Look without applying a Review action."
-                    )
                 } else {
                     ContentUnavailableView(
                         "No photo selected",

@@ -3680,6 +3680,21 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 actor="owner-connector",
             ),
         })
+    elif mode == "fixture-visual-repair-configuration":
+        from openai_visual_editor import configuration
+        result.update({"readOnly": True, "visualRepairConfiguration": configuration()})
+    elif mode == "fixture-visual-repair-generate":
+        from production_visual_repair import start_generation
+        result.update({"readOnly": False, "visualRepairProposal": start_generation(
+            repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("assetId") or ""),
+            str(manifest.get("sourceVersionId") or ""), manifest.get("defectCategories") or [],
+            idempotency_key=str(manifest.get("idempotencyKey") or ""),
+            regenerate=bool(manifest.get("regenerate")),
+        )})
+    elif mode == "fixture-visual-repair-cancel":
+        from production_visual_repair import cancel_generation
+        result.update({"readOnly": False, "visualRepairProposal": cancel_generation(
+            repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("proposalId") or ""))})
     elif mode == "fixture-visual-repair-proposal-list":
         result.update({
             "readOnly": True,

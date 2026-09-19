@@ -124,6 +124,13 @@ def plan(root: Path, action: dict) -> dict:
             ORDER BY CASE WHEN s.last_scanned_at IS NULL THEN 0 ELSE 1 END,
             s.last_scanned_at,a.captured_at DESC,a.asset_id LIMIT ?""", (limit,))
         result.update(operations=["photos.metadata-read-many", "photos.preview"], assetIDs=_photos_ids(rows))
+    elif kind == "sidecar-culling-review" and mode == "fixture-visual-repair-generate":
+        from fixture_pipeline import connect_read_only
+        from production_visual_repair import validate_request
+        with connect_read_only(root) as connection:
+            _, photo_id = validate_request(connection, str(manifest.get("fixtureId") or ""),
+                str(manifest.get("assetId") or ""), str(manifest.get("sourceVersionId") or ""))
+        result.update(operations=["photos.preview"], assetIDs=[photo_id], maxPixel=1800)
     elif kind == "sidecar-culling-review" and mode == "fixture-ai-pass-start":
         rows = _rows(root, """SELECT a.asset_id,a.raw_json FROM sidecar_assets a
             JOIN asset_editorial_state e ON e.asset_id=a.asset_id

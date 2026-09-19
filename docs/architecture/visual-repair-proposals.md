@@ -7,12 +7,36 @@ row used as its original. Visual proposal provenance is stored in the
 authoritative `Owner.sqlite` tables `visual_repair_proposals` and
 `visual_repair_events`; no JSON file is a source of truth.
 
-The production generator remains intentionally unavailable. On 2026-08-27 the
-Owner explicitly approved one bounded OpenAI pass using synthetic imagery only.
-The retained test pair and privacy-safe prompt summary live under
-`native/PhotosByElieBackstage/Tests/OwnerCoreTests/Fixtures/PBE144SyntheticOpenAI/`.
-No Photos asset, client image, real property image, credential, or canonical
-Owner row was sent to the provider.
+## Production generation (PBB-184)
+
+Backstage can generate a real visual draft from an explicit saved RE visual
+request. Generate visual draft exports one fresh 1800-pixel PhotoKit preview
+through the signed app's exact-asset capability, then starts a bounded worker.
+The worker uses OpenAI's Image Edits API and `gpt-image-2.5-sunburst` at medium
+quality. This image model is separate from the text/keyword model ladder; the
+request retains that ladder's rung and snapshot, while `resolvedModel` and the
+provider receipt identify the actual image editor. No metadata pass is started.
+
+The personal credential is read from Keychain service
+`PhotosByElie OpenAI Image API` (or `OPENAI_API_KEY` for a configured test process).
+No credential is embedded in the app, manifest, command arguments or repository.
+API reference: https://developers.openai.com/api/reference/resources/images/methods/edit
+
+Drafts retain queued/running/failed/cancelled/ready generation state, a decoded
+PNG, before/after SHA-256 identities, request receipt and immutable source binding.
+The exact captured before image is used in comparison. Artifacts remain private
+under `assets/owner-actions/visual-repair-artifacts`; Owner.sqlite is authoritative.
+Capture and completion revalidate the saved reasons, current source version and
+fixture decision. Duplicate requests attach to the current operation. Provider
+calls serialize and are never automatically retried after uncertain outcomes.
+A failed run can be retried explicitly; workers older than twenty minutes are
+reported as expired. Cancellation prevents attachment, though an in-flight
+provider request may finish. Regeneration keeps the previous draft until its
+replacement succeeds. Viewing, generating and accepting a draft do not approve
+metadata, replace originals, upload or publish anything.
+
+The retained synthetic test pair from the separately approved 2026-08-27 test
+is under `native/PhotosByElieBackstage/Tests/OwnerCoreTests/Fixtures/PBE144SyntheticOpenAI/`.
 
 Tests may explicitly enable the synthetic seam with
 `PBE_ENABLE_SYNTHETIC_VISUAL_REPAIR=1`. The proposal request still creates only
@@ -31,8 +55,8 @@ The original source identity remains `immutable-source-version://…`.
 `originalPreviewReference` is only a rendered comparison aid and cannot replace
 that identity. The native comparison falls back to this test-only file when no
 PhotoKit preview exists, allowing installed acceptance against a disposable
-synthetic Owner database. A future real-image production generator still needs
-a separate privacy/provider decision and is not enabled by this proof.
+synthetic Owner database. The synthetic materializer cannot attach files to production requests; real-image
+generation uses the separate validated production path described above.
 
 Accept records a draft decision only. It does not write Photos metadata,
 replace a source version, alter title/keywords, ratings, fixture decisions,
@@ -62,8 +86,7 @@ root exercises the normal Review UI while leaving canonical `Owner.sqlite`,
 Photos, fixture decisions, catalog, upload, and publication state untouched.
 
 Rollback is deletion of the disposable data root or rejection of its draft.
-Neither operation touches an original or canonical Owner state. Production
-generation remains off after the acceptance fixture is discarded.
+Neither operation touches an original or canonical Owner state. A disposable fixture never implicitly authorizes real-photo generation.
 
 ## Personal build verification — 2026-09-19
 

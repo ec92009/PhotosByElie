@@ -2,8 +2,8 @@
 """Local, draft-only visual repair proposals for the RE review subtree.
 
 This module deliberately stores references and provenance, never image bytes.
-The only generator accepted here is an explicitly enabled synthetic test
-generator; production image generation remains an open configuration gate.
+The synthetic test path remains separately gated. Production generation uses
+production_visual_repair with saved-request, source and provider validation.
 """
 
 from __future__ import annotations
@@ -128,6 +128,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "original_preview_sha256": "TEXT NOT NULL DEFAULT ''",
         "derived_sha256": "TEXT NOT NULL DEFAULT ''",
         "materialized_at": "TEXT",
+        "generation_state": "TEXT NOT NULL DEFAULT ''",
+        "generation_error": "TEXT NOT NULL DEFAULT ''",
+        "provider_receipt_json": "TEXT NOT NULL DEFAULT '{}'",
     }
     for name, declaration in additions.items():
         if name not in columns:
@@ -317,6 +320,13 @@ def _rendered_artifact(repo_root: Path, value: Path, label: str) -> tuple[str, s
 
 def _proposal_json(row: sqlite3.Row, *, idempotent_replay: bool = False) -> dict[str, Any]:
     ladder = _read_json(row["model_ladder_json"], [])
+    generation_state = str(_row_value(row, "generation_state") or "")
+    generation_error = str(_row_value(row, "generation_error") or "")
+    if generation_state in {"queued", "running"}:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(row["updated_at"]).replace("Z", "+00:00"))).total_seconds()
+        if age > 1200:
+            generation_state = "failed"
+            generation_error = "Generation worker expired; no automatic retry was made."
     return {
         "proposalId": str(row["proposal_id"]),
         "fixtureId": str(row["fixture_id"]),
@@ -351,6 +361,9 @@ def _proposal_json(row: sqlite3.Row, *, idempotent_replay: bool = False) -> dict
         "decidedAt": str(row["decided_at"] or ""),
         "idempotentReplay": idempotent_replay,
         "readOnlyComparison": True,
+        "generationState": generation_state,
+        "generationError": generation_error,
+        "providerReceipt": _read_json(_row_value(row, "provider_receipt_json"), {}),
     }
 
 

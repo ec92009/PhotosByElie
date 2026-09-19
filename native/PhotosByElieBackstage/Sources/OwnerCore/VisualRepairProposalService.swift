@@ -85,6 +85,9 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
     public var decidedAt: String
     public var idempotentReplay: Bool
     public var readOnlyComparison: Bool
+    public var generationState: String = ""
+    public var generationError: String = ""
+    public var isGenerating: Bool { ["queued", "running"].contains(generationState) }
 
     public init(
         id: String,
@@ -184,6 +187,8 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
         decidedAt = json["decidedAt"]?.stringValue ?? ""
         idempotentReplay = json["idempotentReplay"]?.boolValue ?? false
         readOnlyComparison = json["readOnlyComparison"]?.boolValue ?? true
+        generationState = json["generationState"]?.stringValue ?? ""
+        generationError = json["generationError"]?.stringValue ?? ""
     }
 }
 
@@ -243,7 +248,10 @@ public struct VisualRepairComparisonState: Equatable, Sendable {
         } else if proposal?.status == .rejected || proposal?.status == .superseded {
             message = "This visual draft is unavailable; the immutable original remains unchanged."
         } else {
-            message = "No visual draft is available. Production visual generation is not configured."
+            message = proposal?.isGenerating == true
+                ? "Generating the after image…"
+                : (proposal?.generationError.isEmpty == false
+                    ? proposal!.generationError : "No after image yet. Generate a visual draft from the photo’s saved visual request.")
         }
     }
 
@@ -285,6 +293,29 @@ public actor VisualRepairProposalService {
         return result["visualRepairProposals"]?.objectValue?["items"]?.arrayValue?
             .compactMap { $0.objectValue }
             .map(VisualRepairProposal.init(json:)) ?? []
+    }
+
+    public func configuration() async throws -> Bool {
+        let result = try await run("fixture-visual-repair-configuration", extra: [:])
+        return result["visualRepairConfiguration"]?.objectValue?["configured"]?.boolValue ?? false
+    }
+
+    public func generate(fixtureID: String, assetID: String, sourceVersionID: String,
+                         categories: [VisualRepairDefectCategory], regenerate: Bool = false) async throws -> VisualRepairProposal {
+        let result = try await run("fixture-visual-repair-generate", extra: [
+            "fixtureId": .string(fixtureID), "assetId": .string(assetID),
+            "sourceVersionId": .string(sourceVersionID),
+            "defectCategories": .array(categories.map { .string($0.rawValue) }),
+            "regenerate": .bool(regenerate), "idempotencyKey": .string(UUID().uuidString),
+        ])
+        return VisualRepairProposal(json: result["visualRepairProposal"]?.objectValue ?? [:])
+    }
+
+    public func cancel(fixtureID: String, proposalID: String) async throws -> VisualRepairProposal {
+        let result = try await run("fixture-visual-repair-cancel", extra: [
+            "fixtureId": .string(fixtureID), "proposalId": .string(proposalID),
+        ])
+        return VisualRepairProposal(json: result["visualRepairProposal"]?.objectValue ?? [:])
     }
 
     public func request(

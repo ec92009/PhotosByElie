@@ -718,7 +718,7 @@ struct OwnerCoreTests {
         #expect(unavailable.isReadOnly)
         #expect(!unavailable.proposalAvailable)
         #expect(unavailable.proposedReference.isEmpty)
-        #expect(unavailable.message.contains("not configured"))
+        #expect(unavailable.message.contains("No after image yet"))
 
         let proposal = VisualRepairProposal(
             id: "proposal-1",
@@ -746,7 +746,7 @@ struct OwnerCoreTests {
         #expect(comparison.isReadOnly)
         #expect(!comparison.proposalAvailable)
         #expect(comparison.proposedReference.isEmpty)
-        #expect(comparison.message.contains("not configured"))
+        #expect(comparison.message.contains("No after image yet"))
     }
 
     @Test("Visual comparison accepts SHA-bound local synthetic artifacts")

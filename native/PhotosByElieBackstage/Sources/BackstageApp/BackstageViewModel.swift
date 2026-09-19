@@ -4502,10 +4502,74 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    /// The local domain and persistence path accept only an injected synthetic
-    /// generator. Production visual generation remains an explicit gate until
-    /// a bounded, privacy-reviewed provider is configured.
-    var visualRepairGenerationConfigured: Bool { false }
+    @Published var visualRepairGenerationConfigured = false
+    @Published var isStartingVisualGeneration = false
+    @Published var isCancellingVisualGeneration = false
+    private var visualGenerationTask: Task<Void, Never>?
+
+    /// Latch synchronously before capture, connector dispatch or provider work.
+    func generateVisualRepair(for assetID: String, regenerate: Bool = false) {
+        guard !isReviewMutationBlocked, !isStartingVisualGeneration,
+              visualRepairGenerationConfigured, isREReviewScope,
+              let item = reviewItems.first(where: { $0.id == assetID }),
+              !item.visualAIReasons.isEmpty else {
+            visualRepairStatus = "Save visual reasons with Needs AI before generating a draft."
+            return
+        }
+        let fixtureID = selectedFixtureID
+        let categories = item.visualAIReasons.compactMap(VisualRepairDefectCategory.init(rawValue:))
+        isRunningReview = true
+        isStartingVisualGeneration = true
+        visualRepairStatus = "Preparing the photo for visual generation…"
+        visualGenerationTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isRunningReview = false
+                self.isStartingVisualGeneration = false
+                self.visualGenerationTask = nil
+            }
+            do {
+                var proposal = try await self.visualRepairService.generate(
+                    fixtureID: fixtureID, assetID: assetID, sourceVersionID: item.sourceVersionID,
+                    categories: categories, regenerate: regenerate)
+                self.reviewVisualProposals[assetID] = proposal
+                self.isStartingVisualGeneration = false
+                let deadline = Date().addingTimeInterval(20 * 60)
+                while proposal.isGenerating && Date() < deadline {
+                    self.visualRepairStatus = proposal.generationState == "queued"
+                        ? "Visual draft queued…" : "Generating the after image…"
+                    try await Task.sleep(for: .seconds(3))
+                    let proposals = try await self.visualRepairService.proposals(fixtureID: fixtureID, assetIDs: [assetID])
+                    guard let current = proposals.first(where: { $0.id == proposal.id }) else {
+                        throw OwnerActionRunError.failed("Visual generation receipt is unavailable. Refresh to check its state.")
+                    }
+                    proposal = current
+                    self.reviewVisualProposals[assetID] = proposal
+                }
+                self.visualRepairStatus = proposal.derivedAvailable
+                    ? "After image ready. Open Before / After on this photo."
+                    : (proposal.generationError.isEmpty
+                        ? "Generation is still pending. Refresh to check its state." : proposal.generationError)
+            } catch {
+                self.visualRepairStatus = self.userFacingMessage(for: error)
+            }
+        }
+    }
+
+    func cancelVisualGeneration(for assetID: String) {
+        guard !isCancellingVisualGeneration, let proposal = reviewVisualProposals[assetID], proposal.isGenerating else { return }
+        isCancellingVisualGeneration = true
+        visualRepairStatus = "Cancelling visual draft…"
+        let fixtureID = selectedFixtureID
+        Task {
+            defer { isCancellingVisualGeneration = false }
+            do {
+                let updated = try await visualRepairService.cancel(fixtureID: fixtureID, proposalID: proposal.id)
+                reviewVisualProposals[assetID] = updated
+                visualRepairStatus = updated.generationError
+            } catch { visualRepairStatus = userFacingMessage(for: error) }
+        }
+    }
 
     func refreshVisualRepairProposals(for items: [FixtureReviewItem]) async {
         guard isREReviewScope else {
@@ -4517,6 +4581,7 @@ final class BackstageViewModel: ObservableObject {
         isLoadingVisualRepairProposals = true
         defer { isLoadingVisualRepairProposals = false }
         do {
+            visualRepairGenerationConfigured = try await visualRepairService.configuration()
             let proposals = try await visualRepairService.proposals(
                 fixtureID: selectedFixtureID,
                 assetIDs: items.map(\.id)
@@ -4526,7 +4591,7 @@ final class BackstageViewModel: ObservableObject {
                 result[proposal.assetID] = proposal
             }
             visualRepairStatus = proposals.isEmpty
-                ? "No visual repair draft is available. Production visual generation is not configured."
+                ? (visualRepairGenerationConfigured ? "Ready to generate a visual draft from a saved request." : "OpenAI image credential is not configured.")
                 : "Loaded \(proposals.count.formatted()) visual repair draft\(proposals.count == 1 ? "" : "s") for read-only comparison."
         } catch {
             reviewVisualProposals = [:]
@@ -4547,8 +4612,8 @@ final class BackstageViewModel: ObservableObject {
             visualRepairStatus = "No RE visual repair draft is available for this item."
             return
         }
-        if decision == .regenerate, !visualRepairGenerationConfigured {
-            visualRepairStatus = "Regeneration is unavailable until a privacy-reviewed visual generator is configured."
+        if decision == .regenerate {
+            generateVisualRepair(for: assetID, regenerate: true)
             return
         }
         isRunningReview = true

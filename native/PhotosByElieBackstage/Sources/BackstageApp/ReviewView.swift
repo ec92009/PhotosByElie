@@ -893,14 +893,13 @@ private struct VisualRepairComparisonView: View {
     @State private var beforeFraction: CGFloat = 0.5
 
     private var originalComparisonImage: NSImage? {
-        if let original { return original }
-        guard let proposal,
-              VisualRepairComparisonState.isRenderableReference(proposal.originalPreviewReference),
-              let url = URL(string: proposal.originalPreviewReference)
-        else {
-            return nil
+        if let proposal,
+           VisualRepairComparisonState.isRenderableReference(proposal.originalPreviewReference),
+           let url = URL(string: proposal.originalPreviewReference),
+           let captured = NSImage(contentsOf: url) {
+            return captured
         }
-        return NSImage(contentsOf: url)
+        return original
     }
 
     private var proposedImage: NSImage? {
@@ -1234,7 +1233,7 @@ private struct ReviewInspector: View {
                             }
                         }
                         if !item.visualAIReasons.isEmpty {
-                            Text("Visual request saved. Waiting for a configured visual generator.")
+                            Text("Visual request saved. Generate an after image when ready.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -1249,7 +1248,10 @@ private struct ReviewInspector: View {
                             )
                             .font(.caption)
                             .foregroundStyle(.orange)
-                            if proposal.status == .draft {
+                            if !proposal.generationError.isEmpty {
+                                Text(proposal.generationError).font(.caption).foregroundStyle(.red)
+                            }
+                            if proposal.status == .draft && !proposal.isGenerating {
                                 HStack(spacing: 8) {
                                     Button("Accept draft") {
                                         Task { await model.decideVisualRepair(.accept, for: item.id) }
@@ -1261,9 +1263,11 @@ private struct ReviewInspector: View {
                                     }
                                     .disabled(model.isRunningReview)
                                     .backstageHelp("Reject and hide this derived visual reference while retaining its audit provenance.")
-                                    Button("Regenerate unavailable") {}
-                                        .disabled(true)
-                                        .backstageHelp("Regeneration stays unavailable until a privacy-reviewed visual generator is configured.")
+                                    Button("Regenerate draft") {
+                                        model.generateVisualRepair(for: item.id, regenerate: true)
+                                    }
+                                    .disabled(!model.visualRepairGenerationConfigured || model.isRunningReview || proposal.isGenerating)
+                                    .backstageHelp("Generate a new visual draft from the original using the saved visual request.")
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -1272,9 +1276,17 @@ private struct ReviewInspector: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        Button("Request visual draft unavailable") {}
-                            .disabled(true)
-                            .backstageHelp("Production visual generation is not configured. Synthetic generation is test-only and never processes real private source media.")
+                        if model.reviewVisualProposals[item.id]?.isGenerating == true {
+                            Button(model.isCancellingVisualGeneration ? "Cancelling…" : "Cancel visual generation") { model.cancelVisualGeneration(for: item.id) }
+                                .disabled(model.isCancellingVisualGeneration)
+                                .backstageHelp("Cancel attachment of the draft. A provider request already in flight may still finish.")
+                        } else if model.reviewVisualProposals[item.id]?.derivedAvailable != true {
+                            Button(model.isStartingVisualGeneration ? "Preparing visual draft…" : "Generate visual draft") {
+                                model.generateVisualRepair(for: item.id)
+                            }
+                            .disabled(!model.visualRepairGenerationConfigured || model.isRunningReview || item.visualAIReasons.isEmpty)
+                            .backstageHelp("Send this photo’s bounded preview and saved visual reasons to OpenAI to generate a separate draft.")
+                        }
                         Text(model.visualRepairStatus)
                             .font(.caption)
                             .foregroundStyle(.secondary)

@@ -1,9 +1,67 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-19T17:18:58.689Z",
-  "campaign_count": 180,
+  "generated_at": "2026-09-19T18:34:37.779Z",
+  "campaign_count": 181,
   "campaigns": [
+    {
+      "id": "youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
+      "source": "YouTube",
+      "title": "Madrid's Royal Palace: Rooms, Art & Craftsmanship",
+      "description": "Step inside Madrid’s Royal Palace through twelve owner-approved photographs, from the grand exterior and painted ceilings to gilded rooms, historic regalia and intimate details. Explore the still photographs behind the film. Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay.",
+      "date": "2026-09-19",
+      "href": "./campaign.html?c=youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/gvwhif-9657409b58_900.jpg",
+      "imageAlt": "Royal Palace of Madrid under Storm Clouds",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/gvwhif-9657409b58_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/146cdfc1-d9c2-4d2e-82b1-f85534407f65-001-afiai5db33mgs2ozspel7qy8riqi-7a2ab6ad00_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-06a21b639b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-f4f56b69f6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-22b9415670_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-e0b8e3ef4c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-f8072df7bf_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-3aff4661de_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "n6IXrQHhhhY",
+        "shortId": "j9I4xYJT5do",
+        "title": "Madrid's Royal Palace: Rooms, Art & Craftsmanship | Photos By Elie",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/n6IXrQHhhhY?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/j9I4xYJT5do?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=n6IXrQHhhhY",
+        "shortUrl": "https://youtube.com/shorts/j9I4xYJT5do",
+        "visibility": "public",
+        "portraitMp4": "./assets/campaign-media/madrid-royal-palace-2026-09-19-daa82833.mp4",
+        "musicCredit": "Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay"
+      },
+      "photoIds": [
+        "gvwhif-9657409b58",
+        "146cdfc1-d9c2-4d2e-82b1-f85534407f65-001-afiai5db33mgs2ozspel7qy8riqi-7a2ab6ad00",
+        "001-06a21b639b",
+        "001-f4f56b69f6",
+        "001-22b9415670",
+        "001-e0b8e3ef4c",
+        "001-f8072df7bf",
+        "001-3aff4661de",
+        "001-24c56a2f6e",
+        "001-6d61bff043",
+        "001-0bd47eefc3",
+        "img-1847-49826cc8ea"
+      ],
+      "compositePhotoIds": [
+        "gvwhif-9657409b58",
+        "146cdfc1-d9c2-4d2e-82b1-f85534407f65-001-afiai5db33mgs2ozspel7qy8riqi-7a2ab6ad00",
+        "001-06a21b639b",
+        "001-f4f56b69f6"
+      ],
+      "primaryPhotoCount": 12,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1789842869248
+    },
     {
       "id": "youtube-albi-brick-cathedral-river-light-2026-09-15",
       "source": "YouTube",

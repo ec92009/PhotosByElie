@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 import subprocess
 import sys
@@ -12,11 +14,24 @@ import uuid
 
 import backstage_photos_job  # Load only the signed runtime's bundled Pillow.
 from backstage_photos_client import request_preview
-from fixture_pipeline import connect
 from openai_visual_editor import MODEL, configuration, edit_image, image_dimensions
 import visual_repair_proposals as visual
 
 ACTIVE = {"queued", "running"}
+
+
+@contextmanager
+def connect(root: Path):
+    """Use the established Owner index without rerunning library-wide backfills."""
+    path = root / "assets/owner-actions/Owner.sqlite"
+    conn = sqlite3.connect(path.resolve().as_uri() + "?mode=rw", uri=True, timeout=15)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def _row(conn, proposal_id):

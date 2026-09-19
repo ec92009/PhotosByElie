@@ -106,6 +106,8 @@ READ_ONLY_FIXTURE_MODES = {
     "fixture-state-migration-plan",
     "fixture-tree-list",
     "fixture-upload-health",
+    "fixture-visual-repair-configuration",
+    "fixture-visual-repair-proposal-list",
     "r2-reconciliation-plan",
 }
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"

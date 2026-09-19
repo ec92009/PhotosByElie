@@ -70,6 +70,13 @@ class ProductionVisualRepairTests(unittest.TestCase):
         result = production.run_generation(self.root, proposal['proposalId'], editor=lambda *_: self.fail('duplicate provider'))
         self.assertEqual(result['generationState'], 'ready')
 
+    def test_generation_never_runs_library_wide_schema_backfills(self):
+        with patch('fixture_pipeline.ensure_schema', side_effect=AssertionError('library backfill')), \
+             patch('sidecar_state_db.ensure_schema', side_effect=AssertionError('library backfill')):
+            proposal = self.start()
+            result = production.run_generation(self.root, proposal['proposalId'], editor=self.editor)
+        self.assertEqual(result['generationState'], 'ready')
+
     def test_missing_or_changed_saved_intent_prevents_generation(self):
         with connect(self.root) as conn:
             conn.execute("UPDATE asset_editorial_state SET visual_ai_request_json='{}'")

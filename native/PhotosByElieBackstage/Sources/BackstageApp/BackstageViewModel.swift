@@ -398,7 +398,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewProposalConflictIDs: Set<String> = []
     @Published var reviewVisualProposals: [String: VisualRepairProposal] = [:]
     @Published var visualRepairDefectCategories: Set<VisualRepairDefectCategory> = []
-    @Published var visualRepairStatus = "Production visual generation is not configured; comparison remains read-only."
+    @Published var visualRepairStatus = "Checking visual generator configuration…"
     @Published var isLoadingVisualRepairProposals = false
     @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."

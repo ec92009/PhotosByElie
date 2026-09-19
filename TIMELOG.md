@@ -805,6 +805,8 @@ Clock state: running
 
 | 2026-09-13 | 16:14 CEST | 16:15 CEST | 0:01 | Requested the missing Sintra and Les Invalides daily campaign integrations; background reconciliation, tests and release excluded. |
 
+| 2026-09-19 | 19:17 CEST | 19:17 CEST | 0:00 | Delegated Albi campaign hosting and publication; independent validation and deployment excluded from active human collaboration. |
+
 ## Totals
 
 Active collaboration time used: 38:51

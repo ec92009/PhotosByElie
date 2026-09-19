@@ -1,14 +1,14 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-19T18:34:37.779Z",
+  "generated_at": "2026-09-19T18:47:55.695Z",
   "campaign_count": 181,
   "campaigns": [
     {
       "id": "youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
       "source": "YouTube",
       "title": "Madrid's Royal Palace: Rooms, Art & Craftsmanship",
-      "description": "Step inside Madrid’s Royal Palace through twelve owner-approved photographs, from the grand exterior and painted ceilings to gilded rooms, historic regalia and intimate details. Explore the still photographs behind the film. Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay.",
+      "description": "Step inside Madrid’s Royal Palace through twelve photographs, from the grand exterior and painted ceilings to gilded rooms, historic regalia and intimate details. Explore the still photographs behind the film. Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay.",
       "date": "2026-09-19",
       "href": "./campaign.html?c=youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
@@ -60,7 +60,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789842869248
+      "mtimeMs": 1789843675373
     },
     {
       "id": "youtube-albi-brick-cathedral-river-light-2026-09-15",

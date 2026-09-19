@@ -64,3 +64,23 @@ Photos, fixture decisions, catalog, upload, and publication state untouched.
 Rollback is deletion of the disposable data root or rejection of its draft.
 Neither operation touches an original or canonical Owner state. Production
 generation remains off after the acceptance fixture is discarded.
+
+## Personal build verification — 2026-09-19
+
+PBB-183 shipped locally as Backstage v262.0, build 337, from commit
+`f8954bdf8e559498be5dc15dc88280db7737e1f9` on `release/backstage`.
+The signed bundle replaced `/Applications/PhotosByElie Backstage.app`; the
+previous bundle is retained as `.PhotosByElie Backstage.pre-337-20260919T222622.app`.
+
+- Debug and signed release builds passed; the release runtime preview smoke passed.
+- All three `visualRepair` OwnerCore tests passed.
+- An isolated harness using the production comparison view and retained synthetic
+  fixture images verified the overlaid layers, dragging from 22 to 75 percent,
+  a left-arrow adjustment to 70 percent, and accessibility increment to 75 percent.
+- Installed build 337 showed Before / After inside each RE Review thumbnail.
+  The second photo's action opened that photo, and Space opened the selected first photo.
+- Actual photos without rendered drafts show one original and “No after image yet.”
+  Production image generation remains unconfigured. No generation, approval, upload,
+  publication, or photo-state action was performed for this verification.
+- This was a direct personal installation; the cloud updater manifest still points
+  to the older build and safely rejects a downgrade.

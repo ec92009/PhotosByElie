@@ -107,3 +107,35 @@ previous bundle is retained as `.PhotosByElie Backstage.pre-337-20260919T222622.
   publication, or photo-state action was performed for this verification.
 - This was a direct personal installation; the cloud updater manifest still points
   to the older build and safely rejects a downgrade.
+
+
+## Production generator verification — 2026-09-20
+
+PBB-184 is installed locally as Backstage v263.0 build 340 from commit
+`3a0a08dbc2bfad3e7a26530494c7dc6047c64cf2`. The signed application is
+`/Applications/PhotosByElie Backstage.app`; the previous build is retained at
+`/Applications/.PhotosByElie Backstage.pre-340-20260920T102725.app`.
+
+- The release build and signed-runtime 900/1800-pixel preview smoke passed.
+  Existing verification passed 24 visual Python tests, 14 Photos-capability tests,
+  and three Swift visual-repair tests. The final narrow-connection regression
+  suite passed all 12 production tests, including no library-wide backfills.
+- The installed app generated a real corridor-photo draft from its previously
+  saved visual request. Capture/preparation reached running in 0.49 seconds;
+  the complete persisted result took 15.31 seconds. Both real-photo drafts
+  (the earlier laundry photo and this corridor photo) are ready, remain drafts,
+  and have distinct, verified before/after SHA-256 identities. The generated
+  images are 1536 by 1024 pixels; provider receipts record the actual model.
+- The per-photo Before / After action displayed the actual rendered images.
+  Dragging moved the overlay divider and Left adjusted it by five percent;
+  accessibility reported 65 percent original after those actions.
+- Fresh component hashes matched for all four checked source/index records:
+  raw metadata, editorial state, fixture decisions, and immutable source versions.
+  Generation did not approve, upload, publish, or replace an original.
+- Generation uses a bounded connection to the established Owner database and
+  migrates only its own draft tables. It does not rerun full-library schema
+  backfills. Read-only configuration and proposal polling bypass the connector's
+  mutation lock.
+- Build 339 was interrupted before producing the final installation when the
+  user paused. Build 340 carries a fresh release identity. This is a direct
+  personal installation; no cloud updater or public site release is implied.

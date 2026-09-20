@@ -241,11 +241,8 @@ struct ReviewView: View {
     @State private var visualComparisonTarget: ReviewVisualComparisonTarget?
 
     private func openReviewPreview() {
-        if model.isREReviewScope {
-            guard let item = model.focusedReviewItem else {
-                model.reviewStatus = "Select a Review item before opening comparison."
-                return
-            }
+        if let item = model.focusedReviewItem,
+           model.renderedVisualRepairProposal(for: item) != nil {
             visualComparisonTarget = ReviewVisualComparisonTarget(id: item.id)
         } else {
             ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
@@ -405,7 +402,8 @@ struct ReviewView: View {
                                     hasDraftAIReason: false,
                                     hasProposalDraft: model.hasProposalDraft(for: item.id),
                                     hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id),
-                                    compare: model.isREReviewScope ? {
+                                    compare: model.renderedVisualRepairProposal(for: item) != nil ? {
+                                        guard model.renderedVisualRepairProposal(for: item) != nil else { return }
                                         model.clickReviewItem(item.id, modifiers: [])
                                         visualComparisonTarget = ReviewVisualComparisonTarget(id: item.id)
                                     } : nil
@@ -623,7 +621,7 @@ struct ReviewView: View {
                 VisualRepairComparisonView(
                     item: item,
                     original: model.reviewThumbnails[item.id],
-                    proposal: model.reviewVisualProposals[item.id]
+                    proposal: model.renderedVisualRepairProposal(for: item)
                 )
             } else {
                 ContentUnavailableView(

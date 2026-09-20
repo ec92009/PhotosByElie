@@ -7,6 +7,56 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Before After requires a real rendered draft for the exact photo, fixture and source")
+    @MainActor
+    func comparisonRequiresRenderedAfter() throws {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil, equipmentBackfillStore: nil, customerPhotoLinks: nil)
+        model.installFixtureTree([FixtureNode(id: "fixture-re", name: "RE")],
+            preferredFixtureID: "fixture-re", persistSelection: false)
+        let item = FixtureReviewItem(id: "a", photoLibraryIdentifier: "a", sourceVersionID: "v1",
+            title: "Approved photo", keywords: [], filename: "a.jpg", capturedAt: "")
+        #expect(model.renderedVisualRepairProposal(for: item) == nil)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let after = directory.appendingPathComponent("after.png")
+        let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        try #require(bitmap.representation(using: .png, properties: [:])).write(to: after)
+        let valid = VisualRepairProposal(id: "proposal", fixtureID: "fixture-re", assetID: "a",
+            sourceVersionID: "v1", defectCategories: [.contrast], ladderRung: 0, modelLadder: [],
+            requestedGeneratorModel: "test", resolvedModel: "test", reasoningEffort: "", vision: true,
+            attempt: 1, status: .draft, originalReference: "immutable-source-version://v1",
+            derivedReference: after.absoluteString, derivedAvailable: true, generatorReference: "test")
+        model.reviewVisualProposals["a"] = valid
+        #expect(model.renderedVisualRepairProposal(for: item)?.id == "proposal")
+        for proposalStatus in [VisualRepairProposalStatus.accepted, .rejected, .superseded] {
+            var proposal = valid
+            proposal.status = proposalStatus
+            model.reviewVisualProposals["a"] = proposal
+            #expect((model.renderedVisualRepairProposal(for: item) != nil) == (proposalStatus == .accepted))
+        }
+        for mismatch in ["asset", "fixture", "source", "queued", "unavailable"] {
+            var proposal = valid
+            switch mismatch {
+            case "asset": proposal.assetID = "b"
+            case "fixture": proposal.fixtureID = "other"
+            case "source": proposal.sourceVersionID = "old"
+            case "queued": proposal.generationState = "queued"
+            default: proposal.derivedAvailable = false
+            }
+            model.reviewVisualProposals["a"] = proposal
+            #expect(model.renderedVisualRepairProposal(for: item) == nil)
+        }
+        model.reviewVisualProposals["a"] = valid
+        try Data("not an image".utf8).write(to: after)
+        #expect(model.renderedVisualRepairProposal(for: item) == nil)
+        try FileManager.default.removeItem(at: after)
+        #expect(model.renderedVisualRepairProposal(for: item) == nil)
+    }
+
     @Test("Visual-only AI enablement clears on selection change and combines with metadata")
     @MainActor
     func visualOnlyAIEnablement() {

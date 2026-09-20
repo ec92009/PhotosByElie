@@ -740,6 +740,23 @@ final class BackstageViewModel: ObservableObject {
         VisualRepairScope.isREReview(path: fixtures.path(to: selectedFixtureID))
     }
 
+    /// Offer comparison only for a readable After belonging to this exact photo and source.
+    func renderedVisualRepairProposal(for item: FixtureReviewItem) -> VisualRepairProposal? {
+        guard isREReviewScope,
+              let proposal = reviewVisualProposals[item.id],
+              proposal.assetID == item.id,
+              proposal.fixtureID == selectedFixtureID,
+              !item.sourceVersionID.isEmpty,
+              proposal.sourceVersionID == item.sourceVersionID,
+              proposal.status.isComparable,
+              !proposal.isGenerating,
+              proposal.derivedAvailable,
+              VisualRepairComparisonState.isRenderableReference(proposal.derivedReference),
+              let url = URL(string: proposal.derivedReference),
+              let image = NSImage(contentsOf: url), image.isValid else { return nil }
+        return proposal
+    }
+
     func visualRepairComparisonState(for item: FixtureReviewItem) -> VisualRepairComparisonState {
         let originalReference = item.sourceVersionID.isEmpty
             ? "immutable-source-asset://\(item.id)"

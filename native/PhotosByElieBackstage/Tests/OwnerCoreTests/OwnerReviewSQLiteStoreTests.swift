@@ -5,6 +5,46 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Proposal availability follows fixture, filters and the complete paginated queue")
+    func scopedProposalAvailability() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("proposal-count-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let db = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: db)
+        try execute(db, """
+            INSERT INTO fixtures(fixture_id) VALUES ('other-fixture');
+            UPDATE fixture_asset_decisions SET fixture_id='other-fixture' WHERE asset_id='asset-2';
+            INSERT INTO asset_ai_proposals(proposal_id,asset_id,run_id,attempt,status,proposed_title,created_at)
+              VALUES ('proposal-2','asset-2','run-1',1,'ready','Other proposal','2026-01-01T00:00:00Z');
+            """)
+        let store = OwnerReviewSQLiteStore(databaseURL: db)
+        let page = try store.reviewWindow(fixtureID: "fixture-expo", offset: 1, limit: 1)
+        #expect(page.items.isEmpty)
+        #expect(page.summary.availableProposals == 1)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", search: "no-match").summary.availableProposals == 0)
+        try execute(db, """
+            UPDATE fixture_asset_decisions SET fixture_id='fixture-expo' WHERE asset_id='asset-2';
+            UPDATE asset_ai_proposals SET status='superseded' WHERE asset_id='asset-2';
+            UPDATE asset_editorial_state SET editorial_state='requesting-ai' WHERE asset_id='asset-2';
+            """)
+        let pending = try store.reviewWindow(fixtureID: "fixture-expo")
+        #expect(pending.summary.availableProposals == 1)
+        #expect(pending.summary.requestingAI == 1)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", proposalAvailableOnly: true).items.count == 1)
+        try execute(db, "UPDATE fixture_asset_decisions SET placement_state='hidden' WHERE asset_id='asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo").summary.availableProposals == 0)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["hidden"]).summary.availableProposals == 1)
+    }
+
+    @Test("Review messages do not announce unrelated global proposals as new")
+    func scopedProposalMessage() {
+        let global = FixtureAIStatus(json: ["ready": .number(2)])
+        #expect(global.progressMessage(availableInReview: 1) == "1 proposal available in this Review view.")
+        #expect(global.progressMessage(availableInReview: 0) == "0 proposals available in this Review view.")
+        #expect(global.progressMessage().hasPrefix("Across all fixtures:"))
+    }
+
     @Test("Visual-only and combined requests persist independently and undo atomically", arguments: [false, true])
     func visualRequestScopes(combined: Bool) throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("visual-request-\(UUID())")

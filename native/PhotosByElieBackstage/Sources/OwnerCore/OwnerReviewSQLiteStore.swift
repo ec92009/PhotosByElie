@@ -271,7 +271,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 }
             }.count,
             hidden: items.filter { $0.workflowStage == .hiddenFromFixture }.count,
-            countryMissing: items.filter { $0.country.isEmpty }.count
+            countryMissing: items.filter { $0.country.isEmpty }.count,
+            availableProposals: items.filter(\.proposalReady).count
         )
         let outputStates = stateFilters ?? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
         return FixtureReviewWindow(

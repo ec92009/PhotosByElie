@@ -3087,7 +3087,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var readyAIProposalCount: Int {
-        fixtureAIStatus?.ready ?? 0
+        guard let window = fixtureReviewWindow, window.fixtureID == selectedFixtureID else { return 0 }
+        return window.summary.availableProposals
     }
 
     func hasProposalDraft(for assetID: String) -> Bool {
@@ -5235,6 +5236,9 @@ final class BackstageViewModel: ObservableObject {
                 retainingConsumedProposal: retainsCompletedAction
             )
         }
+        window.summary.availableProposals = max(0, window.summary.availableProposals
+            + window.items.filter(\.proposalReady).count
+            - (fixtureReviewWindow?.items.filter(\.proposalReady).count ?? 0))
         fixtureReviewWindow = window
     }
 
@@ -5290,6 +5294,9 @@ final class BackstageViewModel: ObservableObject {
             guard let change = changesByID[current.id] else { return current }
             return BackstageReviewWorkflowState.applying(change.review, to: current)
         }
+        window.summary.availableProposals = max(0, window.summary.availableProposals
+            + window.items.filter(\.proposalReady).count
+            - (fixtureReviewWindow?.items.filter(\.proposalReady).count ?? 0))
         fixtureReviewWindow = window
         hydrateReviewProposalDrafts(from: window.items)
         return true
@@ -5340,6 +5347,9 @@ final class BackstageViewModel: ObservableObject {
                 to: .discovered
             )
         }
+        window.summary.availableProposals = max(0, window.summary.availableProposals
+            + window.items.filter(\.proposalReady).count
+            - (fixtureReviewWindow?.items.filter(\.proposalReady).count ?? 0))
         fixtureReviewWindow = window
         let orderedIDs = window.items.map(\.id)
         let replacementID = orderedIDs.indices.contains(preferredIndex)
@@ -5595,6 +5605,9 @@ final class BackstageViewModel: ObservableObject {
             items.insert(item, at: index)
         }
         window.items = items
+        window.summary.availableProposals = max(0, window.summary.availableProposals
+            + window.items.filter(\.proposalReady).count
+            - (fixtureReviewWindow?.items.filter(\.proposalReady).count ?? 0))
         fixtureReviewWindow = window
         hydrateReviewProposalDrafts(from: entry.reviewItems)
         let orderedIDs = items.map(\.id)
@@ -5629,6 +5642,9 @@ final class BackstageViewModel: ObservableObject {
         }
         let removedIDs = Set(entry.wasteBasketMediaIDs)
         window.items.removeAll { removedIDs.contains($0.id) }
+        window.summary.availableProposals = max(0, window.summary.availableProposals
+            + window.items.filter(\.proposalReady).count
+            - (fixtureReviewWindow?.items.filter(\.proposalReady).count ?? 0))
         fixtureReviewWindow = window
         let orderedIDs = window.items.map(\.id)
         let preferredIndex = entry.reviewItemIndexes.values.min() ?? 0
@@ -5705,7 +5721,8 @@ final class BackstageViewModel: ObservableObject {
             reviewWorkflow.recordAIAvailability(status)
             if status.active { reviewWorkflow.aiPassStartFailure = nil }
             aiProposalStatus = status.progressMessage(
-                starting: isRunningAIPass, startupFailure: reviewWorkflow.aiPassStartFailure
+                starting: isRunningAIPass, startupFailure: reviewWorkflow.aiPassStartFailure,
+                availableInReview: readyAIProposalCount
             )
         } catch {
             guard !isTransientCancellation(error) else { return }
@@ -5724,7 +5741,7 @@ final class BackstageViewModel: ObservableObject {
         let previousToken = reviewWorkflow.aiAvailabilityToken
         await refreshAIStatus()
         let availabilityChanged = reviewWorkflow.aiAvailabilityChanged(from: previousToken)
-        let hasAvailableResults = readyAIProposalCount > 0
+        let hasAvailableResults = (fixtureAIStatus?.ready ?? 0) > 0
             || (fixtureAIStatus?.run?.proposed ?? 0) > 0
             || (fixtureAIStatus?.run?.failed ?? 0) > 0
         guard availabilityChanged || reviewWorkflow.aiWindowRefreshPending else { return }
@@ -5764,14 +5781,14 @@ final class BackstageViewModel: ObservableObject {
             }
             aiProposalStatus = "Preparing requested previews and waiting for the AI worker to claim the queue…"
             fixtureAIStatus = try await fixtureService.startAIPass(trigger: trigger)
-            aiProposalStatus = fixtureAIStatus?.progressMessage() ?? "Checking AI run receipt…"
+            aiProposalStatus = fixtureAIStatus?.progressMessage(availableInReview: readyAIProposalCount) ?? "Checking AI run receipt…"
             while fixtureAIStatus?.active == true {
                 try await Task.sleep(for: .seconds(2))
                 guard !aiPassMonitoringDetached else { return }
                 let status = try await fixtureService.aiStatus()
                 fixtureAIStatus = status
                 // Leave the arrival frontier for the Review refresh loop to consume.
-                aiProposalStatus = status.progressMessage()
+                aiProposalStatus = status.progressMessage(availableInReview: readyAIProposalCount)
             }
         } catch {
             let message = isTransientCancellation(error)

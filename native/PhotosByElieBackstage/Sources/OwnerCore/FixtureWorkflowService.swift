@@ -881,6 +881,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var unreviewed: Int
     public var requestingAI: Int
     public var proposed: Int
+    public var availableProposals: Int
     public var approved: Int
     public var hidden: Int
     public var countryMissing: Int
@@ -892,12 +893,14 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         proposed: Int,
         approved: Int,
         hidden: Int = 0,
-        countryMissing: Int = 0
+        countryMissing: Int = 0,
+        availableProposals: Int = 0
     ) {
         self.total = total
         self.unreviewed = unreviewed
         self.requestingAI = requestingAI
         self.proposed = proposed
+        self.availableProposals = availableProposals
         self.approved = approved
         self.hidden = hidden
         self.countryMissing = countryMissing
@@ -908,6 +911,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         unreviewed = json["unreviewed"]?.intValue ?? 0
         requestingAI = json["requestingAI"]?.intValue ?? 0
         proposed = json["proposed"]?.intValue ?? 0
+        availableProposals = json["availableProposals"]?.intValue ?? 0
         approved = json["approved"]?.intValue ?? 0
         hidden = json["hidden"]?.intValue ?? 0
         countryMissing = json["countryMissing"]?.intValue ?? 0

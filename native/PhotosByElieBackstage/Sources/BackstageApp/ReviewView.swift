@@ -297,7 +297,7 @@ struct ReviewView: View {
                         Text("\(summary.total.formatted()) matching")
                         Text("\(summary.unreviewed.formatted()) awaiting Review")
                         Text("\(summary.requestingAI.formatted()) title/keyword AI requested")
-                        Text("\(summary.proposed.formatted()) proposal ready")
+                        Text("\(summary.availableProposals.formatted()) proposal ready")
                         if model.reviewMode == .full {
                             Text("\(summary.approved.formatted()) approved")
                             Text("\(summary.hidden.formatted()) hidden")
@@ -306,10 +306,19 @@ struct ReviewView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 }
+                if model.reviewProposalAvailableOnly {
+                    Button("Include photos awaiting AI") {
+                        model.reviewProposalAvailableOnly = false
+                        model.reviewWindowOffset = 0
+                        Task { await model.loadFixtureReviewWindow() }
+                    }
+                    .disabled(model.isRunningReview)
+                    .backstageHelp("Turn off Proposal Available while preserving the other Review filters.")
+                }
                 HStack(spacing: 10) {
                     if model.readyAIProposalCount > 0 {
                         Label(
-                            "\(model.readyAIProposalCount.formatted()) proposal\(model.readyAIProposalCount == 1 ? "" : "s") available",
+                            "\(model.readyAIProposalCount.formatted()) proposal\(model.readyAIProposalCount == 1 ? "" : "s") available in this view",
                             systemImage: "sparkles"
                         )
                         .font(.callout.weight(.semibold))
@@ -486,9 +495,11 @@ struct ReviewView: View {
                                   model.fixtureReviewWindow != nil,
                                   model.reviewItems.isEmpty {
                             ContentUnavailableView(
-                                "Review queue is clear",
-                                systemImage: "checkmark.circle",
-                                description: Text("Picked photos appear here until approved or hidden.")
+                                "No photos match these filters",
+                                systemImage: "line.3.horizontal.decrease.circle",
+                                description: Text(model.reviewProposalAvailableOnly
+                                    ? "Proposal Available excludes photos still awaiting AI. Turn it off to include pending photos."
+                                    : "Check the selected fixture, states, search, and RAW filter.")
                             )
                         }
                     }

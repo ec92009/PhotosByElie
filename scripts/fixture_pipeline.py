@@ -2266,9 +2266,11 @@ def fixture_review_window(
                    sum(CASE WHEN editorial.editorial_state = 'unreviewed' THEN 1 ELSE 0 END) unreviewed,
                    sum(CASE WHEN editorial.editorial_state = 'requesting-ai' THEN 1 ELSE 0 END) requesting_ai,
                    sum(CASE WHEN editorial.editorial_state = 'proposed' THEN 1 ELSE 0 END) proposed,
+                   sum(CASE WHEN available_proposal.status IN ('ready', 'loaded') THEN 1 ELSE 0 END) available_proposals,
                    sum(CASE WHEN editorial.editorial_state = 'approved' THEN 1 ELSE 0 END) approved
             FROM {from_sql}
             {joins}
+            {proposal_join}
             WHERE {where_sql}
             """,
             params,
@@ -2374,6 +2376,7 @@ def fixture_review_window(
             "unreviewed": int(summary["unreviewed"] or 0),
             "requestingAI": int(summary["requesting_ai"] or 0),
             "proposed": int(summary["proposed"] or 0),
+            "availableProposals": int(summary["available_proposals"] or 0),
             "approved": int(summary["approved"] or 0),
             "countryMissing": country_missing,
         },

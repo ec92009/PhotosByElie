@@ -11,7 +11,7 @@ extension FixtureAIStatus {
     }
 
     /// Durable worker errors outrank queued-count text, including after relaunch.
-    public func progressMessage(starting: Bool = false, startupFailure: String? = nil) -> String {
+    public func progressMessage(starting: Bool = false, startupFailure: String? = nil, availableInReview: Int? = nil) -> String {
         if let run, active {
             return [
                 "\(run.processed.formatted()) of \(run.requested.formatted()) processed",
@@ -29,7 +29,10 @@ extension FixtureAIStatus {
         }
         if starting { return "Preparing requested previews and waiting for the AI worker to claim the queue…" }
         if active { return "AI worker is active; checking its durable progress…" }
-        if ready > 0 { return "\(ready.formatted()) new proposal\(ready == 1 ? "" : "s") ready." }
+        if let count = availableInReview {
+            return "\(count.formatted()) proposal\(count == 1 ? "" : "s") available in this Review view."
+        }
+        if ready > 0 { return "Across all fixtures: \(ready.formatted()) proposal\(ready == 1 ? "" : "s") ready." }
         if requested > 0 { return "\(requested.formatted()) requested items are ready. Choose Run AI pass now, or wait for the enabled nightly schedule." }
         return "No requested AI work is waiting."
     }

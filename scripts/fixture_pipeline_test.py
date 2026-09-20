@@ -1372,6 +1372,10 @@ class FixturePipelineTest(unittest.TestCase):
             proposal_available_only=True,
         )
         self.assertTrue(available["proposalAvailableOnly"])
+        self.assertEqual(available["summary"]["availableProposals"], 2)
+        last_page = fixture_review_window(self.root, root["fixtureId"], proposal_available_only=True, offset=1, limit=1)
+        self.assertEqual(last_page["summary"]["availableProposals"], 2)
+        self.assertEqual(last_page["count"], 1)
         self.assertEqual(
             [item["assetId"] for item in available["items"]],
             ["asset-1", "asset-2"],

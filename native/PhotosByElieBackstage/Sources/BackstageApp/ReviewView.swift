@@ -353,8 +353,9 @@ struct ReviewView: View {
                 Toggle("Nightly AI at 02:00 (Madrid)", isOn: $model.nightlyAIJobsEnabled)
                     .backstageHelp("Run requested AI work once nightly while Backstage is open and signed in. Off until enabled. Missed runs wait for the next night or Run AI pass now.")
                 BackstageFeedbackView(
-                    message: model.aiProposalStatus,
-                    isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true
+                    message: model.isRunningReview && !model.isAIPassActive
+                        ? "Refreshing Review availability…" : model.aiProposalStatus,
+                    isWorking: model.isRunningReview || model.isRunningAIPass || model.fixtureAIStatus?.active == true
                 )
                 if let run = model.fixtureAIStatus?.run, model.fixtureAIStatus?.active == true {
                     ProgressView(

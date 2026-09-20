@@ -643,7 +643,8 @@ def decide_visual_repair_proposal(
     action = str(action or "").strip().casefold()
     if action not in VISUAL_REPAIR_ACTIONS:
         raise ValueError("visual repair decision must be accept, reject, or regenerate")
-    with fixture_connect(repo_root) as conn:
+    from production_visual_repair import connect as bounded_connect
+    with bounded_connect(repo_root) as conn:
         ensure_schema(conn)
         row = conn.execute(
             "SELECT * FROM visual_repair_proposals WHERE proposal_id = ?",

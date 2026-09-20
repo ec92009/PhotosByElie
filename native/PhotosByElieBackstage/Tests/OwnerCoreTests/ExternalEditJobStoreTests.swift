@@ -1,10 +1,78 @@
 import Foundation
+import CoreGraphics
+import ImageIO
 import SQLite3
 import Testing
 @testable import OwnerCore
 
 @Suite("External editor round trips")
 struct ExternalEditJobStoreTests {
+    @Test("AI return cannot supersede a source that changed after staging")
+    func visualAfterRejectsRacingSource() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let job = try fixture.store.createJob(fixtureID: "fixture-expo", kind: .edit,
+            editor: ExternalEditorProfile(name: VisualRepairRendition.label,
+                bundleIdentifier: VisualRepairRendition.editorPrefix + "race", applicationURL: fixture.root),
+            sources: [fixture.source(position: 0, assetID: "asset-1")], now: fixture.date)
+        let file = fixture.root.appendingPathComponent("after.png")
+        try Data("staged-image".utf8).write(to: file)
+        let pending = try fixture.store.acceptReturnedFile(jobID: job.id, sourceURL: file, now: fixture.date)
+        try fixture.execute("INSERT INTO asset_source_versions(version_id,asset_id,state,created_at) VALUES ('newer','asset-1','candidate','2099-01-01T00:00:00Z')")
+        #expect(throws: ExternalEditJobError.self) {
+            try fixture.store.resolveReturn(returnID: pending.id, decision: .replaceOriginal, now: fixture.date)
+        }
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_returns") == "0")
+        #expect(try fixture.scalar("SELECT state FROM external_edit_return_queue") == "pending")
+    }
+
+    @Test("AI After upscaling creates a versioned rendition, preserves the original and replays safely")
+    func visualAfterRendition() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let file = Bundle.module.url(forResource: "proposed", withExtension: "png", subdirectory: "Fixtures/PBE144SyntheticOpenAI")!
+        let data = try Data(contentsOf: file)
+        let image = try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        let decoded = try #require(CGImageSourceCreateImageAtIndex(image, 0, nil))
+        let item = FixtureReviewItem(id: "asset-1", photoLibraryIdentifier: "asset-1",
+            sourceVersionID: "source-asset-1", title: "One", keywords: [], filename: "one.dng", capturedAt: "",
+            pixelWidth: decoded.width * 2, pixelHeight: decoded.height * 2)
+        let proposal = VisualRepairProposal(id: "visual-repair-test", fixtureID: "fixture-expo", assetID: item.id,
+            sourceVersionID: item.sourceVersionID, defectCategories: [.contrast], ladderRung: 0, modelLadder: [],
+            requestedGeneratorModel: "test", resolvedModel: "test", reasoningEffort: "", vision: true,
+            attempt: 1, status: .draft, originalReference: "immutable-source-version://source-asset-1",
+            derivedReference: file.absoluteString, derivedAvailable: true,
+            derivedSHA256: VisualRepairRendition.digest(data), generatorReference: "test")
+        var invalid = proposal
+        invalid.derivedSHA256 = "wrong"
+        #expect(throws: ExternalEditJobError.self) {
+            try VisualRepairRendition.prepare(proposal: invalid, item: item, store: fixture.store, now: fixture.date)
+        }
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM asset_source_versions") == "2")
+        let result = try VisualRepairRendition.prepare(proposal: proposal, item: item, store: fixture.store, now: fixture.date)
+        let output = try #require(CGImageSourceCreateWithURL(result.fileURL as CFURL, nil))
+        let after = try #require(CGImageSourceCreateImageAtIndex(output, 0, nil))
+        #expect(after.width == item.pixelWidth && after.height == item.pixelHeight)
+        #expect(result.renditionLabel == "AI After · upscaled")
+        #expect(try Data(contentsOf: file) == data)
+        #expect(try fixture.scalar("SELECT rendered_fingerprint FROM asset_source_versions WHERE version_id = 'source-asset-1'") == "")
+        #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
+        #expect(try fixture.scalar("SELECT parent_source_version_id FROM external_edit_lineage WHERE child_source_version_id = '\(result.sourceVersionID)'") == item.sourceVersionID)
+        let replay = try VisualRepairRendition.prepare(proposal: proposal, item: item, store: fixture.store, now: fixture.date)
+        #expect(replay.sourceVersionID == result.sourceVersionID)
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_returns") == "1")
+        try fixture.execute("INSERT INTO asset_source_versions(version_id,asset_id,state,created_at) VALUES ('newer','asset-1','candidate','2099-01-01T00:00:00Z')")
+        #expect(throws: ExternalEditJobError.self) {
+            try VisualRepairRendition.prepare(proposal: proposal, item: item, store: fixture.store, now: fixture.date)
+        }
+        #expect(throws: ExternalEditJobError.self) {
+            try VisualRepairRendition.upscale(data, width: 0, height: 1)
+        }
+        #expect(throws: ExternalEditJobError.self) {
+            try VisualRepairRendition.upscale(data, width: 1000, height: 1)
+        }
+    }
+
     @Test("One selected source stages before replacing the same asset")
     func singleSourceRoundTrip() throws {
         let fixture = try Fixture()

@@ -143,19 +143,22 @@ public struct ExternalEditReturnedSource: Sendable, Equatable {
     public var fileURL: URL
     public var checksumSHA256: String
     public var byteCount: Int64
+    public var renditionLabel: String
 
     public init(
         assetID: String,
         sourceVersionID: String,
         fileURL: URL,
         checksumSHA256: String,
-        byteCount: Int64
+        byteCount: Int64,
+        renditionLabel: String = ""
     ) {
         self.assetID = assetID
         self.sourceVersionID = sourceVersionID
         self.fileURL = fileURL.standardizedFileURL
         self.checksumSHA256 = checksumSHA256
         self.byteCount = byteCount
+        self.renditionLabel = renditionLabel
     }
 }
 
@@ -200,6 +203,7 @@ public protocol ExternalEditJobStoring: Sendable {
         now: Date
     ) throws -> ExternalEditReturnResolution
     func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource?
+    func visualRepairJob(proposalID: String) throws -> ExternalEditJob?
     func cancel(jobID: String, now: Date) throws
     func fail(jobID: String, message: String, now: Date) throws
     func activeJob() throws -> ExternalEditJob?
@@ -207,6 +211,7 @@ public protocol ExternalEditJobStoring: Sendable {
 }
 
 public extension ExternalEditJobStoring {
+    func visualRepairJob(proposalID: String) throws -> ExternalEditJob? { nil }
     func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? { nil }
 }
 
@@ -445,6 +450,15 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         )
     }
 
+    public func visualRepairJob(proposalID: String) throws -> ExternalEditJob? {
+        let database = try openReadable()
+        defer { sqlite3_close_v2(database) }
+        guard try tableExists(database, name: "external_edit_jobs") else { return nil }
+        return try readJob(database,
+            whereClause: "editor_bundle_id = ? AND state NOT IN ('failed', 'cancelled') ORDER BY created_at DESC LIMIT 1",
+            bindings: [VisualRepairRendition.editorPrefix + proposalID])
+    }
+
     public func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? {
         let assetID = assetID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !assetID.isEmpty else { return nil }
@@ -455,8 +469,9 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         var statement: OpaquePointer?
         let sql = """
         SELECT returned.source_version_id, returned.file_path,
-               returned.checksum_sha256, returned.byte_count
+               returned.checksum_sha256, returned.byte_count, job.editor_name
         FROM external_edit_returns AS returned
+        JOIN external_edit_jobs AS job ON job.job_id = returned.job_id
         JOIN asset_source_versions AS source
           ON source.version_id = returned.source_version_id
          AND source.asset_id = returned.destination_asset_id
@@ -502,7 +517,8 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             sourceVersionID: sourceVersionID,
             fileURL: fileURL,
             checksumSHA256: checksum,
-            byteCount: byteCount
+            byteCount: byteCount,
+            renditionLabel: text(statement, 4) == VisualRepairRendition.label ? VisualRepairRendition.label : "Edited version"
         )
     }
 

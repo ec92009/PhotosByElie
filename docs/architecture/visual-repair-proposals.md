@@ -139,3 +139,28 @@ PBB-184 is installed locally as Backstage v263.0 build 340 from commit
 - Build 339 was interrupted before producing the final installation when the
   user paused. Build 340 carries a fresh release identity. This is a direct
   personal installation; no cloud updater or public site release is implied.
+
+## Explicit upscaled delivery rendition — PBB-185
+
+Generation and comparison remain draft-only. The separate **Use After for Uploads ·
+upscaled** action explicitly selects and approves that photo's edited version.
+It resamples the SHA-bound generated image to the original pixel dimensions using
+high-quality interpolation and lossless PNG storage. This restores dimensions,
+not original photographic detail; the action, PNG metadata and Uploads row label
+say **AI After · upscaled**.
+
+The action uses the existing durable edit-return job, lineage and source-version
+pipeline. Camera originals and generated comparison drafts remain intact. The
+new source first enters Review, then the existing approval operation binds
+Upload eligibility to that exact version. Failure before approval leaves a
+recoverable edit return or unapproved candidate; it never uploads a fallback
+original. Repeated execution reuses the same proposal-associated job and version.
+Source identity is checked again inside the return-decision transaction.
+
+Preview, Quick Look and export resolve the same checksum-verified accepted file.
+Missing or changed files fail closed. This action does not upload, publish, or
+modify Apple Photos. Normal metadata approval is labeled **Approve original**
+while an unselected visual draft exists. Before / After is available only for a
+readable draft attached to the current source, or its explicitly selected derived
+version. The other 156 previously approved photos require the Approved Review
+filter and have no comparison button.

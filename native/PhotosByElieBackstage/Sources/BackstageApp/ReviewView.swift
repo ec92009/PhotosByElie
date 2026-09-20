@@ -991,7 +991,7 @@ private struct VisualRepairComparisonView: View {
                     HStack {
                         imageLabel("Before")
                         Spacer()
-                        imageLabel("After · draft")
+                        imageLabel(proposal?.status == .accepted ? "After · upscaled" : "After · draft")
                     }
                     .padding(12)
                     Rectangle()
@@ -1144,12 +1144,14 @@ private struct ReviewInspector: View {
                     }
                     Divider()
                     HStack {
-                        Button("Approve") {
+                        Button(model.reviewVisualProposals[item.id]?.status == .draft
+                            && model.reviewVisualProposals[item.id]?.sourceVersionID == item.sourceVersionID
+                            ? "Approve original" : "Approve") {
                             Task { await model.applyReviewAction(.approve) }
                         }
                         .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("a", modifiers: [])
-                        .backstageHelp("Approve the selected title and keywords and make the assets eligible for Uploads.")
+                        .backstageHelp("Approve metadata for the current image version. To select an AI After instead, use Use After for Uploads below.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }
@@ -1261,13 +1263,17 @@ private struct ReviewInspector: View {
                             if !proposal.generationError.isEmpty {
                                 Text(proposal.generationError).font(.caption).foregroundStyle(.red)
                             }
+                            if proposal.status.isComparable && !proposal.isGenerating {
+                                Button("Use After for Uploads · upscaled") {
+                                    model.useVisualAfterForUploads(for: item.id)
+                                }
+                                .disabled(!hasRenderedProposal || model.isRunningReview)
+                                .backstageHelp("Approve this AI After at the original pixel dimensions using explicit upscaling. Selects the edited file for previews and Uploads, retains the camera original, and does not upload or publish.")
+                                Text("Upscaling restores dimensions, not original photographic detail.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
                             if proposal.status == .draft && !proposal.isGenerating {
                                 HStack(spacing: 8) {
-                                    Button("Accept draft") {
-                                        Task { await model.decideVisualRepair(.accept, for: item.id) }
-                                    }
-                                    .disabled(!hasRenderedProposal || model.isRunningReview)
-                                    .backstageHelp("Record acceptance of this visual draft only; it will not replace the source or change title, keywords, delivery, or publication.")
                                     Button("Reject draft") {
                                         Task { await model.decideVisualRepair(.reject, for: item.id) }
                                     }

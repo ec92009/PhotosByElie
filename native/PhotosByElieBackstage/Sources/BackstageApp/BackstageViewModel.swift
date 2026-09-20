@@ -456,6 +456,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isCancellingNativePublication = false
     @Published var nativePublicationBatchNumber = 0
     @Published var nativePublicationBatchCount = 0
+    @Published var nativeUploadRenditionLabels: [String: String] = [:]
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
@@ -747,13 +748,23 @@ final class BackstageViewModel: ObservableObject {
               proposal.assetID == item.id,
               proposal.fixtureID == selectedFixtureID,
               !item.sourceVersionID.isEmpty,
-              proposal.sourceVersionID == item.sourceVersionID,
               proposal.status.isComparable,
               !proposal.isGenerating,
               proposal.derivedAvailable,
               VisualRepairComparisonState.isRenderableReference(proposal.derivedReference),
               let url = URL(string: proposal.derivedReference),
               let image = NSImage(contentsOf: url), image.isValid else { return nil }
+        if proposal.sourceVersionID != item.sourceVersionID {
+            guard let job = try? externalEditJobStore?.visualRepairJob(proposalID: proposal.id),
+                  job.returnedSourceVersionID == item.sourceVersionID,
+                  job.sources.first?.sourceVersionID == proposal.sourceVersionID,
+                  let source = try? externalEditJobStore?.currentReturnedSource(assetID: item.id),
+                  source.sourceVersionID == item.sourceVersionID else { return nil }
+            var rendered = proposal
+            rendered.derivedReference = source.fileURL.absoluteString
+            rendered.derivedSHA256 = source.checksumSHA256
+            return rendered
+        }
         return proposal
     }
 
@@ -4617,6 +4628,48 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    /// Capture one explicit After approval and lock before rendering or database work begins.
+    func useVisualAfterForUploads(for assetID: String) {
+        guard !isReviewMutationBlocked, isREReviewScope,
+              let item = reviewItems.first(where: { $0.id == assetID }),
+              let proposal = reviewVisualProposals[assetID],
+              proposal.fixtureID == selectedFixtureID,
+              let store = externalEditJobStore else { return }
+        let fixtureID = selectedFixtureID
+        preserveCurrentReviewDraft()
+        let title = reviewProposalDrafts[assetID]?.title ?? item.title
+        let keywords = reviewProposalDrafts[assetID]?.keywords ?? item.keywords
+        cancelReviewMetadataAutosave()
+        isRunningReview = true
+        visualRepairStatus = "Preparing explicitly upscaled After for Uploads…"
+        reviewStatus = visualRepairStatus
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isRunningReview = false }
+            do {
+                _ = try await Task.detached(priority: .userInitiated) {
+                    try VisualRepairRendition.prepare(proposal: proposal, item: item, store: store)
+                }.value
+                self.invalidateCurrentRenditionCaches(for: assetID)
+                // The immutable camera original remains intact; this approves the exact new rendition.
+                let accepted = try await self.visualRepairService.decide(.accept,
+                    fixtureID: fixtureID, proposalID: proposal.id,
+                    idempotencyKey: "backstage-visual-use-after-\(proposal.id)")
+                self.reviewVisualProposals[assetID] = accepted
+                _ = try await self.fixtureService.applyReview(.approve, fixtureID: fixtureID,
+                    assetIDs: [assetID], anchorAssetID: assetID, title: title, keywords: keywords)
+                await self.loadFixtureReviewWindow(preferredAssetID: assetID)
+                self.visualRepairStatus = "AI After · upscaled to \(item.pixelWidth)×\(item.pixelHeight), approved for Uploads. Original retained. Nothing uploaded."
+                self.reviewStatus = self.visualRepairStatus
+            } catch {
+                self.invalidateCurrentRenditionCaches(for: assetID)
+                await self.loadFixtureReviewWindow(preferredAssetID: assetID)
+                self.visualRepairStatus = "After preparation needs attention: \(self.userFacingMessage(for: error))"
+                self.reviewStatus = self.visualRepairStatus
+            }
+        }
+    }
+
     func decideVisualRepair(
         _ decision: VisualRepairDecision,
         for assetID: String
@@ -7881,6 +7934,7 @@ final class BackstageViewModel: ObservableObject {
     func loadNativeUploadThumbnail(for item: NativeUploadPlanItem) async {
         guard nativeUploadThumbnails[item.id] == nil else { return }
         do {
+            nativeUploadRenditionLabels[item.id] = try externalEditJobStore?.currentReturnedSource(assetID: item.id)?.renditionLabel
             let preview = try await previewForAsset(
                 forAssetID: item.id,
                 preferredIdentifier: item.photoLibraryIdentifier,
@@ -9329,6 +9383,7 @@ final class BackstageViewModel: ObservableObject {
         lifecycleUploadWorkflow.cancelThumbnailTask(for: assetID)
         lifecycleThumbnails.removeValue(forKey: assetID)
         nativeUploadThumbnails.removeValue(forKey: assetID)
+        nativeUploadRenditionLabels.removeValue(forKey: assetID)
         if focusedCullingAssetID == assetID {
             photoPreview = nil
         }

@@ -240,6 +240,18 @@ struct ExternalEditReturnQueueSQLiteStore: Sendable {
         sources: [ExternalEditSource],
         record: DecisionRecord
     ) throws {
+        if row.editor.bundleIdentifier.hasPrefix(VisualRepairRendition.editorPrefix),
+           record.decision == .replaceOriginal {
+            guard let source = sources.first else { throw ExternalEditJobError.invalidSources }
+            var statement: OpaquePointer?
+            let sql = "SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1"
+            guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+                  let statement else { throw databaseError(database) }
+            defer { sqlite3_finalize(statement) }
+            bind([source.assetID], to: statement)
+            guard sqlite3_step(statement) == SQLITE_ROW,
+                  text(statement, 0) == source.sourceVersionID else { throw ExternalEditJobError.invalidSources }
+        }
         if record.decision == .keepBoth {
             try insertDerivedAsset(
                 database,

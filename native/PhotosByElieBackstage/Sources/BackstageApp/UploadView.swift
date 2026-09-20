@@ -129,8 +129,12 @@ struct UploadView: View {
                                 .background(.quaternary)
                                 .clipShape(RoundedRectangle(cornerRadius: 5))
                                 .clipped()
-                                Text(item.title)
-                                    .lineLimit(2)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.title).lineLimit(2)
+                                    if let label = model.nativeUploadRenditionLabels[item.id] {
+                                        Text(label).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                             .task(id: item.id) {
                                 guard !isPreviewMode else { return }

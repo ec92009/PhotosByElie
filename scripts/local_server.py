@@ -3355,7 +3355,7 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids
     )
     from requested_ai_previews import capture_requested_ai_previews
     with _runtime_connection(repo_root) as connection:
-        candidates = _candidate_rows(connection, repo_root, None)
+        candidates = _candidate_rows(connection, repo_root, None, fixture_id)
         if fixture_id is not None:
             for asset_id in asset_ids or []:
                 decision = connection.execute("SELECT placement_state,eligibility_state FROM fixture_asset_decisions WHERE fixture_id=? AND asset_id=?", (fixture_id, asset_id)).fetchone()
@@ -3365,7 +3365,11 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids
             if not isinstance(source_version_ids, dict) or set(source_version_ids) != set(asset_ids or []):
                 raise ValueError("Perform AI source versions must match the selected photos")
             for asset_id, expected in source_version_ids.items():
-                current = connection.execute("SELECT version_id FROM asset_source_versions WHERE asset_id=? AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1", (asset_id,)).fetchone()
+                from fixture_editions import enabled as editions_enabled
+                if editions_enabled(connection):
+                    current = connection.execute("SELECT source_version_id FROM fixture_asset_editions WHERE asset_id=? AND fixture_id=?", (asset_id, fixture_id)).fetchone()
+                else:
+                    current = connection.execute("SELECT version_id FROM asset_source_versions WHERE asset_id=? AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1", (asset_id,)).fetchone()
                 if str(current[0] if current else "") != expected:
                     raise ValueError("A selected photo changed version. Refresh and perform AI on the current photo.")
     if asset_ids is not None:
@@ -3374,7 +3378,7 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids
         if {item["assetId"] for item in candidates} != selected:
             raise ValueError("Selected AI photos changed or are unavailable. Refresh and retry.")
     capture_requested_ai_previews(repo_root, [item["assetId"] for item in candidates
-                                            if not Path(item["previewPath"]).is_file()])
+                                            if not Path(item["previewPath"]).is_file()], **({"fixture_id": fixture_id} if fixture_id else {}))
     log_root = repo_root / ".review-logs" / "requested-ai-runs"
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"manual-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
@@ -3390,6 +3394,7 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids
                 "--trigger",
                 trigger,
                 "--prepared-assets-stdin",
+                *(["--fixture-id", fixture_id] if fixture_id else []),
             ],
             cwd=repo_root,
             stdin=subprocess.PIPE,
@@ -3405,7 +3410,7 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids
         # Preserve a visible, retryable failure even if the child crashed before
         # it could create its own durable run. Never copy private child logs.
         message = f"AI pass startup failed: {error}"
-        failure = record_ai_start_failure(repo_root, [item["assetId"] for item in candidates], trigger, message)
+        failure = record_ai_start_failure(repo_root, [item["assetId"] for item in candidates], trigger, message, fixture_id=fixture_id)
         if failure.get("active"):
             return {**failure, "attached": True, "started": False}
         raise RuntimeError(message) from error
@@ -3762,6 +3767,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 asset_ids=manifest.get("assetIds") or [],
                 include_loaded=bool(manifest.get("includeLoaded")),
+                fixture_id=manifest.get("fixtureId"),
             ),
         })
     elif mode == "fixture-ai-proposals-load":
@@ -3850,6 +3856,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             native_upload_run_status(repo_root, existing_run_id) if existing_run_id
             else create_native_upload_run(
                 repo_root, manifest.get("assetIds") or [],
+                fixture_id=manifest.get("fixtureId"),
                 limit=int(manifest.get("limit") or 50),
                 concurrency=int(manifest.get("concurrency") or 4),
             )

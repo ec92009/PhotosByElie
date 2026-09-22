@@ -2781,11 +2781,13 @@ def _run_backstage_photos_materialize_one(
     destination: Path,
     allow_icloud_downloads: bool,
     timeout: int = 1800,
+    source_version_id: str | None = None,
 ) -> dict[str, Any]:
     external = _materialize_external_edit_return(
         repo_root,
         asset_id=asset_id,
         destination=destination,
+        source_version_id=source_version_id,
     )
     if external is not None:
         return external
@@ -2805,6 +2807,7 @@ def _materialize_external_edit_return(
     *,
     asset_id: str,
     destination: Path,
+    source_version_id: str | None = None,
 ) -> dict[str, Any] | None:
     """Prefer the exact latest accepted external rendition over the Photos original."""
     with connect(repo_root) as conn:
@@ -2814,23 +2817,21 @@ def _materialize_external_edit_return(
         if table is None:
             return None
         row = conn.execute(
-            """
+            f"""
             SELECT returned.file_path, returned.checksum_sha256, returned.byte_count,
                    source.version_id
             FROM external_edit_returns AS returned
             JOIN asset_source_versions AS source
               ON source.version_id = returned.source_version_id
              AND source.asset_id = returned.destination_asset_id
-            JOIN asset_delivery_state AS delivery
-              ON delivery.asset_id = returned.destination_asset_id
-             AND delivery.source_version_hash = returned.source_version_id
+            {"" if source_version_id else "JOIN asset_delivery_state AS delivery ON delivery.asset_id=returned.destination_asset_id AND delivery.source_version_hash=returned.source_version_id"}
             WHERE returned.destination_asset_id = ?
               AND source.source_exists = 1
-              AND source.state IN ('approved', 'live')
+              {"AND source.version_id=?" if source_version_id else "AND source.state IN ('approved', 'live')"}
             ORDER BY source.created_at DESC, source.version_id DESC
             LIMIT 1
             """,
-            (asset_id,),
+            (asset_id, source_version_id) if source_version_id else (asset_id,),
         ).fetchone()
     if row is None:
         return None

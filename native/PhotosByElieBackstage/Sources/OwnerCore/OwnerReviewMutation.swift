@@ -32,6 +32,10 @@ struct ReviewMutationContext {
         aiRequest: ReviewMutationAIRequest,
         anchorAssetID: String
     ) throws -> Placement? {
+        if try connection.hasFixtureEditions {
+            return try applyToEdition(action, assetID: assetID, metadata: metadata,
+                proposal: activeProposal, request: aiRequest, anchorAssetID: anchorAssetID)
+        }
         if action == .approve || action == .hide {
             try connection.execute("UPDATE asset_editorial_state SET visual_ai_request_json = '{}' WHERE asset_id = ?", bindings: [.string(assetID)])
         }

@@ -28,14 +28,14 @@ public enum VisualRepairRendition {
         guard digest(data) == proposal.derivedSHA256 else { throw ExternalEditJobError.invalidReturnedFile }
         let existing = try store.visualRepairJob(proposalID: proposal.id)
         if let existing, !existing.returnedSourceVersionID.isEmpty {
-            guard let current = try store.currentReturnedSource(assetID: item.id),
+            guard let current = try store.currentReturnedSource(assetID: item.id, fixtureID: proposal.fixtureID),
                   current.sourceVersionID == existing.returnedSourceVersionID,
                   existing.fixtureID == proposal.fixtureID,
                   existing.sources.first?.sourceVersionID == proposal.sourceVersionID
             else { throw ExternalEditJobError.invalidSources }
             return current
         }
-        let sources = try store.resolveSources(assetIDs: [item.id])
+        let sources = try store.resolveSources(assetIDs: [item.id], fixtureID: proposal.fixtureID)
         guard sources.count == 1, sources[0].sourceVersionID == proposal.sourceVersionID,
               item.sourceVersionID == proposal.sourceVersionID else { throw ExternalEditJobError.invalidSources }
         // Validate and render before acquiring an edit job so invalid images never leave a lock.
@@ -58,7 +58,7 @@ public enum VisualRepairRendition {
             candidate = try store.acceptReturnedFile(jobID: job.id, sourceURL: output, now: now)
         }
         let result = try store.resolveReturn(returnID: candidate.id, decision: .replaceOriginal, now: now)
-        guard let current = try store.currentReturnedSource(assetID: item.id),
+        guard let current = try store.currentReturnedSource(assetID: item.id, fixtureID: proposal.fixtureID),
               current.sourceVersionID == result.sourceVersionID else { throw ExternalEditJobError.invalidReturnedFile }
         return current
     }

@@ -8,6 +8,35 @@ import Testing
 
 @Suite("External editor round trips")
 struct ExternalEditJobStoreTests {
+    @Test("A returned After changes only its fixture edition and current preview")
+    func fixtureSpecificReturnedImages() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let schema = Bundle.module.url(forResource: "fixture_editions_schema", withExtension: "sql", subdirectory: "Fixtures")!
+        try fixture.execute(String(contentsOf: schema, encoding: .utf8))
+        try fixture.execute("""
+            INSERT INTO fixtures VALUES ('marketing');
+            INSERT INTO fixture_asset_editions(fixture_id,asset_id,title,source_version_id,editorial_state,created_at,updated_at)
+            VALUES ('fixture-expo','asset-1','Expo','source-asset-1','approved','',''),
+                   ('marketing','asset-1','Marketing','source-asset-1','approved','','');
+            """)
+        let store = fixture.store
+        let job = try store.createJob(fixtureID: "marketing", kind: .edit, editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")], now: fixture.date)
+        _ = try store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("fixture After bytes".utf8).write(to: returned)
+        let candidate = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let receipt = try store.resolveReturn(returnID: candidate.id, decision: .replaceOriginal, now: fixture.date)
+        #expect(try store.currentReturnedSource(assetID: "asset-1", fixtureID: "fixture-expo") == nil)
+        #expect(try store.currentReturnedSource(assetID: "asset-1", fixtureID: "marketing")?.sourceVersionID == receipt.sourceVersionID)
+        #expect(try store.resolveSources(assetIDs: ["asset-1"], fixtureID: "fixture-expo").first?.sourceVersionID == "source-asset-1")
+        #expect(try store.resolveSources(assetIDs: ["asset-1"], fixtureID: "marketing").first?.sourceVersionID == receipt.sourceVersionID)
+        #expect(try fixture.scalar("SELECT editorial_state FROM fixture_asset_editions WHERE fixture_id='fixture-expo'") == "approved")
+        #expect(try fixture.scalar("SELECT editorial_state FROM fixture_asset_editions WHERE fixture_id='marketing'") == "unreviewed")
+        #expect(try fixture.scalar("SELECT title FROM fixture_asset_editions WHERE fixture_id='fixture-expo'") == "Expo")
+    }
+
     @Test("Normal Approve selects the After; Reject AI restores original approval; missing After never falls back", arguments: ["approve", "reject", "missing", "unrecorded"])
     @MainActor
     func reviewAIApprovalRoute(action: String) async throws {

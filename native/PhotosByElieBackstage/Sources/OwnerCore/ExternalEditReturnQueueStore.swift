@@ -244,11 +244,14 @@ struct ExternalEditReturnQueueSQLiteStore: Sendable {
            record.decision == .replaceOriginal {
             guard let source = sources.first else { throw ExternalEditJobError.invalidSources }
             var statement: OpaquePointer?
-            let sql = "SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1"
+            let scoped = try hasFixtureEditions(database)
+            let sql = scoped
+                ? "SELECT source_version_id FROM fixture_asset_editions WHERE asset_id=? AND fixture_id=?"
+                : "SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1"
             guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
                   let statement else { throw databaseError(database) }
             defer { sqlite3_finalize(statement) }
-            bind([source.assetID], to: statement)
+            bind(scoped ? [source.assetID, row.fixtureID] : [source.assetID], to: statement)
             guard sqlite3_step(statement) == SQLITE_ROW,
                   text(statement, 0) == source.sourceVersionID else { throw ExternalEditJobError.invalidSources }
         }
@@ -345,11 +348,12 @@ struct ExternalEditReturnQueueSQLiteStore: Sendable {
             assetID: destinationAssetID,
             timestamp: timestamp
         )
-        try execute(
-            database,
-            "UPDATE asset_source_versions SET state = 'superseded', superseded_at = ? WHERE asset_id = ? AND state = 'candidate'",
-            [timestamp, destinationAssetID]
-        )
+        let scoped = try hasFixtureEditions(database)
+        if !scoped {
+            try execute(database,
+                "UPDATE asset_source_versions SET state = 'superseded', superseded_at = ? WHERE asset_id = ? AND state = 'candidate'",
+                [timestamp, destinationAssetID])
+        }
         try execute(
             database,
             """
@@ -366,12 +370,22 @@ struct ExternalEditReturnQueueSQLiteStore: Sendable {
             destinationAssetID: destinationAssetID,
             sourceVersionID: sourceVersionID
         )
-        try resetEditorialAndDelivery(
-            database,
-            assetID: destinationAssetID,
-            sourceVersionID: sourceVersionID,
-            timestamp: timestamp
-        )
+        if scoped {
+            try execute(database, """
+                INSERT OR IGNORE INTO fixture_asset_editions
+                  (fixture_id,asset_id,title,keywords_json,source_version_id,created_at,updated_at)
+                SELECT ?,asset_id,COALESCE(photos_title,''),COALESCE(photos_keywords_json,'[]'),?,?,?
+                FROM sidecar_assets WHERE asset_id=?
+                """, [row.fixtureID, sourceVersionID, timestamp, timestamp, destinationAssetID])
+            try execute(database, """
+                UPDATE fixture_asset_editions SET source_version_id=?,editorial_state='unreviewed',
+                  approved_at=NULL,approved_revision_hash='',updated_at=?
+                WHERE fixture_id=? AND asset_id=?
+                """, [sourceVersionID, timestamp, row.fixtureID, destinationAssetID])
+        } else {
+            try resetEditorialAndDelivery(database, assetID: destinationAssetID,
+                                          sourceVersionID: sourceVersionID, timestamp: timestamp)
+        }
         try insertLineage(
             database,
             row: row,
@@ -446,6 +460,14 @@ struct ExternalEditReturnQueueSQLiteStore: Sendable {
             """,
             [fixtureID, assetID, timestamp, timestamp]
         )
+    }
+
+    private func hasFixtureEditions(_ database: OpaquePointer) throws -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "SELECT 1 FROM sqlite_master WHERE type='table' AND name='fixture_asset_editions'", -1, &statement, nil) == SQLITE_OK,
+              let statement else { throw databaseError(database) }
+        defer { sqlite3_finalize(statement) }
+        return sqlite3_step(statement) == SQLITE_ROW
     }
 
     private func resetEditorialAndDelivery(

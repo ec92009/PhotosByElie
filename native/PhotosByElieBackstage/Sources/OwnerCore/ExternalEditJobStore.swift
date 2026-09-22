@@ -186,6 +186,7 @@ public enum ExternalEditJobError: LocalizedError, Equatable {
 
 public protocol ExternalEditJobStoring: Sendable {
     func resolveSources(assetIDs: [String]) throws -> [ExternalEditSource]
+    func resolveSources(assetIDs: [String], fixtureID: String) throws -> [ExternalEditSource]
     func createJob(
         fixtureID: String,
         kind: ExternalEditKind,
@@ -203,6 +204,7 @@ public protocol ExternalEditJobStoring: Sendable {
         now: Date
     ) throws -> ExternalEditReturnResolution
     func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource?
+    func currentReturnedSource(assetID: String, fixtureID: String) throws -> ExternalEditReturnedSource?
     func visualRepairJob(proposalID: String) throws -> ExternalEditJob?
     func cancel(jobID: String, now: Date) throws
     func fail(jobID: String, message: String, now: Date) throws
@@ -211,6 +213,8 @@ public protocol ExternalEditJobStoring: Sendable {
 }
 
 public extension ExternalEditJobStoring {
+    func resolveSources(assetIDs: [String], fixtureID: String) throws -> [ExternalEditSource] { try resolveSources(assetIDs: assetIDs) }
+    func currentReturnedSource(assetID: String, fixtureID: String) throws -> ExternalEditReturnedSource? { try currentReturnedSource(assetID: assetID) }
     func visualRepairJob(proposalID: String) throws -> ExternalEditJob? { nil }
     func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? { nil }
 }
@@ -460,25 +464,35 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
     }
 
     public func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? {
+        try readReturnedSource(assetID: assetID, fixtureID: nil)
+    }
+
+    public func currentReturnedSource(assetID: String, fixtureID: String) throws -> ExternalEditReturnedSource? {
+        try readReturnedSource(assetID: assetID, fixtureID: fixtureID)
+    }
+
+    private func readReturnedSource(assetID: String, fixtureID: String?) throws -> ExternalEditReturnedSource? {
         let assetID = assetID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !assetID.isEmpty else { return nil }
         let database = try openReadable()
         defer { sqlite3_close_v2(database) }
         guard try tableExists(database, name: "external_edit_returns") else { return nil }
 
+        let scoped = try fixtureID != nil && tableExists(database, name: "fixture_asset_editions")
         var statement: OpaquePointer?
         let sql = """
         SELECT returned.source_version_id, returned.file_path,
-               returned.checksum_sha256, returned.byte_count, job.editor_name
+               returned.checksum_sha256, returned.byte_count, job.editor_name, source.source_exists
         FROM external_edit_returns AS returned
         JOIN external_edit_jobs AS job ON job.job_id = returned.job_id
         JOIN asset_source_versions AS source
           ON source.version_id = returned.source_version_id
          AND source.asset_id = returned.destination_asset_id
         WHERE returned.destination_asset_id = ?
-          AND source.source_exists = 1
-          AND source.state IN ('candidate', 'approved', 'live')
-          AND source.version_id = (
+          \(scoped ? "" : "AND source.source_exists = 1")
+          \(scoped ? "" : "AND source.state IN ('candidate', 'approved', 'live')")
+          AND source.version_id = \(scoped ? "(SELECT source_version_id FROM fixture_asset_editions WHERE fixture_id=? AND asset_id=returned.destination_asset_id)" : """
+          (
             SELECT latest.version_id
             FROM asset_source_versions AS latest
             WHERE latest.asset_id = returned.destination_asset_id
@@ -487,14 +501,16 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             ORDER BY latest.created_at DESC, latest.version_id DESC
             LIMIT 1
           )
+          """)
         LIMIT 1
         """
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
               let statement else { throw databaseError(database) }
         defer { sqlite3_finalize(statement) }
-        bind([assetID], to: statement)
+        bind([assetID] + (scoped ? [fixtureID ?? ""] : []), to: statement)
         guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
 
+        guard sqlite3_column_int(statement, 5) == 1 else { throw ExternalEditJobError.invalidReturnedFile }
         let sourceVersionID = text(statement, 0)
         let fileURL = URL(fileURLWithPath: text(statement, 1)).standardizedFileURL
         let checksum = text(statement, 2)
@@ -525,6 +541,14 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
     /// Resolve editor inputs from durable Owner state so every screen can use
     /// the same exact current-source contract.
     public func resolveSources(assetIDs: [String]) throws -> [ExternalEditSource] {
+        try readSources(assetIDs: assetIDs, fixtureID: nil)
+    }
+
+    public func resolveSources(assetIDs: [String], fixtureID: String) throws -> [ExternalEditSource] {
+        try readSources(assetIDs: assetIDs, fixtureID: fixtureID)
+    }
+
+    private func readSources(assetIDs: [String], fixtureID: String?) throws -> [ExternalEditSource] {
         let orderedIDs = assetIDs.reduce(into: [String]()) { result, id in
             let clean = id.trimmingCharacters(in: .whitespacesAndNewlines)
             if !clean.isEmpty, !result.contains(clean) { result.append(clean) }
@@ -533,16 +557,19 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         let database = try openReadable()
         defer { sqlite3_close_v2(database) }
 
+        let scoped = try fixtureID != nil && tableExists(database, name: "fixture_asset_editions")
         var resolved: [ExternalEditSource] = []
         for (position, assetID) in orderedIDs.enumerated() {
             var statement: OpaquePointer?
             let sql = """
-            SELECT COALESCE((
+            SELECT COALESCE(\(scoped ? "(SELECT edition.source_version_id FROM fixture_asset_editions edition JOIN asset_source_versions source ON source.version_id=edition.source_version_id AND source.asset_id=edition.asset_id AND source.source_exists=1 WHERE edition.fixture_id=? AND edition.asset_id=asset.asset_id)" : """
+                   (
                      SELECT version_id
                      FROM asset_source_versions
                      WHERE asset_id = asset.asset_id AND source_exists = 1
                      ORDER BY created_at DESC, version_id DESC LIMIT 1
-                   ), '') AS source_version_id,
+                   )
+                   """), '') AS source_version_id,
                    COALESCE(
                      NULLIF(json_extract(asset.raw_json, '$.localIdentifier'), ''),
                      NULLIF(json_extract(asset.raw_json, '$.cloudIdentifier'), ''),
@@ -564,10 +591,11 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
                   let statement else { throw databaseError(database) }
             defer { sqlite3_finalize(statement) }
-            bind([assetID], to: statement)
+            bind((scoped ? [fixtureID ?? ""] : []) + [assetID], to: statement)
             guard sqlite3_step(statement) == SQLITE_ROW else {
                 throw ExternalEditJobError.invalidSources
             }
+            if scoped && text(statement, 0).isEmpty { throw ExternalEditJobError.invalidSources }
             resolved.append(ExternalEditSource(
                 position: position,
                 assetID: assetID,

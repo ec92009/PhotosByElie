@@ -59,10 +59,15 @@ def validate_request(conn, fixture_id, asset_id, source_version_id):
     if visual._table_exists(conn, "external_edit_asset_locks") and conn.execute(
             "SELECT 1 FROM external_edit_asset_locks WHERE asset_id=?", (asset_id,)).fetchone():
         raise ValueError("Finish this photo's external edit before visual generation.")
-    latest = conn.execute("SELECT version_id FROM asset_source_versions WHERE asset_id=? AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1", (asset_id,)).fetchone()
+    from fixture_editions import enabled as editions_enabled
+    if editions_enabled(conn):
+        latest = conn.execute("SELECT source_version_id FROM fixture_asset_editions WHERE asset_id=? AND fixture_id=?", (asset_id, fixture_id)).fetchone()
+        editorial = conn.execute("SELECT visual_ai_request_json FROM fixture_asset_editions WHERE asset_id=? AND fixture_id=?", (asset_id, fixture_id)).fetchone()
+    else:
+        latest = conn.execute("SELECT version_id FROM asset_source_versions WHERE asset_id=? AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1", (asset_id,)).fetchone()
+        editorial = conn.execute("SELECT visual_ai_request_json FROM asset_editorial_state WHERE asset_id=?", (asset_id,)).fetchone()
     if not latest or latest[0] != source_version_id:
-        raise ValueError("The photo's source version changed; request visual repair again.")
-    editorial = conn.execute("SELECT visual_ai_request_json FROM asset_editorial_state WHERE asset_id=?", (asset_id,)).fetchone()
+        raise ValueError("The fixture image version changed; request visual repair again.")
     request = visual._read_json(editorial[0], {}) if editorial else {}
     if request.get("sourceVersionId") != source_version_id or not request.get("requestedAt"):
         raise ValueError("Save an explicit visual AI request for this source version first.")
@@ -154,7 +159,11 @@ def start_generation(root: Path, fixture_id: str, asset_id: str, source_version_
     try:
         destination = artifact_root(root, proposal_id)
         before = destination / "before.jpg"
-        preview_runner(photo_id, before, 1800, timeout=60)
+        from fixture_editions import enabled, render_selected_preview
+        with connect(root) as conn:
+            rendered = enabled(conn) and render_selected_preview(conn,fixture_id,asset_id,before,1800)
+        if not rendered:
+            preview_runner(photo_id, before, 1800, timeout=60)
         data = before.read_bytes()
         if len(data) > 8 * 1024 * 1024:
             raise ValueError("Visual preview exceeds its size limit.")

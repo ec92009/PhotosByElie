@@ -41,6 +41,9 @@ ProposalFunction = Callable[[dict[str, Any]], dict[str, Any]]
 PreviewPreparer = Callable[[Path, list[str]], dict[str, Any]]
 
 
+from fixture_editions import enabled as editions_enabled, editorial_scope
+
+
 def _codex_binary() -> str:
     configured = os.environ.get("PBE_REQUESTED_AI_CODEX_BIN", "").strip()
     if configured:
@@ -95,16 +98,17 @@ def wait_for_ai_worker_claim(repo_root: Path, process: subprocess.Popen, *, star
         time.sleep(0.1)
 
 
-def record_ai_start_failure(repo_root: Path, asset_ids: list[str], trigger: str, message: str) -> dict[str, Any]:
+def record_ai_start_failure(repo_root: Path, asset_ids: list[str], trigger: str, message: str, fixture_id: str | None = None) -> dict[str, Any]:
     """Persist startup failures without changing requests, metadata or media."""
     with _runtime_connection(repo_root) as conn:
+        table, where, scope_args = editorial_scope(conn, fixture_id)
         conn.execute("BEGIN IMMEDIATE")
         if _active_run(conn):
             conn.rollback()
             return ai_run_status(repo_root)
         ids = [asset_id for asset_id in dict.fromkeys(asset_ids) if conn.execute(
-            "SELECT 1 FROM asset_editorial_state WHERE asset_id = ? AND editorial_state = 'requesting-ai'",
-            (asset_id,),
+            f"SELECT 1 FROM {table} WHERE {where} AND editorial_state = 'requesting-ai'",
+            (asset_id, *scope_args),
         ).fetchone()]
         run_id, timestamp = f"airun-{uuid.uuid4().hex[:16]}", now_iso()
         conn.execute(
@@ -120,8 +124,8 @@ def record_ai_start_failure(repo_root: Path, asset_ids: list[str], trigger: str,
             [(run_id, asset_id, message, timestamp) for asset_id in ids],
         )
         conn.executemany(
-            "UPDATE asset_editorial_state SET ai_last_error = ?, updated_at = ? WHERE asset_id = ? AND editorial_state = 'requesting-ai'",
-            [(message, timestamp, asset_id) for asset_id in ids],
+            f"UPDATE {table} SET ai_last_error = ?, updated_at = ? WHERE {where} AND editorial_state = 'requesting-ai'",
+            [(message, timestamp, asset_id, *scope_args) for asset_id in ids],
         )
         conn.commit()
     return ai_run_status(repo_root)
@@ -278,7 +282,10 @@ def _candidate_rows(
     conn: sqlite3.Connection,
     repo_root: Path,
     limit: int | None,
+    fixture_id: str | None = None,
 ) -> list[dict[str, Any]]:
+    table, _, scope_args = editorial_scope(conn, fixture_id)
+    scoped = bool(scope_args)
     external_edit_lock_sql = ""
     if conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'external_edit_asset_locks'"
@@ -291,6 +298,7 @@ def _candidate_rows(
         """
     sql = f"""
         SELECT asset.asset_id, asset.filename, asset.captured_at, asset.location_label,
+               {"editorial.fixture_id,editorial.country,editorial.source_version_id,editorial.requested_at," if scoped else ""}
                editorial.ai_reasons_json, editorial.ai_note,
                editorial.ai_attempt_count, editorial.ai_preview_path,
                editorial.ai_preview_sha256,
@@ -309,7 +317,7 @@ def _candidate_rows(
                COALESCE(prior.proposed_keywords_json, '[]') prior_proposal_keywords_json,
                COALESCE(prior.proposed_country, '') prior_proposal_country,
                COALESCE(prior.reason, '') prior_proposal_reason
-        FROM asset_editorial_state AS editorial
+        FROM {table} AS editorial
         JOIN sidecar_assets AS asset ON asset.asset_id = editorial.asset_id
         LEFT JOIN sidecar_decisions AS decision ON decision.asset_id = asset.asset_id
         LEFT JOIN asset_ai_proposals AS prior
@@ -327,6 +335,15 @@ def _candidate_rows(
         ORDER BY COALESCE(editorial.requested_at, editorial.updated_at), asset.asset_id
     """
     params: list[Any] = []
+    if scoped:
+        start = sql.index("               COALESCE(\n                 NULLIF(decision.title")
+        end = sql.index("               COALESCE(prior.proposed_title", start)
+        sql = sql[:start] + "               editorial.title current_title, editorial.keywords_json current_keywords_json,\n" + sql[end:]
+        sql = sql.replace("LEFT JOIN sidecar_decisions AS decision ON decision.asset_id = asset.asset_id",
+                          "LEFT JOIN fixture_asset_editions AS decision ON decision.asset_id=asset.asset_id AND decision.fixture_id=editorial.fixture_id")
+        sql = sql.replace("AND proposal.status = 'superseded'", "AND proposal.fixture_id=editorial.fixture_id AND proposal.status = 'superseded'")
+        sql = sql.replace("WHERE editorial.editorial_state = 'requesting-ai'", "WHERE editorial.editorial_state = 'requesting-ai' AND editorial.fixture_id=?")
+        params.append(fixture_id)
     if limit is not None:
         sql += " LIMIT ?"
         params.append(max(1, int(limit)))
@@ -341,6 +358,9 @@ def _candidate_rows(
         )
         items.append({
         "repoRoot": str(repo_root),
+        "fixtureId": fixture_id or "",
+        "sourceVersionId": row["source_version_id"] if scoped else "",
+        "requestedAt": row["requested_at"] if scoped else "",
         "assetId": str(row["asset_id"]),
         "filename": str(row["filename"] or ""),
         "capturedAt": str(row["captured_at"] or ""),
@@ -352,7 +372,7 @@ def _candidate_rows(
         "previewSha256": str(row["ai_preview_sha256"] or ""),
         "currentTitle": str(row["current_title"] or ""),
         "currentKeywords": _read_json(row["current_keywords_json"], []),
-        "currentCountry": str(country_context["country"]),
+        "currentCountry": str(row["country"] if scoped else country_context["country"]),
         "suggestedCountry": str(country_context["suggestedCountry"]),
         "countrySuggestionSource": str(country_context["countrySuggestionSource"]),
         "countryProposalEnabled": bool(capability["enabled"]),
@@ -437,6 +457,7 @@ def run_requested_ai_pass(
     repo_root: Path,
     *,
     trigger: str = "manual",
+    fixture_id: str | None = None,
     prepared_asset_ids: list[str] | None = None,
     limit: int | None = None,
     proposer: ProposalFunction = codex_proposer,
@@ -460,7 +481,8 @@ def run_requested_ai_pass(
                 "runId": str(active["run_id"]),
                 "status": str(active["status"]),
             }
-        candidates = _candidate_rows(conn, repo_root, limit)
+        candidates = _candidate_rows(conn, repo_root, limit, fixture_id)
+        editorial_table, editorial_where, scope_args = editorial_scope(conn, fixture_id)
     if prepared_asset_ids is not None:
         allowed_ids = set(prepared_asset_ids)
         candidates = [item for item in candidates if item["assetId"] in allowed_ids]
@@ -476,9 +498,9 @@ def run_requested_ai_pass(
         if not Path(item["previewPath"]).is_file()
     ]
     if missing_preview_ids and prepared_asset_ids is None:
-        preview_receipt = preview_preparer(repo_root, missing_preview_ids)
+        preview_receipt = preview_preparer(repo_root, missing_preview_ids, **({"fixture_id": fixture_id} if scope_args else {}))
         with _runtime_connection(repo_root) as conn:
-            candidates = _candidate_rows(conn, repo_root, limit)
+            candidates = _candidate_rows(conn, repo_root, limit, fixture_id)
     with _runtime_connection(repo_root) as conn:
         # Preview preparation may race with another manual/nightly trigger.
         # Recheck and claim under the same writer lock, not only before preparation.
@@ -490,7 +512,7 @@ def run_requested_ai_pass(
         # prepared capability scope. A just-completed competing run may have
         # already fulfilled requests from our earlier candidate snapshot.
         prepared_scope = {item["assetId"] for item in candidates}
-        candidates = [item for item in _candidate_rows(conn, repo_root, limit)
+        candidates = [item for item in _candidate_rows(conn, repo_root, limit, fixture_id)
                       if item["assetId"] in prepared_scope]
         for item in candidates:
             rung = model_ladder[min(max(0, int(item["attempt"]) - 1), len(model_ladder) - 1)]
@@ -563,12 +585,12 @@ def run_requested_ai_pass(
                 (now_iso(), run_id, item["assetId"]),
             )
             conn.execute(
-                """
-                UPDATE asset_editorial_state
+                f"""
+                UPDATE {editorial_table}
                 SET ai_attempt_count = ?, ai_last_error = '', updated_at = ?
-                WHERE asset_id = ? AND editorial_state = 'requesting-ai'
+                WHERE {editorial_where} AND editorial_state = 'requesting-ai'
                 """,
-                (item["attempt"], now_iso(), item["assetId"]),
+                (item["attempt"], now_iso(), item["assetId"], *scope_args),
             )
             conn.commit()
         try:
@@ -578,10 +600,10 @@ def run_requested_ai_pass(
             timestamp = now_iso()
             with _runtime_connection(repo_root) as conn:
                 state = conn.execute(
-                    "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
-                    (item["assetId"],),
+                    f"SELECT * FROM {editorial_table} WHERE {editorial_where}",
+                    (item["assetId"], *scope_args),
                 ).fetchone()
-                if not state or state["editorial_state"] != "requesting-ai":
+                if not state or state["editorial_state"] != "requesting-ai" or (scope_args and (state["source_version_id"] != item["sourceVersionId"] or state["requested_at"] != item["requestedAt"])):
                     conn.execute(
                         """
                         UPDATE asset_ai_run_items
@@ -594,8 +616,9 @@ def run_requested_ai_pass(
                 else:
                     proposal_id = f"aip-{uuid.uuid4().hex[:16]}"
                     conn.execute(
-                        """
+                        f"""
                         INSERT INTO asset_ai_proposals (
+                          {"fixture_id," if scope_args else ""}
                           proposal_id, asset_id, run_id, attempt, status,
                           previous_title, previous_keywords_json,
                           previous_country, proposed_title, proposed_keywords_json,
@@ -605,9 +628,10 @@ def run_requested_ai_pass(
                           generator, generator_model, requested_generator_model,
                           resolved_model, reasoning_effort, vision, model_ladder,
                           created_at
-                        ) VALUES (?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES ({'?, ' if scope_args else ''}?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
+                            *scope_args,
                             proposal_id,
                             item["assetId"],
                             run_id,
@@ -635,14 +659,14 @@ def run_requested_ai_pass(
                         ),
                     )
                     conn.execute(
-                        """
-                        UPDATE asset_editorial_state
+                        f"""
+                        UPDATE {editorial_table}
                         SET editorial_state = 'proposed', proposed_at = ?,
                             ai_reasons_json = '[]', ai_note = '',
                             ai_last_error = '', updated_at = ?
-                        WHERE asset_id = ?
+                        WHERE {editorial_where}
                         """,
-                        (timestamp, timestamp, item["assetId"]),
+                        (timestamp, timestamp, item["assetId"], *scope_args),
                     )
                     conn.execute(
                         """
@@ -667,12 +691,12 @@ def run_requested_ai_pass(
                     (message, timestamp, run_id, item["assetId"]),
                 )
                 conn.execute(
-                    """
-                    UPDATE asset_editorial_state
+                    f"""
+                    UPDATE {editorial_table}
                     SET ai_last_error = ?, updated_at = ?
-                    WHERE asset_id = ? AND editorial_state = 'requesting-ai'
+                    WHERE {editorial_where} AND editorial_state = 'requesting-ai'
                     """,
-                    (message, timestamp, item["assetId"]),
+                    (message, timestamp, item["assetId"], *scope_args),
                 )
                 _update_run_counts(conn, run_id)
                 conn.commit()
@@ -728,6 +752,7 @@ def main() -> int:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--trigger", choices=("scheduled", "manual"), default="manual")
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--fixture-id")
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--prepared-assets-stdin", action="store_true")
     args = parser.parse_args()
@@ -761,6 +786,7 @@ def main() -> int:
     result = run_requested_ai_pass(
         args.repo_root,
         trigger=args.trigger,
+        fixture_id=args.fixture_id,
         prepared_asset_ids=prepared,
         limit=args.limit,
         progress=emit,

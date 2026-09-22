@@ -1669,10 +1669,12 @@ public actor FixtureWorkflowService {
     }
 
     public func aiProposals(
+        fixtureID: String = "",
         assetIDs: [String] = [],
         includeLoaded: Bool = true
     ) async throws -> [FixtureAIProposal] {
         let result = try await run("fixture-ai-proposals-ready", extra: [
+            "fixtureId": .string(fixtureID),
             "assetIds": .array(assetIDs.map(JSONValue.string)),
             "includeLoaded": .bool(includeLoaded),
         ])

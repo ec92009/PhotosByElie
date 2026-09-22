@@ -470,13 +470,14 @@ public actor FixtureDeliveryService {
     }
 
     public func startNativeUpload(
+        fixtureID: String = "",
         assetIDs: [String] = [],
         limit: Int = 50,
         concurrency: Int = 4
     ) async throws -> NativeUploadRun {
         let action = try await fixtureAction(
             mode: "asset-upload-run-start",
-            fixtureID: "",
+            fixtureID: fixtureID,
             extra: [
                 "prepareOnly": .bool(true),
                 "assetIds": .array(clean(assetIDs).map(JSONValue.string)),

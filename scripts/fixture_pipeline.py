@@ -2194,6 +2194,9 @@ def fixture_review_window(
     safe_offset = max(0, int(offset or 0))
     safe_limit = max(1, min(500, int(limit or 200)))
     with connect(repo_root) as conn:
+        from fixture_editions import enabled as editions_enabled, seed_memberships
+        scoped = editions_enabled(conn)
+        if scoped: seed_memberships(conn,fixture_id)
         fixture = conn.execute(
             """
             SELECT fixture_id, parent_fixture_id
@@ -2269,6 +2272,16 @@ def fixture_review_window(
                 LIMIT 1
               )
         """
+        if scoped:
+            joins = """
+              LEFT JOIN sidecar_decisions AS decision ON decision.asset_id=a.asset_id
+              JOIN fixture_asset_editions AS editorial ON editorial.asset_id=a.asset_id AND editorial.fixture_id=current_decision.fixture_id
+              LEFT JOIN fixture_edition_delivery AS delivery ON delivery.asset_id=a.asset_id
+                AND delivery.fixture_id=editorial.fixture_id AND delivery.revision_hash=editorial.approved_revision_hash
+              LEFT JOIN asset_source_versions AS latest_source_version ON latest_source_version.version_id=editorial.source_version_id
+            """
+            proposal_join=proposal_join.replace("WHERE latest_proposal.asset_id = a.asset_id", "WHERE latest_proposal.asset_id=a.asset_id AND latest_proposal.fixture_id=editorial.fixture_id")
+            predicates=[p.replace('decision.title','editorial.title').replace('decision.keywords_json','editorial.keywords_json') for p in predicates]
         params = [*base_params, *search_params]
         where_sql = " AND ".join(predicates)
         summary = conn.execute(
@@ -2292,9 +2305,10 @@ def fixture_review_window(
                    a.location_label,
                    latest_source_version.version_id source_version_id,
                    current_decision.placement_state,
-                   COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
+                   {"editorial.title" if scoped else "COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '')"} title,
                    COALESCE(decision.caption, '') caption,
                    CASE
+                     WHEN {"1" if scoped else "0"}=1 THEN {"editorial.keywords_json" if scoped else "decision.keywords_json"}
                      WHEN COALESCE(decision.metadata_state, 'unreviewed') <> 'unreviewed'
                        THEN COALESCE(decision.keywords_json, '[]')
                      ELSE COALESCE(NULLIF(a.photos_keywords_json, ''), '[]')
@@ -2318,7 +2332,7 @@ def fixture_review_window(
                    available_proposal.model_ladder proposal_model_ladder,
                    CASE WHEN delivery.delivery_state = 'live'
                           AND NOT {_review_current_upload_predicate()}
-                        THEN 'needs-upload' ELSE delivery.delivery_state END delivery_state
+                        THEN 'needs-upload' ELSE COALESCE(delivery.delivery_state,'not-ready') END delivery_state
             FROM {from_sql}
             {joins}
             {proposal_join}
@@ -2356,6 +2370,8 @@ def fixture_review_window(
                 str(row["asset_id"]),
                 capability=country_capability,
             ))
+            if scoped:
+                item['country']=conn.execute('SELECT country FROM fixture_asset_editions WHERE fixture_id=? AND asset_id=?',(fixture_id,row['asset_id'])).fetchone()[0]
             review_items.append(item)
     total = int(summary["total"] or 0)
     return {
@@ -2845,6 +2861,12 @@ def apply_fixture_review_action(
     operation_id = f"reviewop-{uuid.uuid4().hex[:20]}"
     local_transaction_timing: dict[str, Any] | None = None
     with connect(repo_root) as conn:
+        from fixture_editions import enabled as editions_enabled
+        if editions_enabled(conn):
+            from fixture_edition_review import apply
+            return apply(conn,fixture_id,clean_ids,clean_action,anchor=clean_anchor,propagate=propagate,
+                title=title,keywords=list(keywords) if keywords is not None else None,country=country,
+                proposal_id=proposal_id,reasons=list(ai_reasons or []),note=ai_note,visual_reasons=visual_reasons,actor=actor)
         local_transaction_started_at = now_iso()
         local_transaction_started_clock = time.perf_counter()
         fixture = conn.execute(
@@ -3310,6 +3332,10 @@ def undo_fixture_review_action(
         ).fetchone()
         if not operation:
             raise ValueError("review operation does not exist")
+        from fixture_editions import enabled as editions_enabled
+        if editions_enabled(conn):
+            from fixture_edition_review import undo
+            return undo(conn,operation,actor)
         before_snapshots = _read_json(operation["before_json"], [])
         after_snapshots = _read_json(operation["after_json"], [])
         if not isinstance(before_snapshots, list) or not isinstance(after_snapshots, list):
@@ -3450,23 +3476,27 @@ def undo_fixture_review_action(
 def ai_preview_targets(
     repo_root: Path,
     asset_ids: Iterable[str],
+    *, fixture_id: str | None = None,
 ) -> list[dict[str, str]]:
     """Return exact PhotoKit identifiers for requested items missing a bounded preview."""
     selected = _unique(asset_ids)
     if not selected:
         return []
+    from fixture_editions import editorial_scope
     with connect(repo_root) as conn:
+        table, scope_where, scope_args = editorial_scope(conn, fixture_id)
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, editorial.ai_preview_path
             FROM sidecar_assets AS a
-            JOIN asset_editorial_state AS editorial
+            JOIN {table} AS editorial
               ON editorial.asset_id = a.asset_id
             WHERE a.asset_id IN ({','.join('?' for _ in selected)})
               AND editorial.editorial_state = 'requesting-ai'
+              {"AND editorial.fixture_id=?" if scope_args else ""}
             ORDER BY a.asset_id
             """,
-            selected,
+            [*selected, *scope_args],
         ).fetchall()
     targets: list[dict[str, str]] = []
     for row in rows:
@@ -3487,6 +3517,7 @@ def record_ai_preview(
     repo_root: Path,
     asset_id: str,
     preview_path: Path,
+    *, fixture_id: str | None = None,
 ) -> dict[str, Any]:
     """Attach one bounded local JPEG to an existing explicit AI request."""
     resolved = preview_path.expanduser().resolve()
@@ -3494,20 +3525,22 @@ def record_ai_preview(
         raise ValueError("AI request preview does not exist")
     digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
     timestamp = now_iso()
+    from fixture_editions import editorial_scope
     with connect(repo_root) as conn:
+        table, scope_where, scope_args = editorial_scope(conn, fixture_id)
         row = conn.execute(
-            "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
-            (asset_id,),
+            f"SELECT editorial_state FROM {table} WHERE {scope_where}",
+            (asset_id, *scope_args),
         ).fetchone()
         if not row or row["editorial_state"] != "requesting-ai":
             raise ValueError("AI preview can only be attached to a requested item")
         conn.execute(
-            """
-            UPDATE asset_editorial_state
+            f"""
+            UPDATE {table}
             SET ai_preview_path = ?, ai_preview_sha256 = ?, updated_at = ?
-            WHERE asset_id = ?
+            WHERE {scope_where}
             """,
-            (str(resolved), digest, timestamp, asset_id),
+            (str(resolved), digest, timestamp, asset_id, *scope_args),
         )
         conn.commit()
     return {
@@ -3523,6 +3556,7 @@ def ready_ai_proposals(
     *,
     asset_ids: Iterable[str] = (),
     include_loaded: bool = False,
+    fixture_id: str | None = None,
 ) -> dict[str, Any]:
     """Read proposal drafts without changing canonical editorial metadata."""
     selected = _unique(asset_ids)
@@ -3532,17 +3566,24 @@ def ready_ai_proposals(
     if selected:
         where.append(f"proposal.asset_id IN ({','.join('?' for _ in selected)})")
         params.extend(selected)
+    from fixture_editions import editorial_scope
     with connect(repo_root) as conn:
+        table, scope_where, scope_args = editorial_scope(conn, fixture_id)
+        if scope_args:
+            where.append("proposal.fixture_id=?")
+            params.append(fixture_id)
         rows = conn.execute(
             f"""
             SELECT proposal.*, editorial.editorial_state,
                    COALESCE(decision.title, '') canonical_title,
                    COALESCE(decision.keywords_json, '[]') canonical_keywords_json
             FROM asset_ai_proposals AS proposal
-            JOIN asset_editorial_state AS editorial
+            JOIN {table} AS editorial
               ON editorial.asset_id = proposal.asset_id
-            LEFT JOIN sidecar_decisions AS decision
+              {"AND editorial.fixture_id=proposal.fixture_id" if scope_args else ""}
+            LEFT JOIN {"fixture_asset_editions" if scope_args else "sidecar_decisions"} AS decision
               ON decision.asset_id = proposal.asset_id
+              {"AND decision.fixture_id=proposal.fixture_id" if scope_args else ""}
             WHERE {' AND '.join(where)}
             ORDER BY proposal.created_at, proposal.asset_id
             """,
@@ -3786,11 +3827,14 @@ def ai_run_status(repo_root: Path) -> dict[str, Any]:
         latest = active or conn.execute(
             "SELECT * FROM asset_ai_runs ORDER BY created_at DESC LIMIT 1"
         ).fetchone()
+        from fixture_editions import enabled as editions_enabled
+        scoped = editions_enabled(conn)
+        table = 'fixture_asset_editions' if scoped else 'asset_editorial_state'
         requested = int(conn.execute(
-            "SELECT count(*) FROM asset_editorial_state WHERE editorial_state = 'requesting-ai'"
+            f"SELECT count(*) FROM {table} WHERE editorial_state = 'requesting-ai'"
         ).fetchone()[0])
         ready = int(conn.execute(
-            "SELECT count(*) FROM asset_ai_proposals WHERE status = 'ready'"
+            "SELECT count(*) FROM asset_ai_proposals WHERE status = 'ready'" + (" AND fixture_id <> ''" if scoped else "")
         ).fetchone()[0])
     finally:
         conn.close()
@@ -4901,8 +4945,15 @@ def configure_asset_destinations(repo_root: Path, fixture_id: str, asset_ids: It
     clean_ids = _unique(asset_ids)
     with connect(repo_root) as conn:
         fixture_breadcrumbs(conn, fixture_id)
+        from fixture_editions import enabled as editions_enabled, approved_edition, is_expo_fixture
+        scoped = editions_enabled(conn)
+        if scoped and 'apple_photos' in selected and not is_expo_fixture(conn,fixture_id):
+            raise ValueError('Give Back is available only in Expo.')
         for asset_id in clean_ids:
-            version_hash = editorial_version_hash(conn, asset_id)
+            edition = approved_edition(conn,fixture_id,asset_id) if scoped else None
+            if scoped and not edition:
+                raise ValueError('Approve this fixture edition before configuring its delivery.')
+            version_hash = edition['revision_hash'] if scoped else editorial_version_hash(conn, asset_id)
             conn.execute("""
               INSERT INTO fixture_asset_destinations (fixture_id, asset_id, destinations_json, version_hash, configured_at, updated_at)
               VALUES (?, ?, ?, ?, ?, ?)
@@ -5001,6 +5052,9 @@ def record_r2_upload_results(repo_root: Path, asset_id: str, upload_results: Ite
     results = [item for item in upload_results if isinstance(item, dict)]
     receipts: list[dict[str, Any]] = []
     with connect(repo_root) as conn:
+        from fixture_editions import enabled as editions_enabled
+        if editions_enabled(conn):
+            raise ValueError('R2 results require a fixture and pinned edition; use the scoped upload runner.')
         current_version = editorial_version_hash(conn, asset_id)
         rows = conn.execute(
             """
@@ -5055,6 +5109,8 @@ def record_r2_upload_results(repo_root: Path, asset_id: str, upload_results: Ite
 
 def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
     with connect(repo_root) as conn:
+        from fixture_editions import enabled as editions_enabled, is_expo_fixture
+        edition_scoped = editions_enabled(conn)
         breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
         fixture = conn.execute("SELECT destination_defaults_json FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
         defaults = _read_json(fixture["destination_defaults_json"], ["r2"])
@@ -5074,19 +5130,20 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
         cloud_allowed = policy_allows_cloud(policy)
         delivery_allowed = policy_allows_delivery(policy)
         download_allowed = policy_allows_download(policy)
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT p.asset_id,
                    COALESCE(scoped.placement_state, d.pick_state, 'undecided') pick_state,
-                   COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+                   COALESCE({"edition.editorial_state" if edition_scoped else "d.metadata_state"}, 'unreviewed') metadata_state,
                    COALESCE(d.pick_state, '') global_pick_state,
                    COALESCE(t.tombstone_state, '') tombstone_state,
                    COALESCE(lifecycle.lifecycle_state, '') lifecycle_state,
                    x.destinations_json,
-                   x.version_hash
+                   {"edition.approved_revision_hash" if edition_scoped else "x.version_hash"} version_hash
           FROM fixture_asset_placements p
           LEFT JOIN fixture_asset_decisions scoped
             ON scoped.fixture_id = p.fixture_id AND scoped.asset_id = p.asset_id
           LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
+          {"LEFT JOIN fixture_asset_editions edition ON edition.fixture_id=p.fixture_id AND edition.asset_id=p.asset_id" if edition_scoped else ""}
           LEFT JOIN sidecar_tombstones t
             ON t.asset_id = p.asset_id AND t.tombstone_state = 'active'
           LEFT JOIN media_lifecycle lifecycle
@@ -5104,9 +5161,9 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
             destinations = [
                 destination
                 for destination in destinations
-                if destination != "r2" or cloud_allowed
+                if (destination != "r2" or cloud_allowed) and (destination != "apple_photos" or not edition_scoped or is_expo_fixture(conn,fixture_id))
             ]
-            version_hash = row["version_hash"] or editorial_version_hash(conn, row["asset_id"])
+            version_hash = (row["version_hash"] or "") if edition_scoped else (row["version_hash"] or editorial_version_hash(conn, row["asset_id"]))
             receipts = conn.execute("SELECT destination, status, object_key, checksum_sha256, verified_at, error_text FROM fixture_delivery_receipts WHERE fixture_id = ? AND asset_id = ? AND version_hash = ? ORDER BY updated_at", (fixture_id, row["asset_id"], version_hash)).fetchall()
             receipt_map: dict[str, dict[str, Any]] = {}
             for destination in destinations:
@@ -5119,7 +5176,7 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
                     "items": destination_receipts,
                     "errorText": "; ".join(errors),
                 }
-            globally_blocked = row["global_pick_state"] == "hidden" or row["tombstone_state"] == "active" or row["lifecycle_state"] in {"hidden", "discarded"}
+            globally_blocked = (not edition_scoped and row["global_pick_state"] == "hidden") or row["tombstone_state"] == "active" or row["lifecycle_state"] in {"hidden", "discarded"}
             approved = row["pick_state"] == "picked" and row["metadata_state"] == "approved" and not globally_blocked
             complete = approved and all(receipt_map.get(destination, {}).get("status") == "verified" for destination in destinations)
             items.append({"assetId": row["asset_id"], "pickState": row["pick_state"], "metadataState": row["metadata_state"], "approved": approved, "destinations": destinations, "versionHash": version_hash, "receipts": receipt_map, "complete": complete})

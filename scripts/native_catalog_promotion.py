@@ -597,10 +597,16 @@ def catalog_candidate(
     upload_results: Iterable[dict[str, Any]],
     *,
     source_version_hash: str = "",
+    fixture_id: str | None = None,
     collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Validate owner policy and verified derivatives before touching SQLite."""
     row = _asset_row(conn, asset_id)
+    if fixture_id and row is not None:
+        from fixture_edition_uploads import validate_upload
+        edition = validate_upload(conn,fixture_id,asset_id,source_version_hash)
+        row = {**dict(row),"title":edition["title"],"keywords_json":edition["keywords_json"],
+               "approved_country_slug":edition["country"],"editorial_state":"approved"}
     if row is None:
         return {"eligible": False, "reason": "asset_not_indexed"}
     if str(row["editorial_state"] or "") != "approved":
@@ -625,7 +631,7 @@ def catalog_candidate(
     public_fixture_ids = [
         str(item["fixture_id"])
         for item in fixture_rows
-        if policy_allows_catalog(effective_fixture_policy(repo_root, str(item["fixture_id"]), conn=conn)["effective"])
+        if (not fixture_id or str(item["fixture_id"])==fixture_id) and policy_allows_catalog(effective_fixture_policy(repo_root, str(item["fixture_id"]), conn=conn)["effective"])
     ]
     if not public_fixture_ids:
         return {"eligible": False, "reason": "no_public_catalog_fixture"}
@@ -651,6 +657,7 @@ def catalog_candidate(
         "mediaId": str(objects["mediaId"]["value"]),
         "objects": objects,
         "fixtureIds": public_fixture_ids,
+        "fixtureEditionID": fixture_id,
         "collection": str(resolution.get("collection") or "unknown"),
         "collectionResolution": resolution,
     }
@@ -834,13 +841,14 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
         previous_media_ids = [
             str(item["media_id"])
             for item in owner.execute(
-                """
+                f"""
                 SELECT DISTINCT media_id
                 FROM public_catalog_publications
                 WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
+                {"AND source_version_hash IN (SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id=?)" if candidate.get("fixtureEditionID") else ""}
                 ORDER BY updated_at DESC, media_id
                 """,
-                (str(row["asset_id"]), media_id),
+                (str(row["asset_id"]),media_id,candidate["fixtureEditionID"]) if candidate.get("fixtureEditionID") else (str(row["asset_id"]), media_id),
             ).fetchall()
         ]
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1010,6 +1018,7 @@ def promote_verified_asset(
     source_version_hash: str,
     upload_results: Iterable[dict[str, Any]],
     *,
+    fixture_id: str | None = None,
     collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Write one verified asset to the local catalog and audit the handoff."""
@@ -1022,6 +1031,7 @@ def promote_verified_asset(
             results,
             source_version_hash=source_version_hash,
             collection_resolver=collection_resolver,
+            fixture_id=fixture_id,
         )
     if not candidate.get("eligible"):
         return {"state": "not-applicable", "reason": candidate.get("reason", "not-eligible"), "error": candidate.get("error", "")}
@@ -1038,17 +1048,18 @@ def promote_verified_asset(
             catalog_sha256=checksum,
             verified_at=now_iso(),
         )
-        with connect(repo_root) as conn:
-            conn.execute(
-                """
-                UPDATE asset_delivery_state
-                SET delivery_state = 'live', source_version_hash = ?,
-                    last_error = '', updated_at = ?
-                WHERE asset_id = ?
-                """,
-                (source_version_hash, now_iso(), asset_id),
-            )
-            conn.commit()
+        if not fixture_id:
+            with connect(repo_root) as conn:
+                conn.execute(
+                    """
+                    UPDATE asset_delivery_state
+                    SET delivery_state = 'live', source_version_hash = ?,
+                        last_error = '', updated_at = ?
+                    WHERE asset_id = ?
+                    """,
+                    (source_version_hash, now_iso(), asset_id),
+                )
+                conn.commit()
         return {
             "state": "local",
             "mediaId": media_id,

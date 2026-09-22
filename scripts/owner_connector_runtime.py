@@ -22,6 +22,9 @@ PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST = "scripts/pbe_owner_web_bundle_paths.txt"
 REQUIRED_RUNTIME_FILES = frozenset(
     {
         "scripts/fixture_pipeline.py",
+        "scripts/fixture_editions.py",
+        "scripts/fixture_edition_uploads.py",
+        "scripts/fixture_edition_review.py",
         "scripts/backstage_photos_client.py",
         "scripts/local_server.py",
         "scripts/new_owner_connector.py",

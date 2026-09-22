@@ -395,6 +395,7 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var reviewWasteBasketPendingAction: OwnerAction?
     @Published var reviewScrollTargetID: String?
     @Published var fixtureAIStatus: FixtureAIStatus?
+    private var reviewDraftsByFixture: [String: [String: ReviewMetadataDraft]] = [:]
     @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
     @Published var reviewProposalConflictIDs: Set<String> = []
     @Published var reviewVisualProposals: [String: VisualRepairProposal] = [:]
@@ -761,7 +762,7 @@ final class BackstageViewModel: ObservableObject {
             guard let job = try? externalEditJobStore?.visualRepairJob(proposalID: proposal.id),
                   job.returnedSourceVersionID == item.sourceVersionID,
                   job.sources.first?.sourceVersionID == proposal.sourceVersionID,
-                  let source = try? externalEditJobStore?.currentReturnedSource(assetID: item.id),
+                  let source = try? externalEditJobStore?.currentReturnedSource(assetID: item.id, fixtureID: selectedFixtureID),
                   source.sourceVersionID == item.sourceVersionID else { return nil }
             var rendered = proposal
             rendered.derivedReference = source.fileURL.absoluteString
@@ -1331,13 +1332,13 @@ final class BackstageViewModel: ObservableObject {
             preferences.set(preferredFixtureID, forKey: Self.selectedFixturePreferenceKey)
         }
         if previousFixtureID != selectedFixtureID {
-            resetFixtureScopedViewState()
+            resetFixtureScopedViewState(previousFixtureID: previousFixtureID)
         }
     }
 
     /// Clears only transient views when scope changes. Durable workflow state
     /// remains untouched until the user invokes an explicit audited action.
-    private func resetFixtureScopedViewState() {
+    private func resetFixtureScopedViewState(previousFixtureID: String) {
         metadataReport = nil
         metadataGiveBackPlannedAssetIDs = nil
         metadataStatus = selectedFixtureID.isEmpty
@@ -1362,6 +1363,9 @@ final class BackstageViewModel: ObservableObject {
             : "Loading \(selectedFixtureBreadcrumb) for Culling…"
 
         preserveCurrentReviewDraft()
+        reviewDraftsByFixture[previousFixtureID] = reviewProposalDrafts
+        reviewProposalDrafts = reviewDraftsByFixture[selectedFixtureID] ?? [:]
+        reviewProposalConflictIDs = []
         cancelReviewMetadataAutosave()
         reviewWorkflow.invalidateWindowRequests()
         fixtureReviewWindow = nil
@@ -1387,6 +1391,8 @@ final class BackstageViewModel: ObservableObject {
         nativeUploadPlan = nil
         nativeUploadRun = nil
         nativeUploadThumbnails = [:]
+        nativeUploadRenditionLabels = [:]
+        galleryWorkflow.basicThumbnails = [:]
         deliverables = []
         publicationPlan = nil
     }
@@ -2577,6 +2583,10 @@ final class BackstageViewModel: ObservableObject {
         await runMetadata(commit: true)
     }
 
+    var metadataGiveBackAllowed: Bool {
+        selectedFixtureID == "fixture-expo" || selectedFixtureBreadcrumb == "Expo"
+    }
+
     var metadataGiveBackAssetIDs: [String] {
         let assetID = metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
         return assetID.isEmpty ? [] : [assetID]
@@ -2590,7 +2600,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var metadataGiveBackCommitReady: Bool {
-        guard let report = metadataReport,
+        guard metadataGiveBackAllowed, let report = metadataReport,
               report.isDryRun,
               report.fixtureID == selectedFixtureID,
               report.readyCount > 0,
@@ -2600,6 +2610,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func retryMetadataFailures() async {
+        guard metadataGiveBackAllowed else { return }
         guard !isMetadataReviewOperationInProgress else { return }
         guard let metadataReport else { return }
         guard fixtureScopedActionsAllowed else {
@@ -5893,8 +5904,10 @@ final class BackstageViewModel: ObservableObject {
             : "Loading completed AI proposal drafts…"
         defer { isLoadingAIProposals = false }
         preserveCurrentReviewDraft()
+        let proposalFixtureID = selectedFixtureID
         do {
-            let proposals = try await fixtureService.aiProposals(includeLoaded: false)
+            let proposals = try await fixtureService.aiProposals(fixtureID: proposalFixtureID, includeLoaded: false)
+            guard selectedFixtureID == proposalFixtureID else { return }
             var loadedProposalIDs: [String] = []
             var conflicts: Set<String> = []
             for proposal in proposals {
@@ -5940,9 +5953,11 @@ final class BackstageViewModel: ObservableObject {
 
     func restoreLoadedAIProposalDrafts() async {
         preserveCurrentReviewDraft()
+        let proposalFixtureID = selectedFixtureID
         do {
-            let proposals = try await fixtureService.aiProposals(includeLoaded: true)
+            let proposals = try await fixtureService.aiProposals(fixtureID: proposalFixtureID, includeLoaded: true)
                 .filter { $0.status == "loaded" }
+            guard selectedFixtureID == proposalFixtureID else { return }
             var restored = 0
             for proposal in proposals where reviewProposalDrafts[proposal.assetID] == nil {
                 reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
@@ -6185,7 +6200,7 @@ final class BackstageViewModel: ObservableObject {
         }
         var job: ExternalEditJob?
         do {
-            let sources = try externalEditJobStore.resolveSources(assetIDs: assetIDs)
+            let sources = try externalEditJobStore.resolveSources(assetIDs: assetIDs, fixtureID: selectedFixtureID)
             let kind: ExternalEditKind = sources.count == 1 ? .edit : .create
             job = try externalEditJobStore.createJob(
                 fixtureID: selectedFixtureID,
@@ -7918,7 +7933,7 @@ final class BackstageViewModel: ObservableObject {
     func loadNativeUploadThumbnail(for item: NativeUploadPlanItem) async {
         guard nativeUploadThumbnails[item.id] == nil else { return }
         do {
-            nativeUploadRenditionLabels[item.id] = try externalEditJobStore?.currentReturnedSource(assetID: item.id)?.renditionLabel
+            nativeUploadRenditionLabels[item.id] = try externalEditJobStore?.currentReturnedSource(assetID: item.id, fixtureID: selectedFixtureID)?.renditionLabel
             let preview = try await previewForAsset(
                 forAssetID: item.id,
                 preferredIdentifier: item.photoLibraryIdentifier,
@@ -8617,6 +8632,7 @@ final class BackstageViewModel: ObservableObject {
                     batchOrdinal += 1
                     nativePublicationBatchNumber = batchOrdinal
                     var run = try await deliveryService.startNativeUpload(
+                        fixtureID: selectedFixtureID,
                         assetIDs: batch,
                         limit: batch.count,
                         concurrency: 4
@@ -8704,7 +8720,7 @@ final class BackstageViewModel: ObservableObject {
                     : " Failed items remain independently retryable; they did not stop the rest of the queue.")
                 + (lifecycleUploadWorkflow.publicationCancellationRequested
                     ? ""
-                    : " Give Back completed for approved metadata.")
+                    : metadataGiveBackAllowed ? " Expo Give Back completed for approved metadata." : "")
         } catch {
             if continueThroughEligibleQueue {
                 try? await refreshNativeUploadPlanAfterContinuousRun(order: queueOrder)
@@ -9271,6 +9287,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runMetadata(commit: Bool) async {
+        guard metadataGiveBackAllowed else {
+            metadataStatus = "Give Back to Apple Photos is available only in Expo."
+            return
+        }
         guard !isMetadataReviewOperationInProgress else { return }
         guard fixtureScopedActionsAllowed else {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
@@ -9337,8 +9357,9 @@ final class BackstageViewModel: ObservableObject {
         maxPixelSize: Int
     ) async throws -> PhotoPreview? {
         guard let externalEditJobStore else { return nil }
-        return try await Task.detached(priority: .userInitiated) {
-            guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID) else {
+        let fixtureID = selectedFixtureID
+        let preview: PhotoPreview? = try await Task.detached(priority: .userInitiated) {
+            guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID, fixtureID: fixtureID) else {
                 return nil
             }
             let data = try Data(contentsOf: source.fileURL, options: [.mappedIfSafe])
@@ -9349,6 +9370,8 @@ final class BackstageViewModel: ObservableObject {
                 currentImageByteCount: source.byteCount
             )
         }.value
+        guard fixtureID == selectedFixtureID else { throw CancellationError() }
+        return preview
     }
 
     func invalidateCurrentRenditionCaches(for assetID: String) {
@@ -9472,9 +9495,10 @@ final class BackstageViewModel: ObservableObject {
         to directory: URL,
         strictMaster: Bool = false
     ) async throws -> PhotoExportReceipt {
+        let fixtureID = selectedFixtureID
         if let externalEditJobStore,
            let receipt = try await Task.detached(priority: .userInitiated, operation: {
-               guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID) else {
+               guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID, fixtureID: fixtureID) else {
                    return nil as PhotoExportReceipt?
                }
                try FileManager.default.createDirectory(

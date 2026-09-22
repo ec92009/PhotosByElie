@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 import uuid
 
+from fixture_editions import enabled as editions_enabled
 from fixture_pipeline import connect, editorial_version_hash, now_iso, record_delivery_receipt
 from fixture_policy import (
     effective_fixture_policy,
@@ -158,6 +159,9 @@ def upload_eligibility_plan(
         else "ORDER BY delivery.updated_at, decision.asset_id"
     )
     with connect(repo_root) as conn:
+        if editions_enabled(conn):
+            from fixture_edition_uploads import upload_plan
+            return upload_plan(repo_root, conn, clean_fixture_id, offset=safe_offset, limit=safe_limit, order=clean_order)
         retired_media_types = retired_storefront_media_types(repo_root)
         retired_media_filter = ""
         retired_media_params: dict[str, str] = {}
@@ -701,6 +705,8 @@ def publish_verified_asset(
     asset_id: str,
     upload_results: Iterable[dict[str, Any]],
     *,
+    fixture_id: str | None = None,
+    revision_hash: str | None = None,
     collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Atomically make one verified object set live in every effective fixture."""
@@ -730,11 +736,15 @@ def publish_verified_asset(
                 "publicCatalog": {"state": "not-applicable", "reason": "retired_media_type"},
                 "reason": "retired_media_type",
             }
+        scoped = editions_enabled(conn)
+        if scoped:
+            from fixture_edition_uploads import validate_upload
+            edition = validate_upload(conn,fixture_id,asset_id,revision_hash)
         editorial = conn.execute(
             "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
             (asset_id,),
         ).fetchone()
-        if not editorial or editorial["editorial_state"] != "approved":
+        if not scoped and (not editorial or editorial["editorial_state"] != "approved"):
             raise ValueError("only globally approved assets can be published")
         if conn.execute(
             """
@@ -752,56 +762,60 @@ def publish_verified_asset(
             (asset_id,),
         ).fetchone():
             raise ValueError("Waste Basket assets cannot be published")
-        delivery = conn.execute(
-            "SELECT source_version_hash FROM asset_delivery_state WHERE asset_id = ?",
-            (asset_id,),
-        ).fetchone()
-        approved_version_id = str(delivery["source_version_hash"] or "") if delivery else ""
-        source = None
-        if approved_version_id:
-            source = conn.execute(
-                """
-                SELECT * FROM asset_source_versions
-                WHERE asset_id = ? AND version_id = ? AND source_exists = 1
-                  AND state IN ('approved', 'live')
-                LIMIT 1
-                """,
-                (asset_id, approved_version_id),
-            ).fetchone()
-            if source is None:
-                raise ValueError("the exact Review-approved source version is unavailable")
+        if scoped:
+            version_hash = revision_hash
+            fixture_ids = [fixture_id]
         else:
-            source = conn.execute(
-                """
-                SELECT * FROM asset_source_versions
-                WHERE asset_id = ? AND source_exists = 1 AND state IN ('approved', 'live')
-                ORDER BY created_at DESC, version_id DESC
-                LIMIT 1
-                """,
+            delivery = conn.execute(
+                "SELECT source_version_hash FROM asset_delivery_state WHERE asset_id = ?",
                 (asset_id,),
             ).fetchone()
-        if source:
-            version_hash = str(source["version_id"])
-        else:
-            sync = conn.execute(
-                "SELECT metadata_fingerprint, rendered_fingerprint FROM asset_sync_state WHERE asset_id = ?",
-                (asset_id,),
-            ).fetchone()
-            metadata_sha256 = (
-                str(sync["metadata_fingerprint"] or "")
-                if sync
-                else editorial_version_hash(conn, asset_id)
-            )
-            rendered_sha256 = str(sync["rendered_fingerprint"] or "") if sync else ""
-            version_hash = _upsert_source_version(
-                conn,
-                asset_id,
-                metadata_sha256,
-                rendered_sha256,
-                "approved",
-                timestamp,
-            )
-        fixture_ids = _effective_fixture_ids(conn, asset_id)
+            approved_version_id = str(delivery["source_version_hash"] or "") if delivery else ""
+            source = None
+            if approved_version_id:
+                source = conn.execute(
+                    """
+                    SELECT * FROM asset_source_versions
+                    WHERE asset_id = ? AND version_id = ? AND source_exists = 1
+                      AND state IN ('approved', 'live')
+                    LIMIT 1
+                    """,
+                    (asset_id, approved_version_id),
+                ).fetchone()
+                if source is None:
+                    raise ValueError("the exact Review-approved source version is unavailable")
+            else:
+                source = conn.execute(
+                    """
+                    SELECT * FROM asset_source_versions
+                    WHERE asset_id = ? AND source_exists = 1 AND state IN ('approved', 'live')
+                    ORDER BY created_at DESC, version_id DESC
+                    LIMIT 1
+                    """,
+                    (asset_id,),
+                ).fetchone()
+            if source:
+                version_hash = str(source["version_id"])
+            else:
+                sync = conn.execute(
+                    "SELECT metadata_fingerprint, rendered_fingerprint FROM asset_sync_state WHERE asset_id = ?",
+                    (asset_id,),
+                ).fetchone()
+                metadata_sha256 = (
+                    str(sync["metadata_fingerprint"] or "")
+                    if sync
+                    else editorial_version_hash(conn, asset_id)
+                )
+                rendered_sha256 = str(sync["rendered_fingerprint"] or "") if sync else ""
+                version_hash = _upsert_source_version(
+                    conn,
+                    asset_id,
+                    metadata_sha256,
+                    rendered_sha256,
+                    "approved",
+                    timestamp,
+                )
+            fixture_ids = _effective_fixture_ids(conn, asset_id)
         fixture_policies = {
             fixture_id: effective_fixture_policy(
                 repo_root,
@@ -818,6 +832,13 @@ def publish_verified_asset(
             ]
             for fixture_id, policy in fixture_policies.items()
         }
+        if scoped:
+            from fixture_edition_uploads import object_keys
+            asset = dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?',(asset_id,)).fetchone())
+            expected = {(k['bucket'],k['key']) for k in object_keys(asset,fixture_id,revision_hash,fixture_policies[fixture_id])}
+            received = {(r['bucket'],r['key']) for r in results}
+            if expected != received:
+                raise ValueError("Uploaded receipts do not match this fixture edition's exact destinations.")
         publishable_fixture_ids = [
             fixture_id
             for fixture_id in fixture_ids
@@ -861,12 +882,13 @@ def publish_verified_asset(
                 ),
             )
         conn.execute(
-            """
+            f"""
             UPDATE asset_publications
             SET state = 'superseded', withdrawn_at = ?, updated_at = ?
             WHERE asset_id = ? AND state = 'live'
+              {"AND fixture_id=?" if scoped else ""}
             """,
-            (timestamp, timestamp, asset_id),
+            (timestamp,timestamp,asset_id,fixture_id) if scoped else (timestamp,timestamp,asset_id),
         )
         for fixture_id in publishable_fixture_ids:
             conn.execute(
@@ -903,32 +925,36 @@ def publish_verified_asset(
                     },
                     conn=conn,
                 )
-        conn.execute(
-            """
-            UPDATE asset_source_versions
-            SET state = 'superseded', superseded_at = ?
-            WHERE asset_id = ? AND state = 'live' AND version_id != ?
-            """,
-            (timestamp, asset_id, version_hash),
-        )
-        conn.execute(
-            """
-            UPDATE asset_source_versions
-            SET state = 'live', source_exists = 1, live_at = ?,
-                superseded_at = NULL
-            WHERE version_id = ?
-            """,
-            (timestamp, version_hash),
-        )
-        conn.execute(
-            """
-            UPDATE asset_delivery_state
-            SET delivery_state = 'live', source_version_hash = ?,
-                last_error = '', updated_at = ?
-            WHERE asset_id = ?
-            """,
-            (version_hash, timestamp, asset_id),
-        )
+        if scoped:
+            conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='live',receipt_version_hash='',last_error='',updated_at=?
+                WHERE fixture_id=? AND asset_id=? AND revision_hash=?""",(timestamp,fixture_id,asset_id,revision_hash))
+        else:
+            conn.execute(
+                """
+                UPDATE asset_source_versions
+                SET state = 'superseded', superseded_at = ?
+                WHERE asset_id = ? AND state = 'live' AND version_id != ?
+                """,
+                (timestamp, asset_id, version_hash),
+            )
+            conn.execute(
+                """
+                UPDATE asset_source_versions
+                SET state = 'live', source_exists = 1, live_at = ?,
+                    superseded_at = NULL
+                WHERE version_id = ?
+                """,
+                (timestamp, version_hash),
+            )
+            conn.execute(
+                """
+                UPDATE asset_delivery_state
+                SET delivery_state = 'live', source_version_hash = ?,
+                    last_error = '', updated_at = ?
+                WHERE asset_id = ?
+                """,
+                (version_hash, timestamp, asset_id),
+            )
         catalog_plan = catalog_candidate(
             repo_root,
             conn,
@@ -936,6 +962,7 @@ def publish_verified_asset(
             results,
             source_version_hash=version_hash,
             collection_resolver=collection_resolver,
+            **({"fixture_id": fixture_id} if scoped else {}),
         )
         if catalog_plan.get("eligible"):
             record_catalog_pending(
@@ -958,6 +985,7 @@ def publish_verified_asset(
             version_hash,
             results,
             collection_resolver=collection_resolver,
+            **({"fixture_id": fixture_id} if scoped else {}),
         )
     return {
         "ok": True,
@@ -981,6 +1009,7 @@ def create_upload_run(
     repo_root: Path,
     asset_ids: Iterable[str] = (),
     *,
+    fixture_id: str | None = None,
     limit: int = PUBLICATION_BATCH_LIMIT,
     concurrency: int = DEFAULT_UPLOAD_CONCURRENCY,
 ) -> dict[str, Any]:
@@ -990,6 +1019,9 @@ def create_upload_run(
     timestamp = now_iso()
     run_id = f"uplrun-{uuid.uuid4().hex[:16]}"
     with connect(repo_root) as conn:
+        if editions_enabled(conn):
+            from fixture_edition_uploads import create_run
+            return create_run(repo_root,conn,fixture_id,requested,safe_limit,safe_concurrency)
         retired_media_types = retired_storefront_media_types(repo_root)
         params: list[Any] = []
         requested_filter = ""
@@ -1115,15 +1147,20 @@ def run_upload_batch(
             )
             conn.commit()
             return upload_run_status(repo_root, run_id)
+        scoped = editions_enabled(conn)
+        fixture_id = str(run["fixture_id"]) if scoped else ""
+        if scoped and not fixture_id:
+            raise ValueError("This legacy upload run has no fixture edition. Start a new upload from the chosen fixture.")
         rows = conn.execute(
             """
-            SELECT asset_id FROM asset_upload_run_items
+            SELECT asset_id,source_version_hash FROM asset_upload_run_items
             WHERE run_id = ? AND status IN ('queued', 'uploading')
             ORDER BY asset_id
             """,
             (run_id,),
         ).fetchall()
         asset_ids = [str(row["asset_id"]) for row in rows]
+        revisions = {str(row["asset_id"]): str(row["source_version_hash"]) for row in rows}
         concurrency = int(run["concurrency"] or 1)
         conn.execute(
             "UPDATE asset_upload_runs SET status = 'running', started_at = COALESCE(started_at, ?), updated_at = ? WHERE run_id = ?",
@@ -1133,7 +1170,7 @@ def run_upload_batch(
 
     def worker(asset_id: str) -> tuple[str, dict[str, Any] | None, str]:
         try:
-            result = publish_verified_asset(repo_root, asset_id, upload(asset_id))
+            result = publish_verified_asset(repo_root, asset_id, upload(asset_id), **({"fixture_id":fixture_id,"revision_hash":revisions[asset_id]} if scoped else {}))
             return asset_id, result, ""
         except Exception as error:  # noqa: BLE001 - failures are isolated per asset.
             return asset_id, None, str(error)
@@ -1192,7 +1229,7 @@ def run_upload_batch(
                         """,
                         (
                             status,
-                            str(result.get("sourceVersionHash") or "") if result else "",
+                            str(result.get("sourceVersionHash") or "") if result else revisions[asset_id],
                             _json(result.get("objectKeys") or []) if result else _json([]),
                             error_text,
                             timestamp,
@@ -1201,7 +1238,13 @@ def run_upload_batch(
                             asset_id,
                         ),
                     )
-                    if error_text and not preserve_live_delivery_on_failure:
+                    if scoped:
+                        if error_text:
+                            conn.execute("""UPDATE fixture_edition_delivery SET last_error=?,updated_at=?,
+                                delivery_state=CASE WHEN delivery_state='live' THEN 'live' ELSE 'failed' END
+                                WHERE fixture_id=? AND asset_id=? AND revision_hash=?""",
+                                (error_text,timestamp,fixture_id,asset_id,revisions[asset_id]))
+                    elif error_text and not preserve_live_delivery_on_failure:
                         conn.execute(
                             """
                             UPDATE asset_delivery_state

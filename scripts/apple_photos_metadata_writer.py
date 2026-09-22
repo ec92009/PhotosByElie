@@ -282,6 +282,11 @@ def writeback_plan(
     *,
     adapter: PhotosMetadataAccess | None = None,
 ) -> dict[str, Any]:
+    from fixture_editions import enabled as editions_enabled, approved_edition, is_expo_fixture
+    with connect(repo_root) as scope_conn:
+        scoped = editions_enabled(scope_conn)
+        if scoped and not is_expo_fixture(scope_conn,fixture_id):
+            raise ValueError("Give Back to Apple Photos is available only in Expo.")
     requested_ids = [str(item).strip() for item in asset_ids if str(item).strip()]
     params: list[Any] = []
     where = [
@@ -318,23 +323,28 @@ def writeback_plan(
                      WHERE tombstone.asset_id = a.asset_id
                        AND tombstone.tombstone_state = 'active'
                    ) THEN 1 ELSE 0 END tombstoned,
-                   COALESCE(d.title, '') title, COALESCE(d.caption, '') caption,
-                   COALESCE(d.keywords_json, '[]') keywords_json,
+                   COALESCE({"editorial.title" if scoped else "d.title"}, '') title, COALESCE(d.caption, '') caption,
+                   COALESCE({"editorial.keywords_json" if scoped else "d.keywords_json"}, '[]') keywords_json,
                    COALESCE(d.rating, 0) rating, COALESCE(d.color, '') color,
                    COALESCE(a.raw_json, '{{}}') raw_json
             FROM sidecar_assets AS a
-            LEFT JOIN asset_editorial_state AS editorial
+            LEFT JOIN {"fixture_asset_editions" if scoped else "asset_editorial_state"} AS editorial
               ON editorial.asset_id = a.asset_id
+              {"AND editorial.fixture_id=?" if scoped else ""}
             LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
             WHERE {' AND '.join(where)}
             ORDER BY a.asset_id
             """,
-            params,
+            [fixture_id,*params] if scoped else params,
         ).fetchall()
         grouped: dict[str, dict[str, Any]] = {}
         blocked: list[dict[str, Any]] = []
         for row in rows:
-            current_version = editorial_version_hash(conn, row["asset_id"])
+            edition = approved_edition(conn,fixture_id,row["asset_id"]) if scoped else None
+            if scoped and not edition and not row["tombstoned"]:
+                blocked.append({"assetId":row["asset_id"],"reason":"The Expo edition needs approval."})
+                continue
+            current_version = edition["revision_hash"] if edition else editorial_version_hash(conn, row["asset_id"])
             fixture_rows = conn.execute(
                 """
                 SELECT decision.fixture_id, fixture.name
@@ -365,8 +375,8 @@ def writeback_plan(
                 "caption": row["caption"] if approved else "",
                 "keywords": json.loads(row["keywords_json"] or "[]") if approved else [],
                 "rating": int(row["rating"] or 0), "color": row["color"] or "",
-                "fixtureIds": [str(value["fixture_id"]) for value in fixture_rows],
-                "fixtureNames": [str(value["name"]) for value in fixture_rows],
+                "fixtureIds": [fixture_id] if scoped else [str(value["fixture_id"]) for value in fixture_rows],
+                "fixtureNames": ["Expo"] if scoped else [str(value["name"]) for value in fixture_rows],
             })
         for item in grouped.values():
             managed: list[str] = []

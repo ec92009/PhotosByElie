@@ -2358,14 +2358,14 @@ private struct MetadataGiveBackView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Section("Verified Apple Photos give-back") {
+            Section("Apple Photos Give Back · Expo") {
                 LabeledContent(
                     "Current fixture",
                     value: model.selectedFixtureBreadcrumb.isEmpty
                         ? "Unavailable"
                         : model.selectedFixtureBreadcrumb
                 )
-                Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
+                Text("Give Back is exclusive to Expo. It writes Expo’s approved title and keywords, plus rating and color, to Apple Photos. Other fixtures keep their own metadata and image choices. Preview shows the changes before you commit.")
                     .foregroundStyle(.secondary)
                 LabeledContent("Write scope", value: model.metadataGiveBackScopeDescription)
                 Text("Enter an exact Asset ID in the Title, caption, and keywords section to limit both Preview and Commit to that one item. Leave it blank only when the entire current fixture is intended.")
@@ -2375,7 +2375,7 @@ private struct MetadataGiveBackView: View {
                     Button("Preview changes") {
                         Task { await model.planMetadataGiveBack() }
                     }
-                    .disabled(model.isMetadataReviewOperationInProgress)
+                    .disabled(model.isMetadataReviewOperationInProgress || !model.metadataGiveBackAllowed)
                     .backstageHelp("Build a read-only plan of eligible Apple Photos metadata changes without writing anything.")
                     Button("Commit & verify") {
                         showingCommitConfirmation = true
@@ -2391,6 +2391,7 @@ private struct MetadataGiveBackView: View {
                     .disabled(
                         model.isMetadataReviewOperationInProgress
                             || (model.metadataReport?.failed.isEmpty ?? true)
+                            || !model.metadataGiveBackAllowed
                     )
                     .backstageHelp("Retry only the independently failed assets from the most recent metadata give-back receipt.")
                     if model.isRunningMetadata {

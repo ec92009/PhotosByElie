@@ -110,7 +110,8 @@ public struct OwnerCullingSQLiteStore: Sendable {
             fixtureID: cleanFixtureID,
             parentFixtureID: fixture["parent_fixture_id"]?.stringValue,
             needsUnavailableIdentityFallback: needsUnavailableIdentityFallback,
-            hasCurrentEquipment: hasCurrentEquipment
+            hasCurrentEquipment: hasCurrentEquipment,
+            hasFixtureEditions: try connection.queryOne("SELECT 1 FROM sqlite_master WHERE name='fixture_asset_editions'") != nil
         ).read(using: connection)
 
         let searchTerms = cullingSearchTerms(search)
@@ -669,7 +670,8 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
     let photosTitle = row["photos_title"]?.stringValue ?? ""
     let decisionTitle = row["decision_title"]?.stringValue ?? ""
     let editorialState = row["editorial_state"]?.stringValue ?? "unreviewed"
-    let keywordsJSON = editorialState == "unreviewed"
+    let scoped = row["fixture_scoped"]?.intValue == 1
+    let keywordsJSON = !scoped && editorialState == "unreviewed"
         ? row["photos_keywords_json"]?.stringValue ?? "[]"
         : row["decision_keywords_json"]?.stringValue ?? "[]"
     let keywords = cullingStringArray(keywordsJSON)
@@ -679,7 +681,7 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
     return .object([
         "assetId": row["asset_id"] ?? .string(""),
         "photoLibraryIdentifier": .string(photoLibraryIdentifier),
-        "title": .string(photosTitle.isEmpty ? decisionTitle : photosTitle),
+        "title": .string(scoped ? decisionTitle : (photosTitle.isEmpty ? decisionTitle : photosTitle)),
         "filename": row["filename"] ?? .string(""),
         "mediaType": row["media_type"] ?? .string("photo"),
         "capturedAt": row["captured_at"] ?? .string(""),

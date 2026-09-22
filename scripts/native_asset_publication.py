@@ -248,11 +248,13 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
     catalog_recovery = str(run_id).startswith("catrec-")
     with connect_owner(repo_root) as conn:
         run = conn.execute(
-            "SELECT status FROM asset_upload_runs WHERE run_id = ?",
+            "SELECT * FROM asset_upload_runs WHERE run_id = ?",
             (run_id,),
         ).fetchone()
         if run is None:
             raise ValueError("upload run does not exist")
+        from fixture_editions import enabled as editions_enabled
+        scoped = editions_enabled(conn)
         run_status = str(run["status"] or "")
         if run_status not in {"queued", "running", "failed"}:
             return {"ok": True, "runId": run_id, "resetCount": 0}
@@ -268,7 +270,7 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
         if asset_ids:
             source_reset = (
                 "source_version_hash = source_version_hash"
-                if catalog_recovery
+                if catalog_recovery or scoped
                 else "source_version_hash = ''"
             )
             conn.execute(
@@ -282,7 +284,12 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
                 (timestamp, run_id),
             )
             placeholders = ",".join("?" for _ in asset_ids)
-            if not catalog_recovery:
+            if scoped:
+                conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='needs-upload',last_error='',updated_at=?
+                    WHERE fixture_id=? AND delivery_state IN ('failed','uploading') AND EXISTS (
+                      SELECT 1 FROM asset_upload_run_items i WHERE i.run_id=? AND i.asset_id=fixture_edition_delivery.asset_id
+                        AND i.source_version_hash=fixture_edition_delivery.revision_hash AND i.status='queued')""",(timestamp,run['fixture_id'],run_id))
+            elif not catalog_recovery:
                 conn.execute(
                     f"""
                     UPDATE asset_delivery_state
@@ -443,6 +450,10 @@ def _catalog_recovery_coverage(
     if not rows:
         return {}
     with connect_owner(repo_root) as conn:
+        from fixture_editions import enabled
+        if enabled(conn):
+            from fixture_edition_uploads import recovery_receipts
+            return {row['asset_id']: recovery_receipts(repo_root,conn,row['fixture_id'],row['asset_id'],row['source_version_hash']) for row in rows}
         expected: list[tuple[str, str, str, str, str, str]] = []
         expected_counts: dict[str, int] = {}
         sale_protection = _sale_protection_index(conn)
@@ -583,6 +594,10 @@ def _catalog_recovery_rows(
         ).fetchone()
         if fixture is None:
             raise ValueError("fixture does not exist or is archived")
+        from fixture_editions import enabled
+        if enabled(conn):
+            from fixture_edition_uploads import catalog_recovery_rows
+            return catalog_recovery_rows(repo_root,conn,clean_fixture_id)
         return conn.execute(
             """
             SELECT delivery.asset_id, delivery.source_version_hash,
@@ -736,6 +751,9 @@ def create_catalog_recovery_run(
             """,
             [(run_id, asset_id, version_hash, timestamp) for asset_id, version_hash in selected],
         )
+        from fixture_editions import enabled
+        if enabled(conn):
+            conn.execute('UPDATE asset_upload_runs SET fixture_id=? WHERE run_id=?',(fixture_id,run_id))
         conn.commit()
     return {
         "ok": True,
@@ -760,7 +778,19 @@ def execute_catalog_recovery_run(repo_root: Path, run_id: str) -> dict[str, Any]
         for item in status.get("items") or []
     }
 
+    with connect_owner(repo_root) as conn:
+        from fixture_editions import enabled
+        scoped = enabled(conn)
+        fixture_id = conn.execute('SELECT fixture_id FROM asset_upload_runs WHERE run_id=?',(run_id,)).fetchone()[0] if scoped else ''
+
     def existing_receipts(asset_id: str) -> list[dict[str, Any]]:
+        if scoped:
+            from fixture_edition_uploads import recovery_receipts
+            with connect_owner(repo_root) as conn:
+                covered = recovery_receipts(repo_root,conn,fixture_id,asset_id,source_versions.get(asset_id,''))
+            if not covered:
+                raise RuntimeError('Exact verified receipts for this fixture edition are unavailable. No media was uploaded.')
+            return covered
         covered = retry_sqlite_lock(
             lambda: verified_covered_r2_results(
                 repo_root,
@@ -815,6 +845,13 @@ def upload_results_from_bridge(executed: dict[str, Any]) -> list[dict[str, Any]]
 def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, Any]:
     # The launcher has already claimed this exact run as `running`. Reset only
     # retryable item state while preserving that durable single-flight claim.
+    from fixture_editions import enabled as editions_enabled
+    with connect_owner(repo_root) as conn:
+        scoped = editions_enabled(conn)
+    if scoped:
+        from fixture_edition_uploads import execute_run
+        retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
+        return execute_run(repo_root,run_id)
     retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
     status = retry_sqlite_lock(lambda: upload_run_status(repo_root, run_id))
     asset_ids = [

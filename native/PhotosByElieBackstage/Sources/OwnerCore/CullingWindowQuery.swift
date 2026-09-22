@@ -6,6 +6,7 @@ struct CullingWindowQuery {
     let parentFixtureID: String?
     let needsUnavailableIdentityFallback: Bool
     let hasCurrentEquipment: Bool
+    var hasFixtureEditions: Bool = false
 
     func read(using connection: CullingSQLiteConnection) throws -> [[String: JSONValue]] {
         let (fromSQL, bindings) = joins()
@@ -46,18 +47,22 @@ struct CullingWindowQuery {
              AND current_decision.fixture_id = ?
             LEFT JOIN sidecar_decisions AS global_decision
               ON global_decision.asset_id = asset.asset_id
-            LEFT JOIN asset_editorial_state AS editorial
+            LEFT JOIN \(hasFixtureEditions ? "fixture_asset_editions" : "asset_editorial_state") AS editorial
               ON editorial.asset_id = asset.asset_id
-            LEFT JOIN asset_delivery_state AS delivery
+              \(hasFixtureEditions ? "AND editorial.fixture_id=current_decision.fixture_id" : "")
+            LEFT JOIN \(hasFixtureEditions ? "fixture_edition_delivery" : "asset_delivery_state") AS delivery
               ON delivery.asset_id = asset.asset_id
+              \(hasFixtureEditions ? "AND delivery.fixture_id=editorial.fixture_id AND delivery.revision_hash=editorial.approved_revision_hash" : "")
             LEFT JOIN asset_source_versions AS latest_source
-              ON latest_source.version_id = (
+              ON latest_source.version_id = \(hasFixtureEditions ? "editorial.source_version_id" : """
+              (
                 SELECT source_version.version_id
                 FROM asset_source_versions AS source_version
                 WHERE source_version.asset_id = asset.asset_id
                 ORDER BY source_version.created_at DESC, source_version.version_id DESC
                 LIMIT 1
               )
+              """)
             """
         if hasCurrentEquipment {
             fromSQL += """
@@ -122,7 +127,7 @@ struct CullingWindowQuery {
             ? "NULLIF(current_equipment.focal_length, '')"
             : "NULL"
         return """
-            SELECT asset.asset_id,
+            SELECT asset.asset_id, \(hasFixtureEditions ? "CASE WHEN editorial.asset_id IS NULL THEN 0 ELSE 1 END" : "0") AS fixture_scoped,
                    COALESCE(asset.source_anchor, '') AS source_anchor,
                    COALESCE(asset.raw_json, '{}') AS raw_json,
                    COALESCE(asset.filename, '') AS filename,
@@ -160,17 +165,18 @@ struct CullingWindowQuery {
                      json_extract(asset.raw_json, '$.camera.focalLength'),
                      ''
                    ) AS search_focal_length,
-                   COALESCE(global_decision.title, '') AS decision_title,
-                   COALESCE(global_decision.keywords_json, '[]') AS decision_keywords_json,
+                   COALESCE(\(hasFixtureEditions ? "editorial.title" : "global_decision.title"), '') AS decision_title,
+                   COALESCE(\(hasFixtureEditions ? "editorial.keywords_json" : "global_decision.keywords_json"), '[]') AS decision_keywords_json,
                    COALESCE(current_decision.placement_state, 'undecided') AS placement_state,
                    COALESCE(current_decision.eligibility_state, 'active') AS eligibility_state,
                    COALESCE(global_decision.rating, 0) AS rating,
                    COALESCE(global_decision.color, '') AS color,
-                   COALESCE(editorial.editorial_state, global_decision.metadata_state, 'unreviewed') AS editorial_state,
+                   COALESCE(editorial.editorial_state, \(hasFixtureEditions ? "NULL" : "global_decision.metadata_state"), 'unreviewed') AS editorial_state,
                    CASE WHEN EXISTS (
                      SELECT 1
                      FROM asset_ai_proposals AS proposal
                      WHERE proposal.asset_id = asset.asset_id
+                       \(hasFixtureEditions ? "AND proposal.fixture_id=current_decision.fixture_id" : "")
                        AND proposal.status IN ('ready', 'loaded')
                    ) THEN 1 ELSE 0 END AS proposal_available,
                    \(deliveryProjectionSQL),

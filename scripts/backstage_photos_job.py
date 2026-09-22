@@ -132,17 +132,24 @@ def plan(root: Path, action: dict) -> dict:
                 str(manifest.get("assetId") or ""), str(manifest.get("sourceVersionId") or ""))
         result.update(operations=["photos.preview"], assetIDs=[photo_id], maxPixel=1800)
     elif kind == "sidecar-culling-review" and mode == "fixture-ai-pass-start":
-        rows = _rows(root, """SELECT a.asset_id,a.raw_json FROM sidecar_assets a
-            JOIN asset_editorial_state e ON e.asset_id=a.asset_id
+        from fixture_pipeline import connect_read_only
+        from fixture_editions import enabled as editions_enabled
+        with connect_read_only(root) as connection:
+            scoped = editions_enabled(connection)
+        table = "fixture_asset_editions" if scoped else "asset_editorial_state"
+        rows = _rows(root, f"""SELECT a.asset_id,a.raw_json FROM sidecar_assets a
+            JOIN {table} e ON e.asset_id=a.asset_id
             WHERE e.editorial_state='requesting-ai'
-            AND NOT EXISTS (SELECT 1 FROM external_edit_asset_locks l WHERE l.asset_id=a.asset_id)""")
+            {"AND e.fixture_id=?" if scoped else ""}
+            AND NOT EXISTS (SELECT 1 FROM external_edit_asset_locks l WHERE l.asset_id=a.asset_id)""",
+            (str(manifest.get("fixtureId") or ""),) if scoped else ())
         from fixture_pipeline import ai_preview_targets
         if "assetIds" in manifest:
             selected = manifest["assetIds"]
             if not isinstance(selected, list) or not selected or any(not isinstance(x, str) or not x for x in selected):
                 raise ValueError("Perform AI requires explicit selected asset IDs")
             rows = [row for row in rows if row["asset_id"] in set(selected)]
-        targets = ai_preview_targets(root, [row["asset_id"] for row in rows])
+        targets = ai_preview_targets(root, [row["asset_id"] for row in rows], fixture_id=manifest.get("fixtureId"))
         result.update(operations=["photos.preview"],
                       assetIDs=sorted({item["photoLibraryIdentifier"] for item in targets}), maxPixel=1600)
     elif kind == "sidecar-culling-review" and mode in {"asset-upload-run-start", "asset-upload-run-resume"}:
@@ -163,6 +170,27 @@ def plan(root: Path, action: dict) -> dict:
             return result
         if len(rows) > 50:
             raise ValueError("Upload Photos authority exceeds the 50-asset batch limit")
+        from fixture_pipeline import connect_read_only
+        from fixture_editions import enabled as editions_enabled
+        with connect_read_only(root) as connection:
+            scoped = editions_enabled(connection)
+        if scoped:
+            from fixture_editions import is_expo_fixture
+            with connect_read_only(root) as connection:
+                run = connection.execute("SELECT fixture_id FROM asset_upload_runs WHERE run_id=?", (run_id,)).fetchone()
+                fixture_id = str(run["fixture_id"]) if run else str(manifest.get("fixtureId") or "")
+                expo = is_expo_fixture(connection,fixture_id)
+            result.update(operations=["photos.export-original"], assetIDs=sorted(set(_photos_ids(rows)) | {str(row["asset_id"]) for row in rows}))
+            if expo:
+                from apple_photos_metadata_writer import writeback_plan
+                planned = writeback_plan(root,fixture_id,[row["asset_id"] for row in rows])
+                result["operations"].extend(["photos.metadata-read-many","photos.metadata-apply-many"])
+                for item in planned["items"]:
+                    if item["tombstoned"]: result["preserveMetadataIDs"].append(item["photosAssetId"])
+                    else:
+                        result["writes"].append(dict(assetId=item["photosAssetId"],title=item["title"],caption=item["caption"],
+                            keywords=item["keywords"],managedKeywords=item["managedKeywords"]))
+            return result
         from apple_photos_metadata_writer import writeback_plan
         planned = writeback_plan(root, "", [row["asset_id"] for row in rows])
         result.update(operations=["photos.export-original", "photos.metadata-read-many", "photos.metadata-apply-many"],

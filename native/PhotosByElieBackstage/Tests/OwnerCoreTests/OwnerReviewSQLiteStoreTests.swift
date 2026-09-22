@@ -5,6 +5,45 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Native and upload workers hash the same fixture edition including Unicode")
+    func fixtureRevisionParity() throws {
+        let row: [String: JSONValue] = ["fixture_id": .string("expo"),"source_version_id": .string("source"),
+            "title": .string("Álora / Escalera"),"country": .string("spain"),"keywords_json": .string("[\"café\",\"pasillo\"]")]
+        #expect(try FixtureEditionRevision.hash(row) == "b6aee3007af32ab06644320bf4e96fe41eb1dc4cf1cf8135a34506dfc7944bdf")
+    }
+
+    @Test("Fixture editions isolate approval, metadata, source versions and undo")
+    func fixtureEditionIsolation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("fixture-editions-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let db = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: db)
+        let schema = Bundle.module.url(forResource: "fixture_editions_schema", withExtension: "sql", subdirectory: "Fixtures")!
+        try execute(db, String(contentsOf: schema, encoding: .utf8))
+        try execute(db, """
+            ALTER TABLE asset_ai_proposals ADD COLUMN fixture_id TEXT NOT NULL DEFAULT 'fixture-expo';
+            CREATE TABLE asset_source_versions(version_id TEXT PRIMARY KEY,asset_id TEXT,source_exists INTEGER,created_at TEXT);
+            INSERT INTO asset_source_versions VALUES ('original','asset-1',1,'2026-01-01'),('original-2','asset-2',1,'2026-01-01');
+            INSERT INTO fixtures VALUES ('marketing',NULL,NULL);
+            INSERT INTO fixture_asset_decisions SELECT 'marketing',asset_id,placement_state,eligibility_state,source,last_action,created_at,updated_at FROM fixture_asset_decisions WHERE fixture_id='fixture-expo';
+            """)
+        let store = OwnerReviewSQLiteStore(databaseURL: db)
+        _ = try store.reviewWindow(fixtureID: "fixture-expo")
+        _ = try store.reviewWindow(fixtureID: "marketing")
+        _ = try store.applyReview(.approve, fixtureID: "fixture-expo", assetIDs: ["asset-1"], title: "Apartment title", keywords: ["apartment"])
+        #expect(try store.reviewWindow(fixtureID: "marketing", stateFilters: ["approved"]).items.isEmpty)
+        let marketing = try store.applyReview(.approve, fixtureID: "marketing", assetIDs: ["asset-1"], title: "Marketing title", keywords: ["marketing"])
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved"]).items.first?.title == "Apartment title")
+        #expect(try store.reviewWindow(fixtureID: "marketing", stateFilters: ["approved"]).items.first?.title == "Marketing title")
+        _ = try store.applyReview(.editMetadata, fixtureID: "fixture-expo", assetIDs: ["asset-1"], title: "Changed apartment")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved"]).items.isEmpty)
+        _ = try store.undoReview(operationID: marketing.operationID)
+        #expect(try scalar(db, "SELECT title FROM fixture_asset_editions WHERE fixture_id='fixture-expo' AND asset_id='asset-1'") == "Changed apartment")
+        #expect(try scalar(db, "SELECT editorial_state FROM fixture_asset_editions WHERE fixture_id='marketing' AND asset_id='asset-1'") == "unreviewed")
+        #expect(try scalar(db, "SELECT COUNT(*) FROM fixture_edition_versions") == "2")
+    }
+
     @Test("Proposal availability follows fixture, filters and the complete paginated queue")
     func scopedProposalAvailability() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("proposal-count-\(UUID())")

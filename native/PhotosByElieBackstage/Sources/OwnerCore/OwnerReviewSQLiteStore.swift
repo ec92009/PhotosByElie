@@ -63,6 +63,9 @@ public struct OwnerReviewSQLiteStore: Sendable {
             databaseURL: databaseURL,
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
+        connection.fixtureID = cleanFixtureID
+        try connection.seedFixtureEditions()
+        let scoped = try connection.hasFixtureEditions
         let visualRequestSelect = try ReviewMutationContext.visualRequestSelect(connection)
         let countryCapability = try countryWriteCapability(connection)
         let proposalColumns = try connection.tableColumns("asset_ai_proposals")
@@ -70,7 +73,9 @@ public struct OwnerReviewSQLiteStore: Sendable {
         let sourceVersionSelect = sourceVersionsAvailable
             ? "COALESCE(latest_source_version.version_id, '') AS source_version_id"
             : "'' AS source_version_id"
-        let sourceVersionJoin = sourceVersionsAvailable
+        let sourceVersionJoin = scoped
+            ? "LEFT JOIN asset_source_versions AS latest_source_version ON latest_source_version.version_id=editorial.source_version_id AND latest_source_version.asset_id=asset.asset_id"
+            : sourceVersionsAvailable
             ? """
               LEFT JOIN asset_source_versions AS latest_source_version
                 ON latest_source_version.version_id = (
@@ -86,7 +91,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         let uploadedPredicate = sourceVersionsAvailable
             ? "(delivery.delivery_state = 'live' AND COALESCE(delivery.source_version_hash, '') <> '' AND delivery.source_version_hash = COALESCE(latest_source_version.version_id, ''))"
             : "delivery.delivery_state = 'live'"
-        let currentDeliverySelect = "CASE WHEN delivery.delivery_state = 'live' AND NOT (\(uploadedPredicate)) THEN 'needs-upload' ELSE COALESCE(delivery.delivery_state, 'not-ready') END"
+        let currentDeliverySelect = scoped ? "CASE WHEN editorial.editorial_state != 'approved' THEN 'not-ready' ELSE COALESCE(delivery.delivery_state, 'needs-upload') END" : "CASE WHEN delivery.delivery_state = 'live' AND NOT (\(uploadedPredicate)) THEN 'needs-upload' ELSE COALESCE(delivery.delivery_state, 'not-ready') END"
         let proposalCountrySelect = proposalColumns.contains("proposed_country")
             ? "COALESCE(available_proposal.proposed_country, '') AS proposal_country, COALESCE(available_proposal.country_source, '') AS proposal_country_source"
             : "'' AS proposal_country, '' AS proposal_country_source"
@@ -166,7 +171,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
 
         let rows = try connection.query(
             """
-            SELECT asset.asset_id,
+            SELECT asset.asset_id, \(scoped ? "1" : "0") AS fixture_scoped,
                    COALESCE(asset.source_anchor, '') AS source_anchor,
                    COALESCE(asset.raw_json, '{}') AS raw_json,
                    COALESCE(asset.filename, '') AS filename,
@@ -180,9 +185,9 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(asset.location_keywords_json, '[]') AS location_keywords_json,
                    \(sourceVersionSelect),
                    current_decision.placement_state AS placement_state,
-                   COALESCE(decision.title, '') AS decision_title,
+                   COALESCE(\(scoped ? "editorial.title" : "decision.title"), '') AS decision_title,
                    COALESCE(decision.caption, '') AS decision_caption,
-                   COALESCE(decision.keywords_json, '[]') AS decision_keywords_json,
+                   COALESCE(\(scoped ? "editorial.keywords_json" : "decision.keywords_json"), '[]') AS decision_keywords_json,
                    COALESCE(decision.rating, 0) AS rating,
                    COALESCE(decision.color, '') AS color,
                    editorial.editorial_state AS editorial_state,
@@ -216,16 +221,19 @@ public struct OwnerReviewSQLiteStore: Sendable {
              AND current_decision.eligibility_state = 'active'
             LEFT JOIN sidecar_decisions AS decision
               ON decision.asset_id = asset.asset_id
-            JOIN asset_editorial_state AS editorial
+            JOIN \(scoped ? "fixture_asset_editions" : "asset_editorial_state") AS editorial
               ON editorial.asset_id = asset.asset_id
-            JOIN asset_delivery_state AS delivery
+              \(scoped ? "AND editorial.fixture_id=current_decision.fixture_id" : "")
+            LEFT JOIN \(scoped ? "fixture_edition_delivery" : "asset_delivery_state") AS delivery
               ON delivery.asset_id = asset.asset_id
+              \(scoped ? "AND delivery.fixture_id=editorial.fixture_id AND delivery.revision_hash=editorial.approved_revision_hash" : "")
             \(sourceVersionJoin)
             LEFT JOIN asset_ai_proposals AS available_proposal
               ON available_proposal.proposal_id = (
                 SELECT latest_proposal.proposal_id
                 FROM asset_ai_proposals AS latest_proposal
                 WHERE latest_proposal.asset_id = asset.asset_id
+                  \(scoped ? "AND latest_proposal.fixture_id = current_decision.fixture_id" : "")
                   AND (
                     latest_proposal.status IN ('ready', 'loaded')
                     OR (
@@ -253,7 +261,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         var items = searchedRows.map(reviewWindowItem)
         for index in items.indices {
             let context = try countryContext(connection, assetID: items[index].id)
-            items[index].country = context.country
+            items[index].country = try connection.fixtureEdition(items[index].id)?["country"]?.stringValue ?? context.country
             items[index].suggestedCountry = context.suggested
             items[index].countrySuggestionSource = context.source
         }
@@ -342,6 +350,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             databaseURL: databaseURL,
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
+        connection.fixtureID = fixtureID
+        try connection.seedFixtureEditions()
         let proposalColumns = try connection.tableColumns("asset_ai_proposals")
         let externalEditLocksAvailable = !(try connection.tableColumns("external_edit_asset_locks")).isEmpty
         let sourceVersionsAvailable = !(try connection.tableColumns("asset_source_versions")).isEmpty
@@ -419,11 +429,11 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         SELECT proposal_id, proposed_title, proposed_keywords_json,
                                \(proposedCountrySelect)
                         FROM asset_ai_proposals
-                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                        WHERE asset_id = ? \(proposalColumns.contains("fixture_id") ? "AND fixture_id = ?" : "") AND status IN ('ready', 'loaded')
                         ORDER BY attempt DESC, created_at DESC, proposal_id DESC
                         LIMIT 1
                         """,
-                        bindings: [.string(assetID)]
+                        bindings: [.string(assetID)] + (proposalColumns.contains("fixture_id") ? [.string(fixtureID)] : [])
                     ) {
                         activeProposals[assetID] = proposal
                     }
@@ -441,7 +451,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             let explicitCountry = country.map {
                 $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             }
-            let sourceDecision = try connection.queryOne(
+            let sourceDecision = try connection.fixtureEdition(cleanAnchor) ?? connection.queryOne(
                 "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
                 bindings: [.string(cleanAnchor)]
             ) ?? [:]
@@ -453,6 +463,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             let sourceTitle = explicitTitle ?? sourceMetadata.title
             let sourceKeywords = explicitKeywords.map(JSONValue.array) ?? sourceMetadata.keywords
             let sourceCountry = try explicitCountry
+                ?? connection.fixtureEdition(cleanAnchor)?["country"]?.stringValue
                 ?? countryContext(connection, assetID: cleanAnchor).country
             let cleanAIReasons = unique(aiReasons)
             let cleanAINote = aiNote.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -589,6 +600,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 throw OwnerReviewSQLiteError.invalid("review operation does not exist")
             }
             let fixtureID = operation["fixture_id"]?.stringValue ?? ""
+            connection.fixtureID = fixtureID
             let action = operation["action"]?.stringValue ?? FixtureReviewAction.hide.rawValue
             let beforeSnapshots = try decodeSnapshotArray(operation["before_json"])
             let afterSnapshots = try decodeSnapshotArray(operation["after_json"])
@@ -683,6 +695,7 @@ enum ReviewSQLiteBinding {
 }
 
 final class ReviewSQLiteConnection {
+    var fixtureID: String?
     private let database: OpaquePointer
 
     init(databaseURL: URL, busyTimeoutMilliseconds: Int32) throws {
@@ -792,6 +805,9 @@ final class ReviewSQLiteConnection {
     }
 
     private static let allowedTables: Set<String> = [
+        "fixture_asset_editions",
+        "fixture_edition_versions",
+        "fixture_edition_delivery",
         "sidecar_decisions",
         "asset_editorial_state",
         "asset_delivery_state",
@@ -1146,6 +1162,7 @@ private func snapshot(
     _ connection: ReviewSQLiteConnection,
     assetID: String
 ) throws -> JSONValue {
+    if let scoped = try connection.editionSnapshot(assetID) { return scoped }
     let decision = try connection.queryOne(
         "SELECT * FROM sidecar_decisions WHERE asset_id = ?",
         bindings: [.string(assetID)]
@@ -1198,6 +1215,9 @@ private func effectiveMetadata(
     assetID: String,
     decision: [String: JSONValue]
 ) throws -> (title: String, keywords: JSONValue) {
+    if let edition = try connection.fixtureEdition(assetID) {
+        return (edition["title"]?.stringValue ?? "", reviewJSONArray(edition["keywords_json"]))
+    }
     let asset = try connection.queryOne(
         "SELECT photos_title, photos_keywords_json FROM sidecar_assets WHERE asset_id = ?",
         bindings: [.string(assetID)]
@@ -1223,6 +1243,7 @@ private func propagatedAssetIDs(
     !capturedAt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return includeAnchor ? [anchorAssetID] : []
     }
+    let scoped = try connection.hasFixtureEditions
     let comparator = includeAnchor ? ">=" : ">"
     let rows = try connection.query(
         """
@@ -1233,8 +1254,9 @@ private func propagatedAssetIDs(
          AND current_decision.fixture_id = ?
          AND current_decision.placement_state = 'picked'
          AND current_decision.eligibility_state = 'active'
-        JOIN asset_editorial_state AS editorial
+        JOIN \(scoped ? "fixture_asset_editions" : "asset_editorial_state") AS editorial
           ON editorial.asset_id = asset.asset_id
+          \(scoped ? "AND editorial.fixture_id=current_decision.fixture_id" : "")
         WHERE (asset.missing_at IS NULL OR asset.missing_at = '')
           AND editorial.editorial_state != 'approved'
           AND NOT EXISTS (
@@ -1263,7 +1285,7 @@ private func reviewState(
         "SELECT * FROM sidecar_decisions WHERE asset_id = ?",
         bindings: [.string(assetID)]
     ) ?? [:]
-    let editorial = try connection.queryOne(
+    let editorial = try connection.fixtureEdition(assetID) ?? connection.queryOne(
         "SELECT * FROM asset_editorial_state WHERE asset_id = ?",
         bindings: [.string(assetID)]
     ) ?? [:]
@@ -1274,24 +1296,26 @@ private func reviewState(
         """,
         bindings: [.string(fixtureID), .string(assetID)]
     ) ?? [:]
-    let delivery = try connection.queryOne(
+    let scopedEdition = try connection.fixtureEdition(assetID)
+    let delivery = try scopedEdition != nil ? connection.queryOne("SELECT * FROM fixture_edition_delivery WHERE fixture_id=? AND asset_id=? AND revision_hash=?", bindings: [.string(fixtureID), .string(assetID), .string(scopedEdition?["approved_revision_hash"]?.stringValue ?? "")]) ?? [:] : connection.queryOne(
         "SELECT * FROM asset_delivery_state WHERE asset_id = ?",
         bindings: [.string(assetID)]
     ) ?? [:]
+    let scopedProposals = try connection.tableColumns("asset_ai_proposals").contains("fixture_id")
     let proposals = try connection.query(
         """
         SELECT * FROM asset_ai_proposals
-        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+        WHERE asset_id = ? \(scopedProposals ? "AND fixture_id = ?" : "") AND status IN ('ready', 'loaded')
         ORDER BY attempt DESC, created_at DESC, proposal_id DESC
         """,
-        bindings: [.string(assetID)]
+        bindings: [.string(assetID)] + (scopedProposals ? [.string(fixtureID)] : [])
     )
     let metadata = try effectiveMetadata(connection, assetID: assetID, decision: decision)
     let proposal = proposals.first
     let proposalStatus = proposal?["status"]?.stringValue ?? ""
     let proposalVision = proposal?["vision"]?.boolValue
         ?? ((proposal?["vision"]?.intValue ?? 0) == 1)
-    let country = try countryContext(connection, assetID: assetID).country
+    let country = try connection.fixtureEdition(assetID)?["country"]?.stringValue ?? countryContext(connection, assetID: assetID).country
     return .object([
         "title": .string(metadata.title),
         "caption": decision["caption"] ?? .string(""),
@@ -1340,7 +1364,8 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
     let photosTitle = row["photos_title"]?.stringValue ?? ""
     let decisionKeywords = reviewJSONArray(row["decision_keywords_json"])
     let photosKeywords = reviewJSONArray(row["photos_keywords_json"])
-    let keywordValue = decisionKeywords.arrayValue?.isEmpty == false
+    let scoped = row["fixture_scoped"]?.intValue == 1
+    let keywordValue = scoped || decisionKeywords.arrayValue?.isEmpty == false
         ? decisionKeywords
         : photosKeywords
     let keywords = keywordValue.arrayValue?.compactMap(\.stringValue) ?? []
@@ -1358,7 +1383,7 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         raw: raw,
         assetID: assetID
     )
-    let title = decisionTitle.isEmpty ? photosTitle : decisionTitle
+    let title = scoped ? decisionTitle : (decisionTitle.isEmpty ? photosTitle : decisionTitle)
     let caption = row["decision_caption"]?.stringValue ?? ""
     let filename = row["filename"]?.stringValue ?? ""
     let mediaType = row["media_type"]?.stringValue ?? "photo"
@@ -1555,6 +1580,7 @@ private func restoreSnapshot(
     _ connection: ReviewSQLiteConnection,
     snapshot: JSONValue
 ) throws {
+    if try connection.restoreEditionSnapshot(snapshot.objectValue ?? [:]) { return }
     let assetID = try snapshotAssetID(snapshot)
     let object = snapshot.objectValue ?? [:]
     guard let decision = object["decision"]?.objectValue,

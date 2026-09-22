@@ -75,10 +75,11 @@ def capture_requested_ai_previews(
     asset_ids: Iterable[str],
     *,
     preview_runner: PreviewRunner = _default_preview_runner,
+    fixture_id: str | None = None,
 ) -> dict[str, Any]:
     """Capture missing requested-AI previews through Backstage-owned one-preview IPC."""
     repo_root = repo_root.resolve()
-    targets = ai_preview_targets(repo_root, asset_ids)
+    targets = ai_preview_targets(repo_root, asset_ids, **({"fixture_id": fixture_id} if fixture_id else {}))
     if not targets:
         return {
             "requested": 0,
@@ -89,6 +90,9 @@ def capture_requested_ai_previews(
         }
 
     preview_root = _preview_root(repo_root)
+    if fixture_id:
+        preview_root = preview_root / hashlib.sha256(fixture_id.encode()).hexdigest()[:16]
+        preview_root.mkdir(parents=True, exist_ok=True)
     destination_by_asset_id: dict[str, Path] = {}
     for target in targets:
         asset_id = str(target["assetId"])
@@ -113,12 +117,16 @@ def capture_requested_ai_previews(
             }
         else:
             try:
-                payload = preview_runner(
-                    photo_id,
-                    destination,
-                    MAX_PREVIEW_PIXEL,
-                    min(MAX_SINGLE_PREVIEW_TIMEOUT_SECONDS, remaining),
-                )
+                rendered = False
+                if fixture_id:
+                    from fixture_pipeline import connect_read_only
+                    from fixture_editions import render_selected_preview, enabled
+                    with connect_read_only(repo_root) as conn:
+                        if enabled(conn):
+                            rendered = render_selected_preview(conn,fixture_id,asset_id,destination,MAX_PREVIEW_PIXEL)
+                payload = {"ok":True} if rendered else preview_runner(
+                    photo_id, destination, MAX_PREVIEW_PIXEL,
+                    min(MAX_SINGLE_PREVIEW_TIMEOUT_SECONDS, remaining))
             except Exception as error:
                 payload = {
                     "ok": False,
@@ -128,7 +136,7 @@ def capture_requested_ai_previews(
 
         if destination.is_file():
             try:
-                captured.append(record_ai_preview(repo_root, asset_id, destination))
+                captured.append(record_ai_preview(repo_root, asset_id, destination, **({"fixture_id": fixture_id} if fixture_id else {})))
             except Exception as error:
                 failures.append({
                     "assetId": asset_id,

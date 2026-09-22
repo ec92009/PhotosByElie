@@ -1144,7 +1144,7 @@ private struct ReviewInspector: View {
                         }
                         .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("a", modifiers: [])
-                        .backstageHelp("Approve the AI After when ready, otherwise the current original. Reject AI first to keep the original. Nothing is uploaded.")
+                        .backstageHelp("Approve the displayed metadata and AI After for this fixture, or the original after Reject AI. Other fixtures are unchanged. Nothing is uploaded.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }

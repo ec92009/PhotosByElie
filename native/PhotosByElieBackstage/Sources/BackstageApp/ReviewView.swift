@@ -330,6 +330,11 @@ struct ReviewView: View {
                     }
                     Spacer()
                 }
+                if let batch = model.reviewAIBatch, batch.work.fixtureID == model.selectedFixtureID {
+                    Text(batch.summary)
+                        .font(.callout).monospacedDigit()
+                        .accessibilityIdentifier("review-ai-batch-progress")
+                }
                 if !model.reviewAIExecutionStatus.isEmpty {
                     BackstageFeedbackView(message: model.reviewAIExecutionStatus,
                         isWorking: model.isPerformingReviewAI)
@@ -1142,7 +1147,7 @@ private struct ReviewInspector: View {
                         Button("Approve") {
                             model.beginReviewApproval()
                         }
-                        .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
+                        .disabled(!model.canApproveReviewSelection)
                         .keyboardShortcut("a", modifiers: [])
                         .backstageHelp("Approve the displayed metadata and AI After for this fixture, or the original after Reject AI. Other fixtures are unchanged. Nothing is uploaded.")
                         Button("Hide") {

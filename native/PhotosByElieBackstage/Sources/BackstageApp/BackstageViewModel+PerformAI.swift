@@ -67,10 +67,10 @@ extension BackstageViewModel {
         }
         for id in work.metadataIDs.union(work.visualIDs) { reviewAIProgress[id] = "Starting AI…" }
         cancelReviewMetadataAutosave()
+        reviewAIBatch = ReviewAIBatchState(work: work)
         isPerformingReviewAI = true
-        isRunningReview = true
         reviewAIRetry = nil
-        reviewAIExecutionStatus = "Starting AI for \(work.items.count) photo(s)…"
+        reviewAIExecutionStatus = "Starting AI for \(work.metadataIDs.union(work.visualIDs).count) photo(s)…"
         reviewAIExecutionStatus += "\n" + ReviewAIBatchProgress(metadataTotal: work.metadataIDs.count,
             visualTotal: work.visualIDs.count).summary
         reviewStatus = reviewAIExecutionStatus
@@ -86,7 +86,6 @@ extension BackstageViewModel {
         var visualLaunchFailures: Set<String> = []
         defer {
             isPerformingReviewAI = false
-            isRunningReview = false
             reviewAITask = nil
         }
         let categories = VisualRepairDefectCategory.allCases
@@ -100,6 +99,8 @@ extension BackstageViewModel {
             } catch {
                 reviewAIExecutionStatus = "AI could not start: \(userFacingMessage(for: error)). Retry failed AI."
                 reviewStatus = reviewAIExecutionStatus
+                reviewAIBatch?.metadataFailedIDs = work.metadataIDs
+                reviewAIBatch?.visualFailedIDs = work.visualIDs
                 reviewAIRetry = work
                 return
             }
@@ -137,6 +138,7 @@ extension BackstageViewModel {
                 while status.active && Date() < deadline {
                     progress.metadataProcessed = status.run?.processed ?? 0
                     progress.metadataFailed = status.run?.failed ?? 0
+                    if let runID { try await refreshReviewAIMetadataProgress(work: captured, runID: runID) }
                     await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns, failures: visualLaunchFailures, progress: &progress)
                     publishReviewAIProgress(progress, stage: "Performing AI…")
                     try await Task.sleep(for: .seconds(2))
@@ -146,8 +148,8 @@ extension BackstageViewModel {
                     }
                     fixtureAIStatus = status
                 }
-                let proposals = try await fixtureService.aiProposals(assetIDs: work.metadataIDs.sorted(), includeLoaded: true)
-                let completed = Set(proposals.filter { $0.runID == runID && ["ready", "loaded"].contains($0.status) }.map(\.assetID))
+                if let runID { try await refreshReviewAIMetadataProgress(work: captured, runID: runID) }
+                let completed = (reviewAIBatch?.metadataReadyIDs ?? []).union(reviewAIBatch?.approvedIDs ?? [])
                 for id in work.metadataIDs {
                     let message = completed.contains(id) ? "Metadata proposal ready" : "Metadata incomplete: \(status.run?.lastError.isEmpty == false ? status.run!.lastError : "retry failed AI")"
                     reviewAIProgress[id] = [message, reviewAIProgress[id]].compactMap { $0 }.joined(separator: " · ")
@@ -155,9 +157,12 @@ extension BackstageViewModel {
                 work.metadataIDs.subtract(completed)
                 progress.metadataReady = progress.metadataTotal - work.metadataIDs.count
                 progress.metadataFailed = work.metadataIDs.count
+                reviewAIBatch?.metadataFailedIDs = work.metadataIDs
             } catch {
-                progress.metadataReady = 0
+                work.metadataIDs.subtract(reviewAIBatch?.metadataReadyIDs ?? [])
+                progress.metadataReady = progress.metadataTotal - work.metadataIDs.count
                 progress.metadataFailed = work.metadataIDs.count
+                reviewAIBatch?.metadataFailedIDs = work.metadataIDs
                 for id in work.metadataIDs {
                     reviewAIProgress[id] = "Metadata failed: \(userFacingMessage(for: error)) · \(reviewAIProgress[id] ?? "")"
                 }
@@ -191,7 +196,9 @@ extension BackstageViewModel {
         let finished = failed.isEmpty
             ? "AI complete. Review the proposals\(visualRuns.isEmpty ? "" : " and Before / After comparisons") before approving."
             : "AI finished with \(failed.count) photo(s) needing attention. Successful results are retained; Retry failed AI continues only incomplete parts."
-        await loadFixtureReviewWindow(preferredAssetID: work.items.first?.id)
+        reviewAIBatch?.visualFailedIDs = work.visualIDs
+        // An approval owns its own refresh; do not race it or clear its busy flag.
+        if !isRunningReview && !isApprovingReview { await loadFixtureReviewWindow(preferredAssetID: focusedReviewItem?.id) }
         // A timed-out component is attention-required, never silently reported as ready.
         progress.visualFailed = work.visualIDs.count
         progress.visualReady = progress.visualTotal - progress.visualFailed
@@ -200,13 +207,35 @@ extension BackstageViewModel {
 
     func publishReviewAIProgress(_ progress: ReviewAIBatchProgress, stage: String) {
         reviewAIExecutionStatus = stage + "\n" + progress.summary
-        reviewStatus = reviewAIExecutionStatus
+        if !isRunningReview && !isApprovingReview { reviewStatus = reviewAIExecutionStatus }
     }
 
     private func updateReviewAIVisualCounts(_ progress: inout ReviewAIBatchProgress,
                                            proposals: [String: VisualRepairProposal], failures: Set<String>) {
         progress.visualReady = proposals.values.filter { $0.derivedAvailable }.count
         progress.visualFailed = failures.count + proposals.values.filter { !$0.derivedAvailable && !$0.isGenerating }.count
+        reviewAIBatch?.visualReadyIDs.formUnion(proposals.values.filter { $0.derivedAvailable && !$0.isGenerating }.map(\.assetID))
+        reviewAIBatch?.visualFailedIDs = failures.union(proposals.values.filter { !$0.derivedAvailable && !$0.isGenerating }.map(\.assetID))
+    }
+
+    private func refreshReviewAIMetadataProgress(work: ReviewAIWork, runID: String) async throws {
+        let proposals = try await fixtureService.aiProposals(fixtureID: work.fixtureID,
+            assetIDs: work.metadataIDs.sorted(), includeLoaded: true)
+        let completed = proposals.filter { $0.runID == runID && ["ready", "loaded"].contains($0.status) && work.metadataIDs.contains($0.assetID) }
+        reviewAIBatch?.metadataReadyIDs.formUnion(completed.map(\.assetID))
+        // Ready proposals are safe to read while workers continue on other items.
+        // Never overwrite a manual draft or reintroduce an already approved result.
+        guard !isRunningReview, !isApprovingReview else { return }
+        for proposal in completed where reviewAIBatch?.approvedIDs.contains(proposal.assetID) != true {
+            if let existing = reviewProposalDrafts[proposal.assetID], !existing.isProposal || existing.hasManualEdits { continue }
+            reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                country: proposal.proposedCountry.isEmpty ? (reviewItems.first { $0.id == proposal.assetID }?.country ?? "") : proposal.proposedCountry,
+                title: proposal.proposedTitle, keywords: proposal.proposedKeywords,
+                proposalID: proposal.id, proposalReason: proposal.reason, proposalStatus: proposal.status,
+                requestedGeneratorModel: proposal.requestedGeneratorModel, resolvedModel: proposal.resolvedModel,
+                reasoningEffort: proposal.reasoningEffort, vision: proposal.vision)
+        }
+        syncReviewDraft()
     }
 
     private func refreshReviewAIVisualProgress(fixtureID: String,
@@ -220,7 +249,9 @@ extension BackstageViewModel {
                       updated.fixtureID == fixtureID, updated.sourceVersionID == expected.sourceVersionID else { continue }
                 found.insert(updated.assetID)
                 proposals[updated.assetID] = updated
-                reviewVisualProposals[updated.assetID] = updated
+                if !isRunningReview && !isApprovingReview && reviewAIBatch?.approvedIDs.contains(updated.assetID) != true {
+                    reviewVisualProposals[updated.assetID] = updated
+                }
             }
             progress.visualRefreshUnavailable = !Set(proposals.keys).isSubset(of: found)
         } catch {

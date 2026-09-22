@@ -37,7 +37,7 @@ struct ExternalEditJobStoreTests {
         #expect(try fixture.scalar("SELECT title FROM fixture_asset_editions WHERE fixture_id='fixture-expo'") == "Expo")
     }
 
-    @Test("Normal Approve selects the After; Reject AI restores original approval; missing After never falls back", arguments: ["approve", "reject", "missing", "unrecorded"])
+    @Test("Normal Approve selects the After; Reject AI restores original approval; missing After never falls back", arguments: ["approve", "approve-running", "reject", "missing", "unrecorded"])
     @MainActor
     func reviewAIApprovalRoute(action: String) async throws {
         let fixture = try Fixture()
@@ -72,6 +72,12 @@ struct ExternalEditJobStoreTests {
             derivedReference: file.absoluteString, derivedAvailable: action != "missing",
             derivedSHA256: VisualRepairRendition.digest(data), generatorReference: "test")
         if action == "unrecorded" { model.reviewVisualProposals.removeValue(forKey: item.id) }
+        if action == "approve-running" {
+            model.reviewAIBatch = ReviewAIBatchState(work: ReviewAIWork(fixtureID: "fixture-expo", items: [item],
+                note: "", metadataIDs: [], visualIDs: [item.id, "still-processing"]), visualReadyIDs: [item.id])
+            model.isPerformingReviewAI = true
+            #expect(model.canApproveReviewSelection)
+        }
         #expect(model.hasPendingReviewAI)
         if action == "reject" {
             model.rejectReviewAI()
@@ -103,6 +109,12 @@ struct ExternalEditJobStoreTests {
             let output = try #require(CGImageSourceCreateWithURL(current.fileURL as CFURL, nil))
             let after = try #require(CGImageSourceCreateImageAtIndex(output, 0, nil))
             #expect(after.width == item.pixelWidth && after.height == item.pixelHeight)
+        }
+        if action == "approve-running" {
+            #expect(model.isPerformingReviewAI)
+            #expect(!model.isApprovingReview)
+            #expect(model.reviewAIBatch?.approvedIDs == [item.id])
+            #expect(model.reviewAIBatch?.remaining == 1)
         }
         #expect(!requests.contains { ($0["mode"]?.stringValue ?? "").contains("upload") })
     }

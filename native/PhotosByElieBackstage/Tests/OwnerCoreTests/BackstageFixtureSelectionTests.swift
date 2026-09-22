@@ -7,6 +7,55 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Batch report partitions ready, waiting, failed and approved photos")
+    func batchReportPartition() {
+        let work = ReviewAIWork(fixtureID: "re", items: [], note: "", metadataIDs: ["a", "b", "c"], visualIDs: ["a", "b", "c"])
+        var batch = ReviewAIBatchState(work: work, metadataReadyIDs: ["a", "b", "c"],
+            visualReadyIDs: ["a"], visualFailedIDs: ["c"])
+        #expect(batch.summary.contains("1 ready to review · 1 still processing · 1 need attention · 0 approved"))
+        batch.approvedIDs.insert("a")
+        #expect(batch.summary.contains("0 ready to review · 1 still processing · 1 need attention · 1 approved"))
+    }
+
+    @Test("A finished photo can be approved once while another photo's metadata is processing")
+    @MainActor
+    func approveFinishedPhotoDuringBatch() async throws {
+        let api = InstantAIActionAPI(reportsRunningProgress: true)
+        let runner = OwnerActionRunner(api: api, waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(), fixtureService: FixtureWorkflowService(runner: runner),
+            visualRepairService: VisualRepairProposalService(runner: runner), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil, equipmentBackfillStore: nil, customerPhotoLinks: nil)
+        model.installFixtureTree([FixtureNode(id: "child", name: "Expo")], preferredFixtureID: "child", persistSelection: false)
+        let items = ["a", "b"].map { FixtureReviewItem(id: $0, photoLibraryIdentifier: $0, sourceVersionID: "v-\($0)",
+            title: $0, keywords: [], filename: "\($0).jpg", capturedAt: "") }
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "child", mode: .full, offset: 0, limit: 200,
+            nextOffset: 0, hasNext: false, summary: FixtureReviewSummary(total: 2, unreviewed: 2, requestingAI: 0, proposed: 0, approved: 0), items: items)
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["a", "b"], anchorID: "a", focusedID: "a")
+        model.performReviewAI()
+        let task = model.reviewAITask
+        let deadline = Date().addingTimeInterval(5)
+        while model.reviewAIBatch?.metadataReadyIDs.contains("a") != true && Date() < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(model.isPerformingReviewAI)
+        #expect(!model.canApproveReviewSelection) // Mixed ready and unfinished selection.
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["a"], anchorID: "a", focusedID: "a")
+        #expect(model.canApproveReviewSelection)
+        #expect(model.isReviewMutationBlocked) // Hide, Reject, editing and new AI are still protected.
+        model.beginReviewApproval()
+        #expect(!model.canApproveReviewSelection)
+        model.beginReviewApproval()
+        while model.isRunningReview && Date() < deadline { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(model.isPerformingReviewAI)
+        #expect(model.reviewAIBatch?.approvedIDs == ["a"])
+        await task?.value
+        let requests = await api.requests
+        #expect(requests.filter { $0["reviewAction"]?.stringValue == "approve" }.count == 1)
+        #expect(requests.filter { $0["mode"]?.stringValue == "fixture-ai-proposals-ready" }.allSatisfy { $0["fixtureId"]?.stringValue == "child" })
+        #expect(model.reviewAIRetry?.metadataIDs == ["b"])
+        #expect(model.reviewProposalDrafts["a"] == nil) // Polling cannot restore an accepted draft.
+    }
+
     @Test("AI progress separates metadata processing from rendered After readiness and failures")
     func aiProgressCounts() {
         var progress = ReviewAIBatchProgress(metadataTotal: 63, visualTotal: 63,
@@ -52,6 +101,7 @@ struct BackstageFixtureSelectionTests {
         model.performReviewAI()
         #expect(model.reviewStatus.contains("0 of \(photoCount) processed"))
         #expect(model.isPerformingReviewAI && model.isReviewMutationBlocked && model.isFixtureChooserDisabled)
+        #expect(model.shutdownWorkState.hasActiveWork)
         model.performReviewAI() // A duplicate activation must not start another run.
         await model.reviewAITask?.value
         #expect(messages.contains { $0.contains("1 of \(photoCount) processed") })
@@ -108,7 +158,19 @@ struct BackstageFixtureSelectionTests {
             requestedGeneratorModel: "test", resolvedModel: "test", reasoningEffort: "", vision: true,
             attempt: 1, status: .draft, originalReference: "immutable-source-version://v1",
             derivedReference: after.absoluteString, derivedAvailable: true, generatorReference: "test")
-        model.reviewVisualProposals["a"] = valid
+        var approvable = valid
+        approvable.derivedSHA256 = "test-rendered-digest"
+        model.reviewVisualProposals["a"] = approvable
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "fixture-re", mode: .full, offset: 0, limit: 200,
+            nextOffset: 0, hasNext: false, summary: FixtureReviewSummary(total: 1, unreviewed: 1, requestingAI: 0, proposed: 1, approved: 0), items: [item])
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ["a"], selectedIDs: ["a"], anchorID: "a", focusedID: "a")
+        model.reviewAIBatch = ReviewAIBatchState(work: ReviewAIWork(fixtureID: "fixture-re", items: [item], note: "", metadataIDs: ["a"], visualIDs: ["a"]), metadataReadyIDs: ["a"], visualReadyIDs: ["a"])
+        model.reviewProposalDrafts["a"] = ReviewMetadataDraft(title: "Ready", keywords: [], proposalID: "metadata-a", proposalStatus: "ready")
+        model.isPerformingReviewAI = true
+        #expect(model.canApproveReviewSelection)
+        model.reviewAIBatch?.metadataReadyIDs = []
+        #expect(!model.canApproveReviewSelection)
+        model.reviewAIBatch?.metadataReadyIDs = ["a"]
         #expect(model.renderedVisualRepairProposal(for: item)?.id == "proposal")
         for proposalStatus in [VisualRepairProposalStatus.accepted, .rejected, .superseded] {
             var proposal = valid
@@ -127,6 +189,7 @@ struct BackstageFixtureSelectionTests {
             }
             model.reviewVisualProposals["a"] = proposal
             #expect(model.renderedVisualRepairProposal(for: item) == nil)
+            #expect(!model.canApproveReviewSelection)
         }
         model.reviewVisualProposals["a"] = valid
         try Data("not an image".utf8).write(to: after)
@@ -5410,7 +5473,7 @@ private actor InstantAIActionAPI: OwnerActionServing {
         case "fixture-ai-proposals-ready":
             result = ["aiProposals": .object(["items": .array([.object([
                 "proposalId": "p", "assetId": .string(starts == 1 ? "a" : "b"),
-                "runId": .string("run-\(starts)"), "status": "ready"
+                "runId": .string("run-\(starts)"), "status": "ready", "proposedTitle": "AI title", "proposedKeywords": .array(["room"])
             ])])])]
         case "fixture-visual-repair-generate":
             let id = manifest["assetId"]?.stringValue ?? ""

@@ -407,6 +407,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewAIExecutionStatus = ""
     @Published var isPerformingReviewAI = false
     @Published var reviewAIProgress: [String: String] = [:]
+    @Published var reviewAIBatch: ReviewAIBatchState?
+    @Published var isApprovingReview = false
     @Published var reviewAIRetry: ReviewAIWork?
     var reviewAITask: Task<Void, Never>?
     @Published var isRunningAIPass = false
@@ -601,7 +603,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isReviewMutationBlocked: Bool {
-        isPerformingReviewAI || isPhotosMaintenanceActive || isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
+        isApprovingReview || isPerformingReviewAI || isPhotosMaintenanceActive || isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
     }
 
     var canReceiveExternalEditReturn: Bool {
@@ -4974,8 +4976,10 @@ final class BackstageViewModel: ObservableObject {
         propagate: Bool = false,
         removalDirection: OwnerSelectionDirection = .next
     ) async {
-        guard !isReviewMutationBlocked else {
-            reviewStatus = "Finish the current Review action first."
+        guard action == .approve ? canApproveReviewSelection : !isReviewMutationBlocked else {
+            reviewStatus = action == .approve
+                ? "The selected results are not ready for approval. Wait for AI to finish, retry failed AI, or Reject AI to use the original."
+                : "Finish the current Review action first."
             return
         }
         if action == .approve, selectedReviewAssetIDs.contains(where: { id in
@@ -5057,11 +5061,15 @@ final class BackstageViewModel: ObservableObject {
         if [.approve, .hide, .requestAI].contains(action) {
             reviewLastAction = action
         }
+        if action == .approve { isApprovingReview = true }
         isRunningReview = true
         reviewStatus = propagate
             ? "Propagating \(reviewActionLabel(action).lowercased()) through the two-hour shoot window…"
             : "Applying \(reviewActionLabel(action).lowercased())…"
-        defer { isRunningReview = false }
+        defer {
+            isRunningReview = false
+            if action == .approve { isApprovingReview = false }
+        }
         do {
             let result = try await fixtureService.applyReview(
                 action,
@@ -5077,6 +5085,9 @@ final class BackstageViewModel: ObservableObject {
                 aiNote: action == .requestAI ? reviewAINote : "",
                 visualAIReasons: action == .requestAI ? visualRepairDefectCategories.map(\.rawValue).sorted() : []
             )
+            if action == .approve, reviewAIBatch?.work.fixtureID == selectedFixtureID {
+                reviewAIBatch?.approvedIDs.formUnion(Set(ids).intersection(reviewAIBatch?.ids ?? []))
+            }
             if action == .approve || action == .hide {
                 reviewAIReasons = []
                 reviewAINote = ""

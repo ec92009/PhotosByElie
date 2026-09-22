@@ -105,7 +105,7 @@ extension BackstageViewModel {
             isLoadingCullingDecisions: isLoadingCullingDecisions,
             isApplyingCullingDecision: isApplyingCullingDecision,
             isDeferringCullingWasteBasketUndo: !cullingWasteBasketDeferredUndoActionIDs.isEmpty,
-            isRunningReview: isRunningReview,
+            isRunningReview: isRunningReview || isPerformingReviewAI || isApprovingReview,
             isSavingReviewMetadata: hasPendingReviewMetadataAutosave,
             isRunningAIPass: isRunningAIPass,
             isAIPassDetachable: isRunningAIPass && fixtureAIStatus?.active == true,

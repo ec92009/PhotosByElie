@@ -129,14 +129,20 @@ enum PhotoLibraryIdentifier {
         else { return nil }
         if components.count == 4 {
             // Legacy index rows can qualify the cloud identity with the local
-            // library path. Resolve the exact cloud identity on this Mac; never
-            // open that path or infer a replacement from the photo's filename.
+            // library path. Preserve it for PhotoKit; never open that path or
+            // infer a replacement from the photo's filename.
             let library = String(components[3])
             guard library.hasPrefix("/"), library.hasSuffix(".photoslibrary"),
                   !library.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
                   !library.split(separator: "/").contains("..") else { return nil }
         }
-        return components.prefix(3).joined(separator: ":")
+        return value
+    }
+
+    static func cloudLookupValues(from identifier: String) -> [String] {
+        guard let value = cloudValue(from: identifier) else { return [] }
+        let canonical = value.split(separator: ":", maxSplits: 3).prefix(3).joined(separator: ":")
+        return value == canonical ? [value] : [value, canonical]
     }
 }
 
@@ -1987,19 +1993,25 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let asset: PHAsset
         if let localAsset = fetchAsset(localIdentifier: identifier) {
             asset = localAsset
-        } else if #available(macOS 12.0, *),
-                  let cloudValue = PhotoLibraryIdentifier.cloudValue(from: identifier) {
+        } else if #available(macOS 12.0, *) {
             // Fixture IDs are stable across Macs while PhotoKit local
             // identifiers are library-local. Resolve the canonical cloud ID
             // when the connector does not provide a local Photos ID.
-            let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
-            let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
-            guard let result = mappings[cloudIdentifier],
-                  case .success(let localIdentifier) = result,
-                  let mappedAsset = fetchAsset(localIdentifier: localIdentifier) else {
+            var resolved: PHAsset?
+            for cloudValue in PhotoLibraryIdentifier.cloudLookupValues(from: identifier) {
+                let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
+                let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
+                if let result = mappings[cloudIdentifier],
+                   case .success(let localIdentifier) = result,
+                   let mappedAsset = fetchAsset(localIdentifier: localIdentifier) {
+                    resolved = mappedAsset
+                    break
+                }
+            }
+            guard let resolved else {
                 throw PhotoLibraryError.assetNotFound(identifier)
             }
-            asset = mappedAsset
+            asset = resolved
         } else {
             throw PhotoLibraryError.assetNotFound(identifier)
         }

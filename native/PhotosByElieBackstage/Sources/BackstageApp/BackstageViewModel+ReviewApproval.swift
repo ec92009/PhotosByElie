@@ -29,6 +29,7 @@ extension BackstageViewModel {
         if isAIPassActive && !isPerformingReviewAI { return false }
         return selectedReviewAssetIDs.allSatisfy { id in
             guard let item = reviewItems.first(where: { $0.id == id }) else { return false }
+            if isLoadingVisualRepairProposals && reviewVisualProposals[id] == nil { return false }
             if isPerformingReviewAI {
                 guard let batch = reviewAIBatch, batch.work.fixtureID == selectedFixtureID else { return false }
                 if batch.ids.contains(id) {
@@ -85,6 +86,7 @@ extension BackstageViewModel {
             reviewStatus = "After approval is unavailable: the local rendition store is not configured."
             return
         }
+        cancelReviewEnrichment()
         preserveCurrentReviewDraft()
         let drafts = reviewProposalDrafts
         let proposals = Dictionary(uniqueKeysWithValues: items.compactMap { item in
@@ -104,6 +106,9 @@ extension BackstageViewModel {
                         try VisualRepairRendition.prepare(proposal: proposal, item: item, store: store)
                     }.value
                     invalidateCurrentRenditionCaches(for: item.id)
+                    // Rows stay mounted after approval, so onAppear will not reload
+                    // their cleared cache. Load the new fixture rendition explicitly.
+                    await loadReviewThumbnail(for: item)
                     reviewVisualProposals[item.id] = try await visualRepairService.decide(.accept,
                         fixtureID: fixtureID, proposalID: proposal.id,
                         idempotencyKey: "backstage-visual-use-after-\(proposal.id)")
@@ -122,7 +127,10 @@ extension BackstageViewModel {
             await loadFixtureReviewWindow(preferredAssetID: ids.first)
             reviewStatus = "Approved for Uploads. AI After images use the original dimensions; originals retained. Nothing uploaded."
         } catch {
-            for item in items { invalidateCurrentRenditionCaches(for: item.id) }
+            for item in items {
+                invalidateCurrentRenditionCaches(for: item.id)
+                await loadReviewThumbnail(for: item)
+            }
             await loadFixtureReviewWindow(preferredAssetID: ids.first)
             reviewStatus = "Approval needs attention: \(userFacingMessage(for: error)). Completed approvals are retained."
         }
@@ -140,6 +148,7 @@ extension BackstageViewModel {
         let proposals = reviewItems.filter { ids.contains($0.id) }.compactMap { pendingReviewAfter(for: $0) }
         guard !proposals.contains(where: \.isGenerating) else { return }
         let fixtureID = selectedFixtureID
+        cancelReviewEnrichment()
         cancelReviewMetadataAutosave()
         isRunningReview = true
         reviewStatus = "Rejecting AI results…"

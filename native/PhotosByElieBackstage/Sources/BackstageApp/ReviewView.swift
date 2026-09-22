@@ -413,7 +413,7 @@ struct ReviewView: View {
                                     }
                                     .disabled(model.isExternalEditOperationInProgress || model.externalEdit.activeJob != nil)
                                 }
-                                .onAppear {
+                                .task(id: item.sourceVersionID) {
                                     guard !isPreviewMode else { return }
                                     model.requestReviewThumbnail(for: item)
                                 }

@@ -168,6 +168,12 @@ struct BackstageFixtureSelectionTests {
         model.reviewProposalDrafts["a"] = ReviewMetadataDraft(title: "Ready", keywords: [], proposalID: "metadata-a", proposalStatus: "ready")
         model.isPerformingReviewAI = true
         #expect(model.canApproveReviewSelection)
+        model.isLoadingVisualRepairProposals = true
+        #expect(model.canApproveReviewSelection) // Cached, exact ready result need not wait for a whole-page refresh.
+        model.reviewVisualProposals.removeValue(forKey: "a")
+        #expect(!model.canApproveReviewSelection) // Unknown After readiness still fails closed.
+        model.reviewVisualProposals["a"] = approvable
+        model.isLoadingVisualRepairProposals = false
         model.reviewAIBatch?.metadataReadyIDs = []
         #expect(!model.canApproveReviewSelection)
         model.reviewAIBatch?.metadataReadyIDs = ["a"]
@@ -228,7 +234,7 @@ struct BackstageFixtureSelectionTests {
         #expect(!model.canMarkReviewSelectionNeedsAI)
     }
 
-    @Test("Review keeps the actual remaining step visible and ignores an older terminal refresh")
+    @Test("Review unlocks before ancillary AI reads finish and ignores an older terminal refresh")
     @MainActor
     func reviewRefreshProgressAndStaleReceipt() async throws {
         let terminal = (1...4).map { index in
@@ -260,14 +266,15 @@ struct BackstageFixtureSelectionTests {
         model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
         let old = Task { await model.loadFixtureReviewWindow() }
         for _ in 0..<1000 where await actionAPI.requests().count < 2 { try await Task.sleep(for: .milliseconds(1)) }
-        #expect(model.isRunningReview)
-        #expect(model.reviewStatus == "Review items and visual drafts loaded. Checking AI status…")
+        #expect(!model.isRunningReview)
+        #expect(model.reviewStatus.hasPrefix("1 "))
         await model.loadFixtureReviewWindow()
         let latestReceipt = model.reviewStatus
         #expect(!model.isRunningReview)
         #expect(latestReceipt.hasPrefix("3 "))
         await actionAPI.releaseTerminalAction("review-progress-2")
         await old.value
+        try await Task.sleep(for: .milliseconds(20))
         #expect(model.reviewStatus == latestReceipt)
         #expect(!model.isRunningReview)
     }

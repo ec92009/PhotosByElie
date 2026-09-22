@@ -109,7 +109,11 @@ struct ExternalEditJobStoreTests {
             let output = try #require(CGImageSourceCreateWithURL(current.fileURL as CFURL, nil))
             let after = try #require(CGImageSourceCreateImageAtIndex(output, 0, nil))
             #expect(after.width == item.pixelWidth && after.height == item.pixelHeight)
+            // Approval must refill the same mounted row's cache from the After,
+            // even though no SwiftUI onAppear occurs and Photos is unavailable.
+            #expect(model.reviewThumbnails[item.id]?.isValid == true)
         }
+        model.cancelReviewEnrichment()
         if action == "approve-running" {
             #expect(model.isPerformingReviewAI)
             #expect(!model.isApprovingReview)

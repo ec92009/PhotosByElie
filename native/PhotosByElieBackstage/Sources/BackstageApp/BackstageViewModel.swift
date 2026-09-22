@@ -1370,6 +1370,10 @@ final class BackstageViewModel: ObservableObject {
         reviewProposalConflictIDs = []
         cancelReviewMetadataAutosave()
         reviewWorkflow.invalidateWindowRequests()
+        reviewWorkflow.thumbnailTasks.values.forEach { $0.cancel() }
+        reviewWorkflow.thumbnailTasks = [:]
+        reviewWorkflow.thumbnailTaskTokens = [:]
+        isLoadingVisualRepairProposals = false
         fixtureReviewWindow = nil
         reviewWindowOffset = 0
         reviewSelection.clear()
@@ -4447,6 +4451,11 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
+    func cancelReviewEnrichment() {
+        reviewWorkflow.enrichmentTask?.cancel()
+        isLoadingVisualRepairProposals = false
+    }
+
     func loadFixtureReviewWindow(
         preferredAssetID: String? = nil,
         retryOnCancellation: Bool = true
@@ -4490,9 +4499,6 @@ final class BackstageViewModel: ObservableObject {
             hydrateReviewProposalDrafts(from: window.items)
             reviewWorkflow.consumeAIWindowRefresh()
             fixtureReviewWindow = window
-            reviewStatus = "Review items loaded. Reading cached image sizes…"
-            await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
-            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             let orderedIDs = window.items.map(\.id)
             reviewSelection = reviewWorkflow.restoredSelection(
                 orderedIDs: orderedIDs,
@@ -4523,15 +4529,19 @@ final class BackstageViewModel: ObservableObject {
                 mediaScope = "items"
             }
             let completedStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope)\(sourceScope) • oldest first."
-            reviewStatus = "Review items loaded. Checking visual repair drafts…"
-            await refreshVisualRepairProposals(for: window.items)
-            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
-            if !isPerformingReviewAI {
-                reviewStatus = "Review items and visual drafts loaded. Checking AI status…"
-                await refreshAIStatus()
-            }
-            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             reviewStatus = completedStatus
+            // The queue and selection are ready. Ancillary reads must not hold the
+            // mutation latch or delay the next ready photo after an approval.
+            isLoadingVisualRepairProposals = isREReviewScope
+            reviewWorkflow.enrichmentTask = Task { [weak self] in
+                guard let self, self.reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
+                await self.refreshVisualRepairProposals(for: window.items, requestSerial: requestSerial)
+                guard self.reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
+                await self.hydrateCurrentImageByteCounts(for: window.items.map(\.id))
+                guard self.reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
+                if !self.isPerformingReviewAI { await self.refreshAIStatus() }
+            }
+
         } catch {
             guard reviewWorkflow.ownsWindowRequest(requestSerial) else { return }
             if isTransientCancellation(error) {
@@ -4625,7 +4635,12 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func refreshVisualRepairProposals(for items: [FixtureReviewItem]) async {
+    func refreshVisualRepairProposals(for items: [FixtureReviewItem], requestSerial: Int? = nil) async {
+        let fixtureID = selectedFixtureID
+        func isCurrent() -> Bool {
+            !Task.isCancelled && fixtureID == selectedFixtureID
+                && (requestSerial.map { reviewWorkflow.ownsWindowRequest($0) } ?? true)
+        }
         guard isREReviewScope else {
             reviewVisualProposals = [:]
             isLoadingVisualRepairProposals = false
@@ -4633,13 +4648,15 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isLoadingVisualRepairProposals = true
-        defer { isLoadingVisualRepairProposals = false }
+        defer { if isCurrent() { isLoadingVisualRepairProposals = false } }
         do {
-            visualRepairGenerationConfigured = try await visualRepairService.configuration()
+            // Fetch the actual results first; generator configuration is not needed
+            // to approve an existing draft.
             let proposals = try await visualRepairService.proposals(
-                fixtureID: selectedFixtureID,
+                fixtureID: fixtureID,
                 assetIDs: items.map(\.id)
             )
+            guard isCurrent() else { return }
             reviewVisualProposals = proposals.reduce(into: [String: VisualRepairProposal]()) { result, proposal in
                 guard result[proposal.assetID] == nil else { return }
                 result[proposal.assetID] = proposal
@@ -4647,8 +4664,13 @@ final class BackstageViewModel: ObservableObject {
             visualRepairStatus = proposals.isEmpty
                 ? (visualRepairGenerationConfigured ? "Ready to generate a visual draft from a saved request." : "OpenAI image credential is not configured.")
                 : "Loaded \(proposals.count.formatted()) visual repair draft\(proposals.count == 1 ? "" : "s") for read-only comparison."
+            isLoadingVisualRepairProposals = false
+            let configured = try await visualRepairService.configuration()
+            guard isCurrent() else { return }
+            visualRepairGenerationConfigured = configured
         } catch {
-            reviewVisualProposals = [:]
+            guard isCurrent() else { return }
+            // A transient read failure must not discard already validated drafts.
             visualRepairStatus = userFacingMessage(for: error)
         }
     }
@@ -4996,6 +5018,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Select one or more Review items."
             return
         }
+        cancelReviewEnrichment()
         let reviewClickStartedAt = Date()
         // Approve submits the visible anchor draft in the same audited request.
         // The Owner pipeline resolves every other selected or propagated item
@@ -5456,6 +5479,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "This Waste Basket action must finish before its Undo can be queued."
             return
         }
+        cancelReviewEnrichment()
         let reviewClickStartedAt = Date()
         isRunningReview = true
         reviewStatus = "Undoing \(entry.label.lowercased())…"
@@ -6000,15 +6024,21 @@ final class BackstageViewModel: ObservableObject {
         guard reviewThumbnails[item.id] == nil,
               reviewWorkflow.thumbnailTasks[item.id] == nil
         else { return }
+        let token = UUID()
+        reviewWorkflow.thumbnailTaskTokens[item.id] = token
         reviewWorkflow.thumbnailTasks[item.id] = Task { [weak self] in
             guard let self else { return }
             await self.loadReviewThumbnail(for: item)
+            guard self.reviewWorkflow.thumbnailTaskTokens[item.id] == token else { return }
             self.reviewWorkflow.thumbnailTasks[item.id] = nil
+            self.reviewWorkflow.thumbnailTaskTokens[item.id] = nil
         }
     }
 
     func loadReviewThumbnail(for item: FixtureReviewItem) async {
         guard reviewThumbnails[item.id] == nil else { return }
+        let fixtureID = selectedFixtureID
+        let token = reviewWorkflow.thumbnailTaskTokens[item.id]
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
@@ -6017,6 +6047,8 @@ final class BackstageViewModel: ObservableObject {
                     preferredIdentifier: item.photoLibraryIdentifier,
                     maxPixelSize: 420
                 )
+                guard !Task.isCancelled, fixtureID == selectedFixtureID,
+                      reviewWorkflow.thumbnailTaskTokens[item.id] == token else { return }
                 guard let image = NSImage(data: preview.jpegData) else {
                     if attempt < 2 {
                         try? await Task.sleep(for: .milliseconds(180))
@@ -8569,6 +8601,7 @@ final class BackstageViewModel: ObservableObject {
         // still be between a debounce and the audited query; canceling them
         // here could strand that flag and prevent the drain from completing.
         reviewWorkflow.aiStatusRefreshTask?.cancel()
+        cancelReviewEnrichment()
         equipmentBackfillTask?.cancel()
         cancelCullingThumbnailWork()
         reviewWorkflow.thumbnailTasks.values.forEach { $0.cancel() }
@@ -9388,6 +9421,7 @@ final class BackstageViewModel: ObservableObject {
     func invalidateCurrentRenditionCaches(for assetID: String) {
         reviewWorkflow.thumbnailTasks[assetID]?.cancel()
         reviewWorkflow.thumbnailTasks[assetID] = nil
+        reviewWorkflow.thumbnailTaskTokens[assetID] = nil
         reviewThumbnails.removeValue(forKey: assetID)
 
         galleryWorkflow.thumbnailTasks[assetID]?.cancel()

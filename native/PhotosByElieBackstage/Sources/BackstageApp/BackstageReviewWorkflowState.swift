@@ -10,6 +10,8 @@ import OwnerCore
 /// state.
 struct BackstageReviewWorkflowState {
     var thumbnailTasks: [String: Task<Void, Never>] = [:]
+    var thumbnailTaskTokens: [String: UUID] = [:]
+    var enrichmentTask: Task<Void, Never>?
     var metadataAutosaveTask: Task<Void, Never>?
     var aiPassStartFailure: String?
     var aiStatusRefreshTask: Task<Void, Never>?
@@ -27,10 +29,14 @@ struct BackstageReviewWorkflowState {
     private(set) var aiWindowRefreshPending = false
 
     mutating func invalidateWindowRequests() {
+        enrichmentTask?.cancel()
+        enrichmentTask = nil
         windowRequestSerial += 1
     }
 
     mutating func beginWindowRequest() -> Int {
+        enrichmentTask?.cancel()
+        enrichmentTask = nil
         windowRequestSerial += 1
         return windowRequestSerial
     }

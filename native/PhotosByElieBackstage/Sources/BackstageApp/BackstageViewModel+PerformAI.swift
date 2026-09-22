@@ -68,6 +68,7 @@ extension BackstageViewModel {
         for id in work.metadataIDs.union(work.visualIDs) { reviewAIProgress[id] = "Starting AI…" }
         cancelReviewMetadataAutosave()
         reviewAIBatch = ReviewAIBatchState(work: work)
+        cancelReviewEnrichment()
         isPerformingReviewAI = true
         reviewAIRetry = nil
         reviewAIExecutionStatus = "Starting AI for \(work.metadataIDs.union(work.visualIDs).count) photo(s)…"

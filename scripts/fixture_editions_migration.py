@@ -98,8 +98,16 @@ def migrate(conn: sqlite3.Connection) -> dict:
     report["uploaded_receipts_retained"] = 0
     if "asset_publications" in tables:
         for edition in conn.execute("SELECT * FROM fixture_asset_editions WHERE editorial_state='approved'").fetchall():
-            receipt = conn.execute("""SELECT 1 FROM asset_publications WHERE fixture_id=? AND asset_id=?
-                AND source_version_hash=? AND state='live'""",(edition["fixture_id"],edition["asset_id"],edition["source_version_id"])).fetchone()
+            # A historical image receipt cannot prove later metadata was uploaded.
+            # Carry the Uploaded badge only when the legacy current delivery is
+            # still live and its accepted metadata matches this exact edition.
+            receipt = conn.execute("""SELECT 1 FROM asset_publications p
+                JOIN asset_delivery_state d ON d.asset_id=p.asset_id AND d.source_version_hash=p.source_version_hash
+                JOIN sidecar_decisions m ON m.asset_id=p.asset_id
+                WHERE p.fixture_id=? AND p.asset_id=? AND p.source_version_hash=?
+                  AND p.state='live' AND d.delivery_state='live'
+                  AND COALESCE(m.title,'')=? AND COALESCE(m.keywords_json,'[]')=?""",
+                (edition["fixture_id"],edition["asset_id"],edition["source_version_id"],edition["title"],edition["keywords_json"])).fetchone()
             if receipt:
                 conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='live',receipt_version_hash=source_version_hash
                     WHERE fixture_id=? AND asset_id=? AND revision_hash=?""",(edition["fixture_id"],edition["asset_id"],edition["approved_revision_hash"]))

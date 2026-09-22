@@ -39,6 +39,15 @@ class MigrationTests(unittest.TestCase):
             c.execute('BEGIN IMMEDIATE');report=migrate(c);c.commit()
             self.assertEqual(get_edition(c,self.a,'photo')['editorial_state'],'unreviewed')
             self.assertEqual(report['unresolved_source'],1)
+    def test_historical_upload_does_not_restore_live_after_a_metadata_edit(self):
+        with connect(self.root) as c:
+            c.execute("INSERT INTO asset_publications(asset_id,fixture_id,source_version_hash,state,published_at,created_at,updated_at) VALUES ('photo',?,'original','live','2026-01-01','2026-01-01','2026-01-01')",(self.a,))
+            c.execute("UPDATE asset_delivery_state SET delivery_state='needs-upload' WHERE asset_id='photo'");c.commit()
+            c.execute('BEGIN IMMEDIATE');report=migrate(c);c.commit()
+            self.assertEqual(c.execute('SELECT delivery_state FROM fixture_edition_delivery WHERE fixture_id=?',(self.a,)).fetchone()[0],'needs-upload')
+            self.assertEqual(report['uploaded_receipts_retained'],0)
+            self.assertEqual(c.execute('SELECT state FROM asset_publications').fetchone()[0],'live')
+
     def test_rollback_removes_partial_schema_and_data(self):
         with connect(self.root) as c:
             c.execute('BEGIN IMMEDIATE');migrate(c);c.rollback()

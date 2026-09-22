@@ -605,12 +605,27 @@ struct ReviewView: View {
                     proposal: model.renderedVisualRepairProposal(for: item)
                 )
             } else {
-                ContentUnavailableView(
-                    "Comparison unavailable",
-                    systemImage: "photo.on.rectangle.angled",
-                    description: Text("The Review item is no longer in the current window.")
-                )
+                VStack(spacing: 16) {
+                    ContentUnavailableView(
+                        "Comparison unavailable",
+                        systemImage: "photo.on.rectangle.angled",
+                        description: Text("The Review item is no longer in the current window.")
+                    )
+                    Button("Close") { visualComparisonTarget = nil }
+                        .keyboardShortcut(.cancelAction)
+                        .backstageHelp("Close the unavailable comparison and return to Review.")
+                }
+                .padding()
+                .onExitCommand { visualComparisonTarget = nil }
             }
+        }
+        .onChange(of: model.reviewItems.map(\.id)) { _, visibleIDs in
+            if let target = visualComparisonTarget, !visibleIDs.contains(target.id) {
+                visualComparisonTarget = nil
+            }
+        }
+        .onChange(of: model.selectedFixtureID) { _, _ in
+            visualComparisonTarget = nil
         }
         .task {
             guard !isPreviewMode else { return }

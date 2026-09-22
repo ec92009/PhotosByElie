@@ -1419,6 +1419,29 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(empty["summary"]["total"], 0)
         self.assertEqual(empty["items"], [])
 
+    def test_review_approved_awaits_current_version_upload(self):
+        create_fixture(self.root, "Pending", fixture_id="pending-upload")
+        set_fixture_asset_state(self.root, "pending-upload", ["asset-1", "asset-2"], "picked")
+        apply_fixture_review_action(self.root, "pending-upload", ["asset-1", "asset-2"], "approve")
+        with connect(self.root) as conn:
+            conn.execute("INSERT INTO asset_source_versions(version_id,asset_id,source_exists,state,created_at) VALUES ('original-1','asset-1',1,'approved','2026-01-01T00:00:00Z')")
+            conn.execute("UPDATE asset_delivery_state SET delivery_state='live',source_version_hash=(SELECT version_id FROM asset_source_versions WHERE asset_id='asset-1' AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1) WHERE asset_id='asset-1'")
+        pending = fixture_review_window(self.root, "pending-upload", state_filters=["picked", "approved"])
+        self.assertEqual([x["assetId"] for x in pending["items"]], ["asset-2"])
+        self.assertEqual([x["assetId"] for x in fixture_review_window(self.root, "pending-upload", state_filters=["uploaded"])["items"]], ["asset-1"])
+        both = fixture_review_window(self.root, "pending-upload", state_filters=["approved", "uploaded"], limit=1)
+        self.assertEqual(both["summary"]["total"], 2)
+        self.assertTrue(both["hasNext"])
+        with connect(self.root) as conn:
+            conn.execute("INSERT INTO asset_source_versions(version_id,asset_id,rendered_fingerprint,source_exists,state,created_at) VALUES ('new-edit','asset-1','edited-bytes',1,'approved','2099-01-01T00:00:00Z')")
+        newer = fixture_review_window(self.root, "pending-upload", state_filters=["approved"])
+        self.assertEqual(newer["summary"]["total"], 2)
+        self.assertEqual(next(x for x in newer["items"] if x["assetId"] == "asset-1")["deliveryState"], "needs-upload")
+        self.assertEqual(fixture_review_window(self.root, "pending-upload", state_filters=["uploaded"])["items"], [])
+        with connect(self.root) as conn:
+            conn.execute("UPDATE asset_delivery_state SET source_version_hash='new-edit' WHERE asset_id='asset-1'")
+        self.assertEqual(fixture_review_window(self.root, "pending-upload", state_filters=["approved"])["summary"]["total"], 1)
+
     def test_uploaded_status_is_inclusive_and_fixture_scoped(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1", "asset-2"], "picked")
@@ -1426,7 +1449,11 @@ class FixturePipelineTest(unittest.TestCase):
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "hidden")
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-2"], "picked")
         with connect(self.root) as connection:
-            connection.execute("UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id IN ('asset-1', 'asset-3')")
+            connection.executemany(
+                "INSERT INTO asset_source_versions(version_id,asset_id,source_exists,state,created_at) VALUES (?,?,1,'approved','2026-01-01T00:00:00Z')",
+                [("original-1", "asset-1"), ("original-3", "asset-3")],
+            )
+            connection.execute("UPDATE asset_delivery_state SET delivery_state = 'live', source_version_hash=(SELECT version_id FROM asset_source_versions WHERE asset_id=asset_delivery_state.asset_id AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1) WHERE asset_id IN ('asset-1', 'asset-3')")
             connection.commit()
         for filters, expected in [(["uploaded"], {"asset-1"}),
                                   (["uploaded", "picked"], {"asset-1", "asset-2"}),

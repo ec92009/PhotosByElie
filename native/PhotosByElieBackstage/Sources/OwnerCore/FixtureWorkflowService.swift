@@ -682,7 +682,7 @@ public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, I
     public var label: String {
         switch self {
         case .picked: "Picked"
-        case .approved: "Approved"
+        case .approved: "Approved · awaiting upload"
         case .hidden: "Hidden"
         case .uploaded: "Uploaded"
         }

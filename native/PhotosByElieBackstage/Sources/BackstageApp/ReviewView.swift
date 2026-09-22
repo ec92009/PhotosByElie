@@ -498,7 +498,9 @@ struct ReviewView: View {
                                 systemImage: "line.3.horizontal.decrease.circle",
                                 description: Text(model.reviewProposalAvailableOnly
                                     ? "Proposal Available excludes photos still awaiting AI. Turn it off to include pending photos."
-                                    : "Check the selected fixture, states, search, and RAW filter.")
+                                    : model.reviewStateFilters.contains(.approved) && !model.reviewStateFilters.contains(.uploaded)
+                                        ? "Approved shows photos awaiting upload. Select Uploaded to see completed uploads, or check the other filters."
+                                        : "Check the selected fixture, states, search, and RAW filter.")
                             )
                         }
                     }

@@ -83,6 +83,10 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 )
               """
             : ""
+        let uploadedPredicate = sourceVersionsAvailable
+            ? "(delivery.delivery_state = 'live' AND COALESCE(delivery.source_version_hash, '') <> '' AND delivery.source_version_hash = COALESCE(latest_source_version.version_id, ''))"
+            : "delivery.delivery_state = 'live'"
+        let currentDeliverySelect = "CASE WHEN delivery.delivery_state = 'live' AND NOT (\(uploadedPredicate)) THEN 'needs-upload' ELSE COALESCE(delivery.delivery_state, 'not-ready') END"
         let proposalCountrySelect = proposalColumns.contains("proposed_country")
             ? "COALESCE(available_proposal.proposed_country, '') AS proposal_country, COALESCE(available_proposal.country_source, '') AS proposal_country_source"
             : "'' AS proposal_country, '' AS proposal_country_source"
@@ -113,7 +117,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             predicates.append("editorial.editorial_state != 'approved'")
         }
         if stateFilters != nil {
-            let statePredicates = effectiveStates.compactMap(reviewStatusPredicate)
+            let statePredicates = effectiveStates.compactMap { reviewStatusPredicate($0, uploadedPredicate: uploadedPredicate) }
             predicates.append(
                 statePredicates.isEmpty ? "0 = 1" : "(" + statePredicates.joined(separator: " OR ") + ")"
             )
@@ -199,7 +203,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(available_proposal.reasoning_effort, '') AS proposal_reasoning_effort,
                    COALESCE(available_proposal.vision, 0) AS proposal_vision,
                    COALESCE(available_proposal.model_ladder, '[]') AS proposal_model_ladder,
-                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state,
+                   \(currentDeliverySelect) AS delivery_state,
                    CAST(COALESCE(
                      json_extract(asset.raw_json, '$.originalByteCount'),
                      json_extract(asset.raw_json, '$.original_byte_count'),
@@ -1659,14 +1663,14 @@ private func timing(started: Date) -> JSONValue {
     ])])
 }
 
-private func reviewStatusPredicate(_ state: String) -> String? {
+private func reviewStatusPredicate(_ state: String, uploadedPredicate: String) -> String? {
     switch state {
     case "picked":
         return "(current_decision.placement_state = 'picked' AND editorial.editorial_state != 'approved')"
     case "approved":
-        return "(current_decision.placement_state = 'picked' AND editorial.editorial_state = 'approved')"
+        return "(current_decision.placement_state = 'picked' AND editorial.editorial_state = 'approved' AND NOT (\(uploadedPredicate)))"
     case "uploaded":
-        return "delivery.delivery_state = 'live'"
+        return uploadedPredicate
     case "hidden":
         return "current_decision.placement_state = 'hidden'"
     default:

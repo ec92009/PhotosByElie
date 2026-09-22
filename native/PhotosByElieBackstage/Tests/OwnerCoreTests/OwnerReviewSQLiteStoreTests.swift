@@ -74,6 +74,37 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(db, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "ready")
     }
 
+    @Test("Approved awaiting upload excludes only receipts for the current source version")
+    func approvedAwaitingCurrentVersionUpload() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-pending-upload-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(databaseURL, """
+            CREATE TABLE asset_source_versions(version_id TEXT PRIMARY KEY, asset_id TEXT, source_exists INTEGER, created_at TEXT);
+            INSERT INTO asset_source_versions VALUES ('v1','asset-1',1,'2026-01-01'),('v2','asset-2',1,'2026-01-01');
+            UPDATE asset_editorial_state SET editorial_state='approved';
+            UPDATE asset_delivery_state SET delivery_state='live',source_version_hash='v1' WHERE asset_id='asset-1';
+            UPDATE asset_delivery_state SET delivery_state='needs-upload',source_version_hash='v2' WHERE asset_id='asset-2';
+            """)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        let before = try Data(contentsOf: databaseURL)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["picked", "approved"]).items.map(\.id) == ["asset-2"])
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
+        let both = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved", "uploaded"], limit: 1)
+        #expect(both.summary.total == 2 && both.items.count == 1 && both.hasNext)
+        #expect(try Data(contentsOf: databaseURL) == before)
+        try execute(databaseURL, "INSERT INTO asset_source_versions VALUES ('new-edit','asset-1',1,'2026-02-01')")
+        let newer = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved"])
+        #expect(newer.summary.total == 2)
+        #expect(newer.items.first(where: { $0.id == "asset-1" })?.deliveryState == "needs-upload")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.isEmpty)
+        try execute(databaseURL, "UPDATE asset_delivery_state SET source_version_hash='new-edit' WHERE asset_id='asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved"]).summary.total == 1)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
+    }
+
     @Test("Uploaded Review status includes hidden live photos without duplicates or cross-fixture leakage")
     func uploadedReviewStatus() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-uploaded-\(UUID())")

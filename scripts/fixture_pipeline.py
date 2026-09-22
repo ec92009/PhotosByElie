@@ -1993,6 +1993,13 @@ def _fixture_review_from_sql(
     )
 
 
+def _review_current_upload_predicate() -> str:
+    """A completed upload belongs only to the current available source version."""
+    return """(delivery.delivery_state = 'live'
+        AND COALESCE(delivery.source_version_hash, '') <> ''
+        AND delivery.source_version_hash = COALESCE(latest_source_version.version_id, ''))"""
+
+
 def _fixture_review_predicates(
     search: str = "",
     *,
@@ -2033,15 +2040,16 @@ def _fixture_review_predicates(
             )
         if "approved" in selected_states:
             state_predicates.append(
-                """
+                f"""
                 (
                   current_decision.placement_state = 'picked'
                   AND editorial.editorial_state = 'approved'
+                  AND NOT {_review_current_upload_predicate()}
                 )
                 """
             )
         if "uploaded" in selected_states:
-            state_predicates.append("delivery.delivery_state = 'live'")
+            state_predicates.append(_review_current_upload_predicate())
         if "hidden" in selected_states:
             state_predicates.append(
                 "current_decision.placement_state = 'hidden'"
@@ -2229,6 +2237,7 @@ def fixture_review_window(
                 SELECT source_version.version_id
                 FROM asset_source_versions AS source_version
                 WHERE source_version.asset_id = a.asset_id
+                  AND source_version.source_exists = 1
                 ORDER BY source_version.created_at DESC, source_version.version_id DESC
                 LIMIT 1
               )
@@ -2305,7 +2314,9 @@ def fixture_review_window(
                    available_proposal.reasoning_effort proposal_reasoning_effort,
                    available_proposal.vision proposal_vision,
                    available_proposal.model_ladder proposal_model_ladder,
-                   delivery.delivery_state
+                   CASE WHEN delivery.delivery_state = 'live'
+                          AND NOT {_review_current_upload_predicate()}
+                        THEN 'needs-upload' ELSE delivery.delivery_state END delivery_state
             FROM {from_sql}
             {joins}
             {proposal_join}

@@ -5388,7 +5388,9 @@ final class BackstageViewModel: ObservableObject {
         } else {
             state = .picked
         }
-        guard reviewStateFilters.contains(state)
+        let pendingStateMatches = reviewStateFilters.contains(state)
+            && !(state == .approved && item.deliveryState == "live")
+        guard pendingStateMatches
             || (reviewStateFilters.contains(.uploaded) && item.deliveryState == "live") else { return false }
         guard retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady else {
             return false

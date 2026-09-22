@@ -386,6 +386,9 @@ struct ReviewView: View {
                                     hasDraftAIReason: false,
                                     hasProposalDraft: model.hasProposalDraft(for: item.id),
                                     hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id),
+                                    afterFailed: model.pendingReviewAfter(for: item).map {
+                                        ["failed", "cancelled"].contains($0.generationState)
+                                    } ?? false,
                                     compare: model.renderedVisualRepairProposal(for: item) != nil ? {
                                         guard model.renderedVisualRepairProposal(for: item) != nil else { return }
                                         model.clickReviewItem(item.id, modifiers: [])
@@ -711,6 +714,7 @@ private struct ReviewAssetRow: View {
     var hasDraftAIReason: Bool
     var hasProposalDraft: Bool
     var hasProposalConflict: Bool
+    var afterFailed = false
     var compare: (() -> Void)? = nil
 
     var body: some View {
@@ -741,6 +745,13 @@ private struct ReviewAssetRow: View {
                         .controlSize(.small)
                         .tint(.black.opacity(0.75))
                         .backstageHelp("Compare this photo's original and visual draft with a sliding divider.")
+                        .padding(6)
+                } else if afterFailed {
+                    Text("After failed")
+                        .font(.caption.weight(.semibold))
+                        .padding(4)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(.red)
                         .padding(6)
                 }
             }
@@ -1181,6 +1192,15 @@ private struct ReviewInspector: View {
                             : "Immediately review all title and keyword details. RE photos also receive all five visual repairs. Results require approval.")
                     }
                     .buttonStyle(.borderedProminent)
+                    if let reason = model.reviewApprovalBlockReason {
+                        Text(reason).font(.callout).foregroundStyle(.orange)
+                            .accessibilityIdentifier("review-approval-block-reason")
+                    }
+                    if !model.retryableSelectedAfterItems.isEmpty {
+                        Button("Retry After") { model.retrySelectedReviewAfter() }
+                            .disabled(!model.canPerformReviewAI)
+                            .backstageHelp("Retry only failed After images in the selection. Keep the proposed title and keywords. Nothing is approved or uploaded.")
+                    }
                     HStack(spacing: 8) {
                         BackstageFeedbackView(
                             message: model.reviewStatus,
@@ -1212,8 +1232,7 @@ private struct ReviewInspector: View {
                         Text("After image")
                             .font(.headline)
                         if let proposal = model.reviewVisualProposals[item.id], proposal.status.isComparable {
-                            let hasRenderedProposal = proposal.derivedAvailable
-                                && VisualRepairComparisonState.isRenderableReference(proposal.derivedReference)
+                            let hasRenderedProposal = model.renderedVisualRepairProposal(for: item) != nil
                             Label(
                                 hasRenderedProposal
                                     ? "Draft available for read-only comparison · attempt \(proposal.attempt)"
@@ -1223,9 +1242,9 @@ private struct ReviewInspector: View {
                             .font(.caption)
                             .foregroundStyle(.orange)
                             if !proposal.generationError.isEmpty {
-                                Text(proposal.generationError).font(.caption).foregroundStyle(.red)
+                                Text("Last attempt: \(proposal.generationError)").font(.caption).foregroundStyle(.red)
                             }
-                            if proposal.status == .draft && !proposal.isGenerating {
+                            if proposal.status == .draft && !proposal.isGenerating && hasRenderedProposal {
                                 Text("Approve uses this After image, upscaled to the original dimensions. Reject AI keeps the original.")
                                     .font(.caption).foregroundStyle(.secondary)
                             }

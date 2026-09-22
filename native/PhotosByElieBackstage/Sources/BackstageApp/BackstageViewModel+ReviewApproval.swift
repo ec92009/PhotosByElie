@@ -22,6 +22,45 @@ extension BackstageViewModel {
         }
     }
 
+    /// Explain a missing After instead of presenting a permanently disabled button
+    /// as if a background refresh could make it ready.
+    var reviewApprovalBlockReason: String? {
+        for id in selectedReviewAssetIDs {
+            guard let item = reviewItems.first(where: { $0.id == id }), requiresReviewAfter(for: item) else { continue }
+            guard let proposal = pendingReviewAfter(for: item) else {
+                return "After image unavailable for \(item.filename). Refresh its result or Reject AI before approving the original."
+            }
+            if proposal.isGenerating {
+                return "After image for \(item.filename) is still processing. Approve becomes available when it is ready."
+            }
+            if proposal.generationState == "failed" || proposal.generationState == "cancelled"
+                || renderedVisualRepairProposal(for: item) == nil || proposal.derivedSHA256.isEmpty {
+                return "After image failed or is unavailable for \(item.filename). Waiting will not enable Approve. Retry After, or Reject AI to approve the original."
+            }
+        }
+        return nil
+    }
+
+    var retryableSelectedAfterItems: [FixtureReviewItem] {
+        reviewItems.filter { item in
+            guard selectedReviewAssetIDs.contains(item.id),
+                  let proposal = pendingReviewAfter(for: item), !proposal.isGenerating else { return false }
+            return proposal.generationState == "failed" || proposal.generationState == "cancelled"
+                || !proposal.derivedAvailable
+        }
+    }
+
+    /// Reconstruct recovery from persisted fixture/source receipts after relaunch.
+    /// Only failed visual work is retried; the completed metadata stays intact.
+    func retrySelectedReviewAfter() {
+        guard canPerformReviewAI else { return }
+        let items = retryableSelectedAfterItems
+        guard !items.isEmpty else { return }
+        reviewAIRetry = ReviewAIWork(fixtureID: selectedFixtureID, items: items,
+            note: reviewAINote, metadataIDs: [], visualIDs: Set(items.map(\.id)), prepared: true)
+        performReviewAI(retry: true)
+    }
+
     var canApproveReviewSelection: Bool {
         guard !isApprovingReview, !isRunningReview, !isPhotosMaintenanceActive, !isExternalEditOperationInProgress,
               !selectedReviewTouchesActiveExternalEdit, !isUpdateOperationInProgress,

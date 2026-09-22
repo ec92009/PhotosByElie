@@ -7,6 +7,53 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("After retry survives relaunch and preserves metadata while excluding successful and stale results")
+    @MainActor
+    func retryPersistedFailedAfter() async throws {
+        let api = InstantAIActionAPI()
+        let runner = OwnerActionRunner(api: api, waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(), fixtureService: FixtureWorkflowService(runner: runner),
+            visualRepairService: VisualRepairProposalService(runner: runner), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil, equipmentBackfillStore: nil, customerPhotoLinks: nil)
+        model.installFixtureTree([FixtureNode(id: "fixture-re", name: "RE", children: [FixtureNode(id: "child", name: "Marketing")])],
+            preferredFixtureID: "child", persistSelection: false)
+        let ids = ["a", "b", "c", "d"]
+        let items = ids.map { FixtureReviewItem(id: $0, photoLibraryIdentifier: $0, sourceVersionID: "v-\($0)",
+            title: $0, keywords: [], filename: "\($0).jpg", capturedAt: "") }
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "child", mode: .full, offset: 0, limit: 200,
+            nextOffset: 0, hasNext: false, summary: FixtureReviewSummary(total: 4, unreviewed: 0, requestingAI: 0, proposed: 4, approved: 0), items: items)
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ids, selectedIDs: Set(ids), anchorID: "b", focusedID: "b")
+        for id in ids {
+            var proposal = VisualRepairProposal(id: "visual-\(id)", fixtureID: id == "c" ? "other" : "child", assetID: id,
+                sourceVersionID: id == "d" ? "obsolete" : "v-\(id)", defectCategories: [.contrast], ladderRung: 0, modelLadder: [],
+                requestedGeneratorModel: "test", resolvedModel: "test", reasoningEffort: "", vision: true, attempt: 1, status: .draft,
+                originalReference: "immutable-source-version://v-\(id)", derivedReference: "", derivedAvailable: id == "a", generatorReference: "test")
+            proposal.generationState = id == "a" ? "ready" : "failed"
+            model.reviewVisualProposals[id] = proposal
+            model.reviewProposalDrafts[id] = ReviewMetadataDraft(title: "Keep \(id)", keywords: ["kept"], proposalID: "meta-\(id)", proposalStatus: "ready")
+        }
+        model.syncReviewDraft()
+        #expect(model.reviewAIRetry == nil) // No session-local retry survives relaunch.
+        #expect(model.retryableSelectedAfterItems.map(\.id) == ["b"])
+        #expect(!model.canApproveReviewSelection)
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ids, selectedIDs: ["b"], anchorID: "b", focusedID: "b")
+        #expect(model.reviewApprovalBlockReason?.contains("Waiting will not enable Approve") == true)
+        #expect(model.renderedVisualRepairProposal(for: items[1]) == nil)
+        model.retrySelectedReviewAfter()
+        #expect(model.isPerformingReviewAI)
+        model.retrySelectedReviewAfter() // Duplicate activation cannot start another run.
+        await model.reviewAITask?.value
+        model.cancelReviewEnrichment()
+        let requests = await api.requests
+        let visual = requests.filter { $0["mode"]?.stringValue == "fixture-visual-repair-generate" }
+        #expect(visual.count == 1)
+        #expect(visual.first?["assetId"]?.stringValue == "b")
+        #expect(visual.first?["fixtureId"]?.stringValue == "child")
+        #expect(!requests.contains { ["fixture-ai-pass-start", "fixture-review-apply"].contains($0["mode"]?.stringValue ?? "") })
+        #expect(model.reviewProposalDrafts["b"]?.title == "Keep b")
+        #expect(model.reviewProposalDrafts["b"]?.keywords == ["kept"])
+    }
+
     @Test("Batch report partitions ready, waiting, failed and approved photos")
     func batchReportPartition() {
         let work = ReviewAIWork(fixtureID: "re", items: [], note: "", metadataIDs: ["a", "b", "c"], visualIDs: ["a", "b", "c"])
@@ -2749,7 +2796,7 @@ struct BackstageFixtureSelectionTests {
         }
         let placementService = RecordingFixturePlacementService(
             states: Dictionary(uniqueKeysWithValues: items.map { ($0.id, .picked) }),
-            applyDelay: .milliseconds(150)
+            holdApply: true
         )
         let fixtureService = FixtureWorkflowService(
             runner: OwnerActionRunner(
@@ -2796,6 +2843,7 @@ struct BackstageFixtureSelectionTests {
         #expect(model.isApplyingCullingDecision)
         #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
         #expect(await placementService.applyCount() == 0)
+        await placementService.releaseApply()
         #expect(await hide.value)
         #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
     }
@@ -4767,13 +4815,17 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
     private var recordedUndoCount = 0
     private var recordedApplyCount = 0
     private let applyDelay: Duration
+    private var applyReleased: Bool
+    private var applyContinuation: CheckedContinuation<Void, Never>?
 
     init(
         states: [String: FixturePlacementState],
-        applyDelay: Duration = .zero
+        applyDelay: Duration = .zero,
+        holdApply: Bool = false
     ) {
         self.states = states
         self.applyDelay = applyDelay
+        self.applyReleased = !holdApply
     }
 
     func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
@@ -4790,6 +4842,9 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
         assetIDs: [String],
         reason: String
     ) async throws -> [FixtureAssetState]? {
+        if !applyReleased {
+            await withCheckedContinuation { applyContinuation = $0 }
+        }
         try await Task.sleep(for: applyDelay)
         recordedApplyCount += 1
         return assetIDs.map { assetID in
@@ -4818,6 +4873,12 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
                 beforePlacementState: change.placementState
             )
         }
+    }
+
+    func releaseApply() {
+        applyReleased = true
+        applyContinuation?.resume()
+        applyContinuation = nil
     }
 
     func undoCount() -> Int { recordedUndoCount }

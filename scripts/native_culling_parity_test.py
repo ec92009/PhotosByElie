@@ -1560,7 +1560,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        self.assertIn("private func invalidateCullingWindowLoads()", model)
+        self.assertIn("private func invalidateCullingWindowLoads(preservingThumbnails: Bool = false)", model)
         filter_slice = model.split("func applyCullingFilters", 1)[1].split(
             "func scheduleCullingSearchRefresh", 1
         )[0]
@@ -1570,8 +1570,9 @@ class NativeCullingParityTest(unittest.TestCase):
         placement_slice = model.split("private func applyFixturePlacement", 1)[1].split(
             "private func undoDecisions", 1
         )[0]
-        for slice_ in (filter_slice, decision_slice, placement_slice):
-            self.assertIn("invalidateCullingWindowLoads()", slice_)
+        self.assertIn("invalidateCullingWindowLoads()", filter_slice)
+        for slice_ in (decision_slice, placement_slice):
+            self.assertIn("invalidateCullingWindowLoads(preservingThumbnails: true)", slice_)
 
         self.assertIn("return cullingAssets.filter { asset in", model)
         self.assertIn("cullingViews.contains(.hidden)", model)

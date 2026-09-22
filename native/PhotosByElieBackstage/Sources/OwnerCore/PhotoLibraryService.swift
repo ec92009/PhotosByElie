@@ -4,6 +4,7 @@ import CryptoKit
 import Foundation
 import ImageIO
 import Photos
+import OSLog
 import UniformTypeIdentifiers
 
 public enum PhotoLibraryAccess: Sendable, Equatable {
@@ -1990,31 +1991,43 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     }
 
     private func asset(_ identifier: String) throws -> PHAsset {
+        let diagnostic = Logger(subsystem: "com.photosbyelie.backstage", category: "PhotosIdentity")
+        let identityTag = String(SHA256.hash(data: Data(identifier.utf8)).description.prefix(32))
+        let lookupValues = PhotoLibraryIdentifier.cloudLookupValues(from: identifier)
+        diagnostic.notice("Lookup tag=\(identityTag, privacy: .public) bytes=\(identifier.utf8.count) variants=\(lookupValues.count)")
         let asset: PHAsset
         if let localAsset = fetchAsset(localIdentifier: identifier) {
+            diagnostic.notice("Direct lookup resolved mediaType=\(localAsset.mediaType.rawValue)")
             asset = localAsset
         } else if #available(macOS 12.0, *) {
             // Fixture IDs are stable across Macs while PhotoKit local
             // identifiers are library-local. Resolve the canonical cloud ID
             // when the connector does not provide a local Photos ID.
             var resolved: PHAsset?
-            for cloudValue in PhotoLibraryIdentifier.cloudLookupValues(from: identifier) {
+            for cloudValue in lookupValues {
                 // Canonical legacy values can resolve directly even when
                 // PhotoKit cloud mapping has no entry for that serialization.
                 if let directAsset = fetchAsset(localIdentifier: cloudValue) {
+                    diagnostic.notice("Fallback direct resolved mediaType=\(directAsset.mediaType.rawValue)")
                     resolved = directAsset
                     break
                 }
                 let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
                 let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
+                if case .failure(let error) = mappings[cloudIdentifier] {
+                    let nsError = error as NSError
+                    diagnostic.notice("Cloud mapping failed domain=\(nsError.domain, privacy: .public) code=\(nsError.code)")
+                }
                 if let result = mappings[cloudIdentifier],
                    case .success(let localIdentifier) = result,
                    let mappedAsset = fetchAsset(localIdentifier: localIdentifier) {
+                    diagnostic.notice("Cloud lookup resolved mediaType=\(mappedAsset.mediaType.rawValue)")
                     resolved = mappedAsset
                     break
                 }
             }
             guard let resolved else {
+                diagnostic.notice("No Photos identity resolved")
                 throw PhotoLibraryError.assetNotFound(identifier)
             }
             asset = resolved

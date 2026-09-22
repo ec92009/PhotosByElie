@@ -71,6 +71,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("record_upload_run_failure", runner)
         self.assertIn("reconcile_upload_run_receipts", runner)
 
+    def test_gallery_select_all_transfers_focus_without_stealing_quick_look(self):
+        gallery = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift").read_text()
+        self.assertIn("@FocusState private var isGridFocused: Bool", gallery)
+        self.assertIn(".focused($isGridFocused)", gallery)
+        self.assertIn(".onChange(of: model.cullingKeyboardFocusRequest)", gallery)
+        self.assertIn("guard !quickLook.isVisible else { return }", gallery)
+        self.assertIn("isGridFocused = true", gallery)
+
     def test_command_a_select_all_routes_to_focused_control_or_loaded_workspace(self):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"

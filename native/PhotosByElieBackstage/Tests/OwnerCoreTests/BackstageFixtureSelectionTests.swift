@@ -3806,6 +3806,38 @@ struct BackstageFixtureSelectionTests {
         model.cullingScrollPhaseChanged(isScrolling: true)
     }
 
+    @Test("Command-A requests grid focus every time and H hides the complete loaded selection")
+    @MainActor
+    func selectAllThenHideEntireWindow() async throws {
+        let ids = (0..<35).map { "bulk-\($0)" }
+        let service = RecordingFixturePlacementService(states: Dictionary(uniqueKeysWithValues: ids.map { ($0, .undecided) }))
+        let runner = OwnerActionRunner(api: PreviewOnlyActionAPI(),
+            waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1), timeout: .seconds(1))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(),
+            fixtureService: FixtureWorkflowService(runner: runner, localReviewService: service),
+            workflowRecoveryStore: nil, currentImageSizeCache: nil, currentEquipmentCache: nil,
+            equipmentBackfillStore: nil)
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        model.selection = .culling
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 35, videos: 0)
+        window.items = ids.map { FixtureAsset(id: $0, title: $0, filename: "\($0).jpg", mediaType: "photo", placementState: .undecided) }
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.undecided]
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: ids, selectedIDs: [ids[0]], anchorID: ids[0], focusedID: ids[0])
+        let initialFocusRequest = model.cullingKeyboardFocusRequest
+        #expect(model.selectAllCurrentContent())
+        #expect(model.cullingKeyboardFocusRequest != initialFocusRequest)
+        let nextFocusRequest = model.cullingKeyboardFocusRequest
+        #expect(model.selectAllCurrentContent())
+        #expect(model.cullingKeyboardFocusRequest != nextFocusRequest)
+        #expect(model.selectedCullingAssetIDs == ids)
+        #expect(await model.applyPickShortcut(.reject))
+        #expect(await service.applyCount() == 1)
+        #expect(ids.allSatisfy { model.cullingStates[$0]?.pickState == "hidden" })
+        #expect(model.visibleCullingAssets.isEmpty)
+        #expect(model.cullingStatus.contains("Affected 35"))
+    }
+
     @Test("Hiding one card preserves other sharp previews and idle upgrades without another appear event", arguments: [false, true])
     @MainActor
     func hidePreservesVisibleThumbnailWork(alreadySharp: Bool) async throws {

@@ -384,6 +384,7 @@ struct CullingView: View {
     var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @State private var confirmingReturnToReview = false
+    @FocusState private var isGridFocused: Bool
 
     var body: some View {
         GeometryReader { viewport in
@@ -404,6 +405,11 @@ struct CullingView: View {
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .onAppear {
             quickLook.activate()
+        }
+        .onChange(of: model.cullingKeyboardFocusRequest) { _, _ in
+            // Quick Look owns its own H/P/U routing and must keep its focus.
+            guard !quickLook.isVisible else { return }
+            isGridFocused = true
         }
         .onDisappear {
             quickLook.deactivate()
@@ -781,6 +787,7 @@ struct CullingView: View {
             updateCullingGridWidth(CGFloat(width))
         }
         .focusable()
+        .focused($isGridFocused)
         .overlay { cullingGridOverlay }
         .modifier(CullingScrollPhaseObserver(model: model))
     }

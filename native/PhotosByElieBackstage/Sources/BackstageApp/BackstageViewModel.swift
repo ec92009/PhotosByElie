@@ -335,6 +335,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingColor: SidecarColor = .none
     @Published var cullingSelection = OwnerSelectionModel<String>()
     @Published var cullingScrollTargetID: String?
+    @Published var cullingKeyboardFocusRequest = UUID()
     @Published var cullingStates: [String: SidecarDecisionState] = [:]
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
@@ -3350,6 +3351,10 @@ final class BackstageViewModel: ObservableObject {
     func selectAllCullingAssets() {
         cullingSelection.selectAll()
         selectedPhotoIDs = cullingSelection.selectedIDs
+        // Command-A also works while the Sidebar owns focus. Transfer keyboard
+        // focus to the selected grid so the next H/P/U reaches its key handlers.
+        // A fresh request is needed even when every item was already selected.
+        cullingKeyboardFocusRequest = UUID()
     }
 
     var currentContentSelectionScope: ContentSelectionScope {

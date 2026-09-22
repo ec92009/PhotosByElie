@@ -12,6 +12,9 @@ MATERIALIZER = REPO_ROOT / "scripts" / "owner_connector_runtime.py"
 REQUIRED_FIXTURE_SCRIPTS = {
     "backstage_photos_client.py",
     "fixture_pipeline.py",
+    "fixture_editions.py",
+    "fixture_edition_review.py",
+    "fixture_edition_uploads.py",
     "local_server.py",
     "new_owner_connector.py",
     "owner_connector_runtime.py",

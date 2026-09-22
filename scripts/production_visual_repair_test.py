@@ -169,5 +169,27 @@ class ProductionVisualRepairTests(unittest.TestCase):
         with connect(self.root) as conn:
             self.assertEqual(production._row(conn, first['proposalId'])['generation_state'], 'failed')
 
+    def test_queued_heartbeat_survives_long_wait_and_cancellation(self):
+        from contextlib import contextmanager
+        proposal = self.start()
+        @contextmanager
+        def delayed_slot(directory, proposal_id, keep_waiting):
+            for tick in (1, 602, 1301):
+                with production.connect(self.root) as conn:
+                    conn.execute("UPDATE visual_repair_proposals SET updated_at='2026-01-01T00:00:00Z' WHERE proposal_id=?", (proposal_id,))
+                with patch.object(production.time, 'monotonic', return_value=tick):
+                    self.assertTrue(keep_waiting())
+                with production.connect(self.root) as conn:
+                    row = production._row(conn, proposal_id)
+                    self.assertEqual(visual._proposal_json(row)['generationState'], 'queued')
+                self.assertEqual(self.start()['proposalId'], proposal_id)
+            production.cancel_generation(self.root, 'fixture-la-concha', proposal_id)
+            self.assertFalse(keep_waiting())
+            yield False
+        with patch.object(production, 'generation_slot', delayed_slot):
+            result = production.run_generation(self.root, proposal['proposalId'],
+                editor=lambda *_: self.fail('cancelled queued photo reached provider'))
+        self.assertEqual(result['generationState'], 'cancelled')
+
 
 if __name__ == '__main__': unittest.main()

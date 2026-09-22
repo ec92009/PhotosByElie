@@ -16,6 +16,7 @@ import backstage_photos_job  # Load only the signed runtime's bundled Pillow.
 from backstage_photos_client import request_preview
 from openai_visual_editor import MODEL, configuration, edit_image, image_dimensions
 import visual_repair_proposals as visual
+from visual_generation_queue import generation_slot
 
 ACTIVE = {"queued", "running"}
 
@@ -184,23 +185,32 @@ def start_generation(root: Path, fixture_id: str, asset_id: str, source_version_
 
 
 def run_generation(root: Path, proposal_id: str, *, editor=edit_image) -> dict:
-    """Serialize provider work and publish only a fully decoded, still-current draft."""
-    import fcntl
-    lock_path = artifact_root(root, proposal_id).parent / ".generation.lock"
-    with lock_path.open("a") as lock:
-        deadline = time.monotonic() + 600
-        while True:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() > deadline:
-                    return _state(root, proposal_id, "failed", "Another visual generation is still running. Retry later.")
-                time.sleep(1)
+    """Bound parallel provider work; publish only a still-current decoded draft."""
+    heartbeat_at = 0.0
+
+    def keep_waiting():
+        """Retain live queued jobs without masking cancellation or dead workers."""
+        nonlocal heartbeat_at
+        with connect(root) as conn:
+            row = _row(conn, proposal_id)
+            if row["generation_state"] not in ACTIVE or row["status"] != "draft":
+                return False
+            now = time.monotonic()
+            if now >= heartbeat_at:
+                conn.execute("UPDATE visual_repair_proposals SET updated_at=? WHERE proposal_id=? AND generation_state='queued' AND status='draft'",
+                             (visual.now_iso(), proposal_id))
+                heartbeat_at = now + 30
+            return True
+
+    directory = artifact_root(root, proposal_id).parent
+    with generation_slot(directory, proposal_id, keep_waiting) as admitted:
+        if not admitted:
+            with connect(root) as conn:
+                return visual._proposal_json(_row(conn, proposal_id))
         try:
             with connect(root) as conn:
                 row = _row(conn, proposal_id)
-                if row["generation_state"] not in ACTIVE:
+                if row["generation_state"] not in ACTIVE or row["status"] != "draft":
                     return visual._proposal_json(row)
                 request, _ = validate_request(conn, row["fixture_id"], row["asset_id"], row["source_version_id"])
                 if visual._json(request) != row["request_fingerprint"]:

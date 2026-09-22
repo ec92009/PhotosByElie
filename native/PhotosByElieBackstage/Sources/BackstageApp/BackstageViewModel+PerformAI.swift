@@ -174,11 +174,16 @@ extension BackstageViewModel {
         for item in work.items where visualRuns[item.id] != nil {
             do {
                 var proposal = visualRuns[item.id]!
-                let deadline = Date().addingTimeInterval(20 * 60)
-                while proposal.isGenerating && Date() < deadline {
+                // A live queued job can wait longer than 20 minutes in a large
+                // batch. Bound loss of status, not healthy queue residence.
+                var statusDeadline = Date().addingTimeInterval(20 * 60)
+                while proposal.isGenerating && Date() < statusDeadline {
                     publishReviewAIProgress(progress, stage: "Generating After images…")
                     try await Task.sleep(for: .seconds(3))
                     await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns, failures: visualLaunchFailures, progress: &progress)
+                    if !progress.visualRefreshUnavailable {
+                        statusDeadline = Date().addingTimeInterval(20 * 60)
+                    }
                     proposal = visualRuns[item.id]!
                     publishReviewAIProgress(progress, stage: "Generating After images…")
                 }

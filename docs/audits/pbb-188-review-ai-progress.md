@@ -7,3 +7,5 @@ Validation: the complete Swift package suite passes (426 tests, 32 suites), incl
 Release candidate: v265.7 / build 352. Installation and running-app verification are deliberately deferred while the user-requested 63-photo build 351 AI batch runs. The user explicitly instructed “let that run.” The candidate must not replace or restart that running app. Tests establish source behavior; this is not yet installed verification.
 
 Signed artifact produced from `f16926b4466d686d9bac85dfa7f68644ff8d7ca4`; strict codesign and isolated embedded-runtime preview checks passed. The standard release publisher verified the immutable archive and manifest by R2 readback and published v265.7/build352. Independent public URL verification through Python urllib returned HTTP 403, so public download usability is not verified. Installed build351 was left untouched. Ticket remains In Progress pending safe installed verification.
+
+Follow-up: build352 was safely installed and observed on 2026-09-22 at 22:47 CEST once all jobs were terminal and build351 returned Ready. Same selected photo/proposals retained and Approve enabled. PBB-188 verified; superseded by build353 for PBB-189.

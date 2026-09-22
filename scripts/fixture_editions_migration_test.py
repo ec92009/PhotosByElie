@@ -41,7 +41,7 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual(report['unresolved_source'],1)
     def test_historical_upload_does_not_restore_live_after_a_metadata_edit(self):
         with connect(self.root) as c:
-            c.execute("INSERT INTO asset_publications(asset_id,fixture_id,source_version_hash,state,published_at,created_at,updated_at) VALUES ('photo',?,'original','live','2026-01-01','2026-01-01','2026-01-01')",(self.a,))
+            c.execute("INSERT INTO asset_publications(asset_id,fixture_id,source_version_hash,state,published_at,updated_at) VALUES ('photo',?,'original','live','2026-01-01','2026-01-01')",(self.a,))
             c.execute("UPDATE asset_delivery_state SET delivery_state='needs-upload' WHERE asset_id='photo'");c.commit()
             c.execute('BEGIN IMMEDIATE');report=migrate(c);c.commit()
             self.assertEqual(c.execute('SELECT delivery_state FROM fixture_edition_delivery WHERE fixture_id=?',(self.a,)).fetchone()[0],'needs-upload')

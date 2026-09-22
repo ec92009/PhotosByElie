@@ -13,3 +13,14 @@ Predicate diagnostics then identified the rejection: the method-reference contro
 Candidate v266.4/build361 validation and installed receipt follow.
 
 The full optimized suite exposed the same method-reference validation failure at both CustomerPhotoLinkSQLiteStore call sites (15 failed expectations across customer-link tests). The identical explicit Unicode-category correction is applied there; this preserves the existing rejection of controls and format characters.
+
+## Verified release receipt — 2026-09-23 01:21 CEST
+
+- Source:38d32068 on release/backstage, pushed to origin.
+- All430 tests in32 suites pass in release configuration. Earlier debug suite also passed430; the release suite was necessary to catch this defect.
+- Signed v266.4/build361 installed at /Applications/PhotosByElie Backstage.app. Strict deep codesign verification passed; signer Apple Development: Elie Cohen (L9958JSM92). Normal quit/install/relaunch used; previous installations retained in the local rollback directory.
+- Installed Friends and Family Gallery: bounded IMG_436 search returned24 records. Previously unavailable IMG_4369,4368,4367,4366,4365,4364,4362 cards all rendered. Scrolling to the lower row showed IMG_4362 sharpen from its initial thumbnail to the idle high-definition preview. No unavailable cards remained in this24-record verification window.
+- This verifies the reported group, not every one of the96 qualified identities in the database. Duplicate records remain distinct; this repair changes resolution only.
+- Existing signed-runtime900px/1800px watermarked preview smoke passed.
+- Published archive and update manifest through the standard publisher, with publisher read-back verification. Public archive:https://download.photos-by-elie.com/backstage/releases/PhotosByElie-Backstage-v266.4-build-361.zip . Earlier failed candidates357–360 were not published.
+- Temporary IMG_436 search removed; Friends and Family / Culling — Undecided filters restored. No hide/pick/approve/upload/generation action used for verification. Normal startup Photos discovery ran during relaunches.

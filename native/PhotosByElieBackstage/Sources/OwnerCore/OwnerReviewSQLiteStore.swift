@@ -55,7 +55,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         let effectiveStates = stateFilters == nil
             ? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
             : selectedStates
-        let includeApproved = stateFilters != nil || mode == .full
+        let includeApproved = effectiveStates.contains("approved")
         let includeHidden = effectiveStates.contains("hidden")
         let selectedMedia = Set(mediaFilters.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
             .intersection(["photos", "videos"])

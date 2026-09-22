@@ -91,7 +91,9 @@ struct OwnerReviewSQLiteStoreTests {
         let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
         let before = try Data(contentsOf: databaseURL)
         #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["picked", "approved"]).items.map(\.id) == ["asset-2"])
-        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.isEmpty)
+        let excluded = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["picked", "uploaded"], limit: 1)
+        #expect(excluded.items.isEmpty && excluded.summary.total == 0 && !excluded.hasNext)
         let both = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved", "uploaded"], limit: 1)
         #expect(both.summary.total == 2 && both.items.count == 1 && both.hasNext)
         #expect(try Data(contentsOf: databaseURL) == before)
@@ -102,7 +104,7 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.isEmpty)
         try execute(databaseURL, "UPDATE asset_delivery_state SET source_version_hash='new-edit' WHERE asset_id='asset-1'")
         #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["approved"]).summary.total == 1)
-        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.isEmpty)
     }
 
     @Test("Hidden is excluded from Uploaded unless explicitly enabled; fixture scope and counts are preserved")
@@ -650,6 +652,26 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(undone.changes.first?.review["proposalReady"]?.boolValue == true)
         #expect(try scalar(databaseURL, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "ready")
         #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
+    }
+
+    @Test("Reject AI withdrawal discards pending metadata and retains the original and delivery receipt")
+    func withdrawAIKeepsOriginal() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("reject-ai-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let db = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: db)
+        let store = OwnerReviewSQLiteStore(databaseURL: db)
+        let title = try scalar(db, "SELECT title FROM sidecar_decisions WHERE asset_id='asset-1'")
+        let delivery = try scalar(db, "SELECT delivery_state FROM asset_delivery_state WHERE asset_id='asset-1'")
+        _ = try store.applyReview(.requestAI, fixtureID: "fixture-expo", assetIDs: ["asset-1"])
+        #expect(try scalar(db, "SELECT status FROM asset_ai_proposals WHERE proposal_id='proposal-1'") == "superseded")
+        #expect(try scalar(db, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id='asset-1'") == "unreviewed")
+        #expect(try scalar(db, "SELECT title FROM sidecar_decisions WHERE asset_id='asset-1'") == title)
+        #expect(try scalar(db, "SELECT delivery_state FROM asset_delivery_state WHERE asset_id='asset-1'") == delivery)
+        _ = try store.applyReview(.approve, fixtureID: "fixture-expo", assetIDs: ["asset-1"])
+        #expect(try scalar(db, "SELECT title FROM sidecar_decisions WHERE asset_id='asset-1'") == title)
+        #expect(try scalar(db, "SELECT status FROM asset_ai_proposals WHERE proposal_id='proposal-1'") == "superseded")
     }
 
     @Test("Metadata edit preserves audit state and accepts a proposed draft on Undo")

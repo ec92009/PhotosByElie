@@ -4633,48 +4633,6 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    /// Capture one explicit After approval and lock before rendering or database work begins.
-    func useVisualAfterForUploads(for assetID: String) {
-        guard !isReviewMutationBlocked, isREReviewScope,
-              let item = reviewItems.first(where: { $0.id == assetID }),
-              let proposal = reviewVisualProposals[assetID],
-              proposal.fixtureID == selectedFixtureID,
-              let store = externalEditJobStore else { return }
-        let fixtureID = selectedFixtureID
-        preserveCurrentReviewDraft()
-        let title = reviewProposalDrafts[assetID]?.title ?? item.title
-        let keywords = reviewProposalDrafts[assetID]?.keywords ?? item.keywords
-        cancelReviewMetadataAutosave()
-        isRunningReview = true
-        visualRepairStatus = "Preparing explicitly upscaled After for Uploads…"
-        reviewStatus = visualRepairStatus
-        Task { [weak self] in
-            guard let self else { return }
-            defer { self.isRunningReview = false }
-            do {
-                _ = try await Task.detached(priority: .userInitiated) {
-                    try VisualRepairRendition.prepare(proposal: proposal, item: item, store: store)
-                }.value
-                self.invalidateCurrentRenditionCaches(for: assetID)
-                // The immutable camera original remains intact; this approves the exact new rendition.
-                let accepted = try await self.visualRepairService.decide(.accept,
-                    fixtureID: fixtureID, proposalID: proposal.id,
-                    idempotencyKey: "backstage-visual-use-after-\(proposal.id)")
-                self.reviewVisualProposals[assetID] = accepted
-                _ = try await self.fixtureService.applyReview(.approve, fixtureID: fixtureID,
-                    assetIDs: [assetID], anchorAssetID: assetID, title: title, keywords: keywords)
-                await self.loadFixtureReviewWindow(preferredAssetID: assetID)
-                self.visualRepairStatus = "AI After · upscaled to \(item.pixelWidth)×\(item.pixelHeight), approved for Uploads. Original retained. Nothing uploaded."
-                self.reviewStatus = self.visualRepairStatus
-            } catch {
-                self.invalidateCurrentRenditionCaches(for: assetID)
-                await self.loadFixtureReviewWindow(preferredAssetID: assetID)
-                self.visualRepairStatus = "After preparation needs attention: \(self.userFacingMessage(for: error))"
-                self.reviewStatus = self.visualRepairStatus
-            }
-        }
-    }
-
     func decideVisualRepair(
         _ decision: VisualRepairDecision,
         for assetID: String
@@ -5000,6 +4958,12 @@ final class BackstageViewModel: ObservableObject {
     ) async {
         guard !isReviewMutationBlocked else {
             reviewStatus = "Finish the current Review action first."
+            return
+        }
+        if action == .approve, selectedReviewAssetIDs.contains(where: { id in
+            reviewItems.first(where: { $0.id == id }).map { requiresReviewAfter(for: $0) } == true
+        }) {
+            await approveReviewAfterSelection()
             return
         }
         if action != .editMetadata {
@@ -5393,6 +5357,7 @@ final class BackstageViewModel: ObservableObject {
         } else {
             state = .picked
         }
+        guard item.editorialState != "approved" || reviewStateFilters.contains(.approved) else { return false }
         guard state != .hidden || reviewStateFilters.contains(.hidden) else { return false }
         let pendingStateMatches = reviewStateFilters.contains(state)
             && !(state == .approved && item.deliveryState == "live")
@@ -6328,7 +6293,7 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func syncReviewDraft() {
+    func syncReviewDraft() {
         guard let item = focusedReviewItem else {
             clearReviewDraft()
             return
@@ -6384,7 +6349,7 @@ final class BackstageViewModel: ObservableObject {
         reviewAINote = ""
     }
 
-    private func preserveCurrentReviewDraft() {
+    func preserveCurrentReviewDraft() {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()

@@ -2374,11 +2374,11 @@ class NativeCullingParityTest(unittest.TestCase):
             backstage_ui_source(),
         )
         self.assertIn("model.performReviewAI()", inspector)
-        self.assertIn(".disabled(!model.canPerformReviewAI)", inspector)
+        self.assertIn("model.hasPendingReviewAI ? model.isReviewMutationBlocked : !model.canPerformReviewAI", inspector)
         self.assertIn("Optional detailed instructions for AI", inspector)
         for obsolete in ["Needs AI", "Run AI pass now", "Nightly AI", "title/keyword AI requested", "Mark for AI review", "Generate visual draft"]:
             self.assertNotIn(obsolete, ui)
-        actions = inspector.split('? "Approve original" : "Approve")', 1)[1].split("Divider()", 1)[0]
+        actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)
         self.assertIn("model.performReviewAI()", actions)
         self.assertNotIn('Button("Propagate")', actions)
@@ -2464,7 +2464,7 @@ class NativeCullingParityTest(unittest.TestCase):
             1,
         )[1].split("private func clearReviewDraft()", 1)[0]
         preservation = model.split(
-            "private func preserveCurrentReviewDraft()", 1
+            "func preserveCurrentReviewDraft()", 1
         )[1].split("private func scheduleReviewMetadataAutosave", 1)[0]
 
         self.assertNotIn('Button("Load proposals")', review)
@@ -2510,7 +2510,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "decideProposal",
         ):
             self.assertNotIn(retired, model)
-        self.assertIn('? "Approve original" : "Approve")', review)
+        self.assertIn('Button("Approve")', review)
         self.assertIn("model.performReviewAI()", review)
         self.assertNotIn('Button("Reject")', review)
         self.assertNotIn('Button("Block"', review)

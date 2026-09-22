@@ -4,9 +4,80 @@ import ImageIO
 import SQLite3
 import Testing
 @testable import OwnerCore
+@testable import BackstageUI
 
 @Suite("External editor round trips")
 struct ExternalEditJobStoreTests {
+    @Test("Normal Approve selects the After; Reject AI restores original approval; missing After never falls back", arguments: ["approve", "reject", "missing", "unrecorded"])
+    @MainActor
+    func reviewAIApprovalRoute(action: String) async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let api = ReviewApprovalTestAPI()
+        let runner = OwnerActionRunner(api: api, waker: NoApprovalWake(), pollInterval: .milliseconds(1))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(),
+            fixtureService: FixtureWorkflowService(runner: runner),
+            visualRepairService: VisualRepairProposalService(runner: runner),
+            workflowRecoveryStore: nil, currentImageSizeCache: nil, currentEquipmentCache: nil,
+            equipmentBackfillStore: nil, externalEditJobStore: fixture.store, customerPhotoLinks: nil)
+        model.installFixtureTree([FixtureNode(id: "fixture-expo", name: "RE")],
+            preferredFixtureID: "fixture-expo", persistSelection: false)
+        let file = Bundle.module.url(forResource: "proposed", withExtension: "png", subdirectory: "Fixtures/PBE144SyntheticOpenAI")!
+        let data = try Data(contentsOf: file)
+        let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        var item = FixtureReviewItem(id: "asset-1", photoLibraryIdentifier: "asset-1",
+            sourceVersionID: "source-asset-1", title: "Original", keywords: [], filename: "one.jpg", capturedAt: "",
+            pixelWidth: image.width * 2, pixelHeight: image.height * 2)
+        if action == "unrecorded" {
+            item.visualAIRequest = ["sourceVersionId": .string(item.sourceVersionID), "reasons": .array(["contrast"])]
+        }
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "fixture-expo", mode: .full,
+            offset: 0, limit: 200, nextOffset: 0, hasNext: false,
+            summary: FixtureReviewSummary(total: 1, unreviewed: 1, requestingAI: 0, proposed: 0, approved: 0), items: [item])
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: [item.id], selectedIDs: [item.id], anchorID: item.id, focusedID: item.id)
+        model.reviewVisualProposals[item.id] = VisualRepairProposal(id: "p", fixtureID: "fixture-expo", assetID: item.id,
+            sourceVersionID: item.sourceVersionID, defectCategories: [.contrast], ladderRung: 0, modelLadder: [],
+            requestedGeneratorModel: "test", resolvedModel: "test", reasoningEffort: "", vision: true,
+            attempt: 1, status: .draft, originalReference: "immutable-source-version://source-asset-1",
+            derivedReference: file.absoluteString, derivedAvailable: action != "missing",
+            derivedSHA256: VisualRepairRendition.digest(data), generatorReference: "test")
+        if action == "unrecorded" { model.reviewVisualProposals.removeValue(forKey: item.id) }
+        #expect(model.hasPendingReviewAI)
+        if action == "reject" {
+            model.rejectReviewAI()
+            #expect(model.isRunningReview)
+            model.rejectReviewAI() // duplicate click is suppressed synchronously
+            for _ in 0..<400 where model.isRunningReview { try await Task.sleep(for: .milliseconds(5)) }
+            #expect(!model.isRunningReview)
+        } else {
+            await model.applyReviewAction(.approve) // same route used by keyboard / Quick Look
+        }
+        let requests = await api.requests
+        let mutations = requests.filter { $0["mode"]?.stringValue == "fixture-review-apply" }
+        let decisions = requests.filter { $0["mode"]?.stringValue == "fixture-visual-repair-proposal-decide" }
+        if action == "missing" || action == "unrecorded" {
+            #expect(mutations.isEmpty && decisions.isEmpty)
+            #expect(model.reviewStatus.contains("not ready"))
+            #expect(try fixture.store.currentReturnedSource(assetID: item.id) == nil)
+        } else if action == "reject" {
+            #expect(decisions.count == 1 && decisions.first?["decision"]?.stringValue == "reject")
+            #expect(mutations.count == 1 && mutations.first?["reviewAction"]?.stringValue == "request-ai")
+            #expect(mutations.first?["aiReasons"]?.arrayValue?.isEmpty == true)
+            #expect(try fixture.store.currentReturnedSource(assetID: item.id) == nil)
+            #expect(!model.hasPendingReviewAI)
+        } else {
+            #expect(decisions.count == 1 && decisions.first?["decision"]?.stringValue == "accept")
+            #expect(mutations.count == 1 && mutations.first?["reviewAction"]?.stringValue == "approve")
+            let current = try #require(try fixture.store.currentReturnedSource(assetID: item.id))
+            #expect(current.sourceVersionID != item.sourceVersionID)
+            let output = try #require(CGImageSourceCreateWithURL(current.fileURL as CFURL, nil))
+            let after = try #require(CGImageSourceCreateImageAtIndex(output, 0, nil))
+            #expect(after.width == item.pixelWidth && after.height == item.pixelHeight)
+        }
+        #expect(!requests.contains { ($0["mode"]?.stringValue ?? "").contains("upload") })
+    }
+
     @Test("AI return cannot supersede a source that changed after staging")
     func visualAfterRejectsRacingSource() throws {
         let fixture = try Fixture()
@@ -586,4 +657,30 @@ private struct Fixture {
       FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id)
     );
     """
+}
+
+private struct NoApprovalWake: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? { throw CancellationError() }
+}
+
+private actor ReviewApprovalTestAPI: OwnerActionServing {
+    private(set) var requests: [[String: JSONValue]] = []
+    func createAction(_ action: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
+        let manifest = action.payload["manifest"]?.objectValue ?? [:]
+        requests.append(manifest)
+        var result: [String: JSONValue] = [:]
+        switch manifest["mode"]?.stringValue {
+        case "fixture-review-apply": result = ["reviewAction": .object(["changes": .array([])])]
+        case "fixture-visual-repair-proposal-decide":
+            result = ["visualRepairProposal": .object(["proposalId": "p", "assetId": "asset-1",
+                "fixtureId": "fixture-expo", "sourceVersionId": "source-asset-1",
+                "status": .string(manifest["decision"]?.stringValue == "reject" ? "rejected" : "accepted")])]
+        case "fixture-review-window": result = ["reviewWindow": .object(["fixtureId": "fixture-expo", "items": .array([])])]
+        case "fixture-ai-status": result = ["ai": .object(["active": false])]
+        default: break
+        }
+        return OwnerActionEnvelope(action: OwnerAction(id: UUID().uuidString, actionKind: action.actionKind,
+            target: action.target, state: .completed, result: result))
+    }
+    func getAction(id: String) async throws -> OwnerAction { throw CancellationError() }
 }

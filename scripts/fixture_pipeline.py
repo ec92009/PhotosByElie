@@ -2028,6 +2028,8 @@ def _fixture_review_predicates(
             str(value or "").strip().casefold()
             for value in state_filters
         } & {"picked", "approved", "hidden", "uploaded"}
+        if "approved" not in selected_states:
+            predicates.append("editorial.editorial_state != 'approved'")
         state_predicates: list[str] = []
         if "picked" in selected_states:
             state_predicates.append(

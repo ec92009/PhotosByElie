@@ -4803,7 +4803,7 @@ private actor RecordingGalleryReviewService: LocalFixtureReviewServing {
     func undoOperationIDs() -> [String] { undoneOperationIDs }
 }
 
-private struct InertPhotoLibrary: PhotoLibraryServing {
+struct InertPhotoLibrary: PhotoLibraryServing {
     func authorization() -> PhotoLibraryAccess { .denied }
     func requestAuthorization() async -> PhotoLibraryAccess { .denied }
     func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }

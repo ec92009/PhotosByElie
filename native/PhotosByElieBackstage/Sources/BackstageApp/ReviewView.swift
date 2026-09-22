@@ -436,7 +436,7 @@ struct ReviewView: View {
                         if press.modifiers.contains(.command) {
                             model.selectAllReviewItems()
                         } else {
-                            Task { await model.applyReviewAction(.approve) }
+                            model.beginReviewApproval()
                         }
                         return .handled
                     }
@@ -1124,14 +1124,12 @@ private struct ReviewInspector: View {
                     }
                     Divider()
                     HStack {
-                        Button(model.reviewVisualProposals[item.id]?.status == .draft
-                            && model.reviewVisualProposals[item.id]?.sourceVersionID == item.sourceVersionID
-                            ? "Approve original" : "Approve") {
-                            Task { await model.applyReviewAction(.approve) }
+                        Button("Approve") {
+                            model.beginReviewApproval()
                         }
                         .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("a", modifiers: [])
-                        .backstageHelp("Approve metadata for the current image version. To select an AI After instead, use Use After for Uploads below.")
+                        .backstageHelp("Approve the AI After when ready, otherwise the current original. Reject AI first to keep the original. Nothing is uploaded.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }
@@ -1153,11 +1151,14 @@ private struct ReviewInspector: View {
                         .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("u", modifiers: [])
                         .backstageHelp("Clear the fixture pick and return the selected assets to Culling as Undecided.")
-                        Button(model.isPerformingReviewAI ? "Performing AI…" : "Perform AI") {
-                            model.performReviewAI()
+                        Button(model.isPerformingReviewAI ? "Performing AI…" : model.hasPendingReviewAI ? "Reject AI" : "Perform AI") {
+                            if model.hasPendingReviewAI { model.rejectReviewAI() }
+                            else { model.performReviewAI() }
                         }
-                        .disabled(!model.canPerformReviewAI)
-                        .backstageHelp("Immediately review all title and keyword details. RE photos also receive all five visual repairs. Results require approval.")
+                        .disabled(model.hasPendingReviewAI ? model.isReviewMutationBlocked : !model.canPerformReviewAI)
+                        .backstageHelp(model.hasPendingReviewAI
+                            ? "Discard the pending AI metadata and After draft. Approve will then use the original. Nothing is approved or uploaded."
+                            : "Immediately review all title and keyword details. RE photos also receive all five visual repairs. Results require approval.")
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
@@ -1190,7 +1191,7 @@ private struct ReviewInspector: View {
                         Divider()
                         Text("After image")
                             .font(.headline)
-                        if let proposal = model.reviewVisualProposals[item.id] {
+                        if let proposal = model.reviewVisualProposals[item.id], proposal.status.isComparable {
                             let hasRenderedProposal = proposal.derivedAvailable
                                 && VisualRepairComparisonState.isRenderableReference(proposal.derivedReference)
                             Label(
@@ -1204,25 +1205,11 @@ private struct ReviewInspector: View {
                             if !proposal.generationError.isEmpty {
                                 Text(proposal.generationError).font(.caption).foregroundStyle(.red)
                             }
-                            if proposal.status.isComparable && !proposal.isGenerating {
-                                Button("Use After for Uploads · upscaled") {
-                                    model.useVisualAfterForUploads(for: item.id)
-                                }
-                                .disabled(!hasRenderedProposal || model.isRunningReview)
-                                .backstageHelp("Approve this AI After at the original pixel dimensions using explicit upscaling. Selects the edited file for previews and Uploads, retains the camera original, and does not upload or publish.")
-                                Text("Upscaling restores dimensions, not original photographic detail.")
+                            if proposal.status == .draft && !proposal.isGenerating {
+                                Text("Approve uses this After image, upscaled to the original dimensions. Reject AI keeps the original.")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
-                            if proposal.status == .draft && !proposal.isGenerating {
-                                HStack(spacing: 8) {
-                                    Button("Reject draft") {
-                                        Task { await model.decideVisualRepair(.reject, for: item.id) }
-                                    }
-                                    .disabled(model.isRunningReview)
-                                    .backstageHelp("Reject and hide this derived visual reference while retaining its audit provenance.")
-                                }
-                                .buttonStyle(.bordered)
-                            }
+
                         } else {
                             Text("No visual draft is available for this source version.")
                                 .font(.caption)

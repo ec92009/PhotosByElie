@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		019FD97632C33E0C21E8E07D /* BackstageXcodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04312A3A24851AFB3EDB66D /* BackstageXcodeApp.swift */; };
 		022D620E5D93FAB1D2D9D2E4 /* BackstageGalleryWorkflowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F539FC0C296A59BF8538A6 /* BackstageGalleryWorkflowState.swift */; };
+		030BD5DDAAE617CEF139C8A6 /* BackstageViewModel+ReviewApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8C3B73095D6026D479ED42 /* BackstageViewModel+ReviewApproval.swift */; };
 		06BF9F3E1B8F2F373D4C041E /* PBEOwnerHTTPRequestParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */; };
 		0813EF2D6E69FFFF8D06B161 /* BackstageWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7502CEEFDBCC869E566BF28A /* BackstageWindowState.swift */; };
 		0B83725363C2BA21579362B8 /* PhotoMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */; };
@@ -297,6 +298,7 @@
 		A9D7B0EB7FBB0F36E565B9BA /* FixtureCullingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureCullingView.swift; sourceTree = "<group>"; };
 		AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelpTests.swift; sourceTree = "<group>"; };
 		AC5BEA77F78B6B15A631E14C /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
+		AE8C3B73095D6026D479ED42 /* BackstageViewModel+ReviewApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackstageViewModel+ReviewApproval.swift"; sourceTree = "<group>"; };
 		AF0A86D1BBD1742F20E172CD /* RawRecoveryBatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawRecoveryBatchService.swift; sourceTree = "<group>"; };
 		B04312A3A24851AFB3EDB66D /* BackstageXcodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageXcodeApp.swift; sourceTree = "<group>"; };
 		B31D0E07A87397F37067AA7E /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
@@ -446,6 +448,7 @@
 				0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */,
 				F72CFA7241DFD5E52511D2B5 /* BackstageViewModel+EditReturns.swift */,
 				CAC4650D7E72D530E6A1CDDB /* BackstageViewModel+PerformAI.swift */,
+				AE8C3B73095D6026D479ED42 /* BackstageViewModel+ReviewApproval.swift */,
 				7502CEEFDBCC869E566BF28A /* BackstageWindowState.swift */,
 				B04312A3A24851AFB3EDB66D /* BackstageXcodeApp.swift */,
 				E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */,
@@ -728,6 +731,7 @@
 				AD6B43FF1F33FCCFB3F24841 /* BackstageUpdateWorkflowState.swift in Sources */,
 				E4AE9D7D636D77CFBC8A0609 /* BackstageViewModel+EditReturns.swift in Sources */,
 				FC8D99F5044FD7E94A1F4A9B /* BackstageViewModel+PerformAI.swift in Sources */,
+				030BD5DDAAE617CEF139C8A6 /* BackstageViewModel+ReviewApproval.swift in Sources */,
 				5710E0E1DAD841A895A560A6 /* BackstageViewModel.swift in Sources */,
 				0813EF2D6E69FFFF8D06B161 /* BackstageWindowState.swift in Sources */,
 				019FD97632C33E0C21E8E07D /* BackstageXcodeApp.swift in Sources */,
@@ -1078,7 +1082,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 346;
+				CURRENT_PROJECT_VERSION = 347;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1088,7 +1092,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 265.1;
+				MARKETING_VERSION = 265.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -1101,7 +1105,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 346;
+				CURRENT_PROJECT_VERSION = 347;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1111,7 +1115,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 265.1;
+				MARKETING_VERSION = 265.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

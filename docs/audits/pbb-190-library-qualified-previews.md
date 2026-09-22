@@ -1,13 +1,15 @@
 # PBB-190 — Library-qualified Photos preview identity
 
-The Friends and Family Gallery screenshot in build356 shows Photo unavailable cards beside working images with the same filenames. Read-only Owner inspection found96 library-qualified cloud IDs, all96 with an exact canonical cloud-ID counterpart. The native cloud resolver rejected a fourth colon component before PhotoKit lookup, so these cards could not resolve even when the canonical record could.
+The Friends and Family Gallery screenshot in build356 shows unavailable preview cards beside working images. Read-only Owner inspection found96 library-qualified cloud identifiers, all with exact canonical cloud-ID counterparts. The resolver originally rejected the optional library qualifier before asking PhotoKit to resolve the identity.
 
-The resolver now validates a bounded optional absolute .photoslibrary qualifier and passes the full stored cloud identity to PhotoKit first, then tries its exact three-component form. The path is never accessed. It rejects relative paths, URLs, traversal, control characters and oversized inputs. Original database keys, duplicate records, fixture decisions, titles/keywords, approval/upload state and Photos originals are unchanged. It does not substitute photos by filename or guess missing local identities.
+The repair accepts a bounded absolute .photoslibrary qualifier, preserves the full serialized identity for PhotoKit, and tries its exact three-component cloud identity as a fallback. It does not access the library path, use filenames as identity, merge records, or rewrite fixture decisions. Relative paths, URLs, traversal, control/format characters and oversized inputs remain invalid.
 
-Verification and installed receipt follow. Candidate v266.1/build358.
+## Failed candidates and release-mode regression
 
-All430Swift tests in32suites pass, including qualified identity preservation and ordered canonical fallback, distinct-identity preservation, malformed suffix rejection, and existing Gallery/Review/source-resolution regressions. Live photo resolution is still to be verified after installation.
+Candidates357–359 passed430debug tests and signing but failed installed preview verification. They were not published. Diagnostic candidate360 confirmed that the 121-byte qualified identifiers reached the resolver intact but produced no lookup candidates. Optimized tests reproduced the failure (six failed expectations); debug and isolated parser checks had passed.
 
-Candidate357 passed tests but failed installed verification: the same IMG_4369 card remained unavailable after explicit Retry. It was not published. Candidate358 preserves the complete PhotoKit serialization, including its library qualifier, before canonical fallback.
+Predicate diagnostics then identified the rejection: the method-reference control-character check reported ordinary paths as containing controls in the package release build. The final implementation checks Unicode scalar categories explicitly and removes the temporary lookup diagnostics. No claim is made about the underlying compiler/Foundation cause beyond this observed difference.
 
-Candidate358 also failed installed verification. Candidate359 applies the same direct fetch then cloud mapping path to both full and canonical identifiers, addressing the bypass of direct lookup for the canonical fallback. No failed candidate has been published.
+Candidate v266.4/build361 validation and installed receipt follow.
+
+The full optimized suite exposed the same method-reference validation failure at both CustomerPhotoLinkSQLiteStore call sites (15 failed expectations across customer-link tests). The identical explicit Unicode-category correction is applied there; this preserves the existing rejection of controls and format characters.

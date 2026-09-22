@@ -16,7 +16,9 @@ public struct CustomerPhotoLink: Equatable, Sendable {
         guard !publishedMediaID.isEmpty,
               publishedMediaID.utf8.count <= 1_024,
               publishedMediaID == publishedMediaID.trimmingCharacters(in: .whitespacesAndNewlines),
-              !publishedMediaID.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+              !publishedMediaID.unicodeScalars.contains(where: {
+                  $0.properties.generalCategory == .control || $0.properties.generalCategory == .format
+              })
         else { throw CustomerPhotoLinkError.noVerifiedPublication }
         var components = URLComponents()
         components.scheme = "https"
@@ -49,7 +51,9 @@ public struct CustomerPhotoLinkSQLiteStore: CustomerPhotoLinkResolving {
 
     public func resolve(assetID: String, fixtureID: String) throws -> CustomerPhotoLink {
         guard [assetID, fixtureID].allSatisfy({
-            !$0.isEmpty && !$0.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+            !$0.isEmpty && !$0.unicodeScalars.contains(where: {
+                  $0.properties.generalCategory == .control || $0.properties.generalCategory == .format
+              })
         }) else {
             throw CustomerPhotoLinkError.noVerifiedPublication
         }

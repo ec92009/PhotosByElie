@@ -1999,6 +1999,12 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             // when the connector does not provide a local Photos ID.
             var resolved: PHAsset?
             for cloudValue in PhotoLibraryIdentifier.cloudLookupValues(from: identifier) {
+                // Canonical legacy values can resolve directly even when
+                // PhotoKit cloud mapping has no entry for that serialization.
+                if let directAsset = fetchAsset(localIdentifier: cloudValue) {
+                    resolved = directAsset
+                    break
+                }
                 let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
                 let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
                 if let result = mappings[cloudIdentifier],

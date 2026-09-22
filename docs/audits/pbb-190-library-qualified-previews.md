@@ -9,3 +9,5 @@ Verification and installed receipt follow. Candidate v266.1/build358.
 All430Swift tests in32suites pass, including qualified identity preservation and ordered canonical fallback, distinct-identity preservation, malformed suffix rejection, and existing Gallery/Review/source-resolution regressions. Live photo resolution is still to be verified after installation.
 
 Candidate357 passed tests but failed installed verification: the same IMG_4369 card remained unavailable after explicit Retry. It was not published. Candidate358 preserves the complete PhotoKit serialization, including its library qualifier, before canonical fallback.
+
+Candidate358 also failed installed verification. Candidate359 applies the same direct fetch then cloud mapping path to both full and canonical identifiers, addressing the bypass of direct lookup for the canonical fallback. No failed candidate has been published.

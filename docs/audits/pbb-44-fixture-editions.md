@@ -13,3 +13,9 @@ Validation: 425 native tests and 143 Python tests passed (19 edition/migration/i
 Target release: Backstage v265.6, build 351. Installation proof is recorded separately below after signed build, backup, migration and live checks.
 
 A final live migration check additionally requires the legacy current delivery to remain live and its accepted metadata to match before retaining Uploaded. A historical receipt by itself cannot override a later needs-upload state. The added regression passed. All three approved Marketing After editions correctly remain needs-upload.
+
+## Installed verification — 2026-09-22 22:04 CEST
+
+Installed v265.6/build351 from clean source `bc73397cc69d1f05a210b883d95321d401e1b500`. Deep strict signature verification and isolated bundled-runtime 900/1800px JPEG smoke passed. The prior app and a verified pre-migration Owner.sqlite are retained in `~/Library/Application Support/PhotosByElie/Backstage/Rollback/v265.5-build350-before351/`.
+
+The live database passed integrity/foreign-key checks and its edition values exactly matched the final backup rehearsal. Live Review showed **156 matching / 153 awaiting Review / 3 approved / 0 hidden**, with Before/After retained on the three After photos. Live Uploads showed exactly three eligible rows, each labelled **AI After · upscaled**, with the corresponding fixture titles and keywords. Give Back Preview was disabled in RE Marketing, enabled in Expo, then disabled again after returning to RE Marketing. No upload, approval, Hide, AI generation, Photos sync or metadata write was used as a live test.

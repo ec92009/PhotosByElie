@@ -22,3 +22,7 @@ Installed UI verification on 2026-09-22:
 - Prior build 344 retained locally for rollback. App Quit automation was unreliable; the exact verified app process was terminated before replacing its bundle.
 
  No photo decisions, files, upload receipts, or publication state were changed for this task.
+
+## Hidden precedence correction — 2026-09-22
+
+The user explicitly rejected the former Uploaded-includes-hidden behavior. Build **346 / v265.1** supersedes that part of the verification above: Hidden unchecked excludes all fixture-hidden photos regardless of Uploaded. Native/Python predicates and optimistic membership now enforce the exclusion before counts and pagination. Installed checks return 156 with Hidden off, 189 with Hidden on, then 156 when off again. See [PBB-187 installed proof](pbb-187-instant-ai.md).

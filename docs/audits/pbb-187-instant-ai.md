@@ -14,4 +14,10 @@ Validation before packaging:
 - 71 of 72 native UI source checks passed. The remaining Uploads help-text assertion already fails on unchanged release commit 4264461b; no Uploads code was changed. Three other stale baseline assertions were updated to current Review UI where this change required them.
 - Tests use synthetic fixtures/providers. No real-photo AI generation, approval, upload or publication was triggered during implementation.
 
-Installed version and visible behavior will be recorded after signing.
+Installed **v265.1 · build 346**, source `9743442031686da636c3af58dcf49e328d75d0f2`, on 2026-09-22. Clean-source verification, packaged runtime preview smoke and strict signature verification passed. Build 345 retained for rollback.
+
+Installed checks: Picked + Approved awaiting upload + Uploaded with Hidden off shows **156 matching, 155 approved, 1 awaiting Review, 0 hidden**. Turning Hidden on shows **189 matching and 33 hidden** and restores D5H_2968/2969; turning it off returns to 156 and removes both. Left Hidden off and Uploaded on.
+
+The selected RE photo exposes enabled **Perform AI**, the optional detailed-instructions field, all-five-repairs explanatory text, and existing Before / After and explicit Use After for Uploads. No reason selectors, deferred run button, nightly schedule or requested-AI counter remain. Real-photo generation was not triggered during verification.
+
+The digest across all 189 fixture decisions, editorial states, AI notes/visual requests, delivery receipts and current source versions was unchanged before/after installation and UI checks: `f113b035a26c7c0f3cdca95e650537af9d78e0fa35a3e37eddde124118f0c08a`.

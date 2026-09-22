@@ -3193,7 +3193,7 @@ final class BackstageViewModel: ObservableObject {
     /// decision after a filter transition. The next explicit load receives a
     /// fresh serial, while the current in-memory decision remains authoritative
     /// until the mutation result has been applied.
-    private func invalidateCullingWindowLoads() {
+    private func invalidateCullingWindowLoads(preservingThumbnails: Bool = false) {
         galleryWorkflow.invalidateWindowRequests()
         galleryWorkflow.backfillTask?.cancel()
         galleryWorkflow.backfillTask = nil
@@ -3204,7 +3204,9 @@ final class BackstageViewModel: ObservableObject {
         // SQLite read starts; cancelling only the backfill coordinator leaves
         // already-issued card requests and metadata writes running, which can
         // starve the main actor and strand the replacement UI at 0 selected.
-        cancelCullingThumbnailWork()
+        if !preservingThumbnails {
+            cancelCullingThumbnailWork()
+        }
     }
 
     func scheduleCullingSearchRefresh() {
@@ -7100,7 +7102,9 @@ final class BackstageViewModel: ObservableObject {
             return false
         }
         if cullingPool == nil {
-            invalidateCullingWindowLoads()
+            // Decisions do not replace the viewport or the image source. Surviving
+            // SwiftUI cards keep their identity and will not emit another onAppear.
+            invalidateCullingWindowLoads(preservingThumbnails: true)
         }
         let selectedBefore = cullingSelection.selectedIDs
         cullingCancellationRequested = false
@@ -7198,7 +7202,9 @@ final class BackstageViewModel: ObservableObject {
             return false
         }
         if cullingPool == nil {
-            invalidateCullingWindowLoads()
+            // Decisions do not replace the viewport or the image source. Surviving
+            // SwiftUI cards keep their identity and will not emit another onAppear.
+            invalidateCullingWindowLoads(preservingThumbnails: true)
         }
         let selectedBefore = cullingSelection.selectedIDs
         let anchorBefore = cullingSelection.anchorID

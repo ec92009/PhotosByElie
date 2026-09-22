@@ -3806,6 +3806,48 @@ struct BackstageFixtureSelectionTests {
         model.cullingScrollPhaseChanged(isScrolling: true)
     }
 
+    @Test("Hiding one card preserves other sharp previews and idle upgrades without another appear event", arguments: [false, true])
+    @MainActor
+    func hidePreservesVisibleThumbnailWork(alreadySharp: Bool) async throws {
+        let library = RecordingPreviewPhotoLibrary()
+        let items = ["hide", "stay"].map { FixtureAsset(id: $0, title: $0, filename: "\($0).jpg", mediaType: "photo", placementState: .undecided) }
+        let service = RecordingFixturePlacementService(states: ["hide": .undecided, "stay": .undecided])
+        let runner = OwnerActionRunner(api: PreviewOnlyActionAPI(),
+            waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1), timeout: .seconds(1))
+        let model = BackstageViewModel(photoLibrary: library,
+            fixtureService: FixtureWorkflowService(runner: runner, localReviewService: service),
+            workflowRecoveryStore: nil, currentImageSizeCache: nil, currentEquipmentCache: nil,
+            equipmentBackfillStore: nil, cullingThumbnailUpgradeDelay: .milliseconds(1))
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 2, videos: 0)
+        window.items = items
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.undecided]
+        model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { ($0.id, SidecarDecisionState(assetId: $0.id, pickState: "undecided")) })
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: items.map(\.id), selectedIDs: ["hide"], anchorID: "hide", focusedID: "hide")
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        items.forEach { model.cullingAssetDidAppear($0) }
+        for _ in 0..<50 where model.cullingThumbnails["stay"] == nil { try await Task.sleep(for: .milliseconds(5)) }
+        let basic = try #require(model.cullingThumbnails["stay"])
+        if alreadySharp {
+            model.cullingScrollPhaseChanged(isScrolling: false)
+            for _ in 0..<50 where model.cullingThumbnails["stay"] === basic { try await Task.sleep(for: .milliseconds(5)) }
+            #expect(model.cullingThumbnails["stay"] !== basic)
+        }
+        let beforeHide = try #require(model.cullingThumbnails["stay"])
+        #expect(await model.applyPickShortcut(.reject))
+        model.cullingAssetDidDisappear("hide")
+        #expect(model.cullingThumbnails["stay"] === beforeHide)
+        #expect(model.visibleCullingAssets.map(\.id) == ["stay"])
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        // SwiftUI retains the stay card: intentionally no second didAppear call.
+        for _ in 0..<50 where model.cullingThumbnails["stay"] === basic { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(model.cullingThumbnails["stay"] !== basic)
+        #expect(library.requestedIDs(at: 900).filter { $0 == "stay" }.count == 1)
+        model.cancelCullingThumbnailWork()
+    }
+
     @Test("Offscreen cards retain completed idle upgrades and reuse them on return")
     @MainActor
     func offscreenThumbnailRetainsUpgrade() async throws {
@@ -5322,6 +5364,13 @@ private actor InstantAIActionAPI: OwnerActionServing {
         }
         return OwnerActionEnvelope(action: OwnerAction(id: UUID().uuidString, actionKind: action.actionKind,
             target: action.target, state: .completed, result: result))
+    }
+    func getAction(id: String) async throws -> OwnerAction { throw CancellationError() }
+}
+
+private struct PreviewOnlyActionAPI: OwnerActionServing {
+    func createAction(_ action: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
+        throw CancellationError() // Background window refresh is outside this preview regression.
     }
     func getAction(id: String) async throws -> OwnerAction { throw CancellationError() }
 }

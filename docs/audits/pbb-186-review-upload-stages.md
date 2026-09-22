@@ -10,6 +10,15 @@ Validation:
 - 24 native OwnerReviewSQLiteStore tests passed, including disjoint stages, combined pagination, read-only queries, and the old-receipt/new-edit/new-receipt transition.
 - 86 Backstage fixture integration tests passed, including Review optimistic actions and refresh behavior.
 - 63 Python fixture pipeline tests passed, including equivalent source-version transitions and existing fixture-scoped Gallery/Review coverage.
-- Live read-only diagnostic on 2026-09-22: all 156 picked RE Marketing photos had a completed receipt for their current version. The pending filter is therefore expected to be empty; Uploaded should show 156.
+- Live read-only diagnostic on 2026-09-22: all 156 picked RE Marketing photos had a completed receipt for their current version. The pending filter is therefore expected to be empty. Uploaded also retains the prior behavior of including hidden photos with completed receipts.
 
-Target signed personal build: v265.0, build 345. Installed verification to be recorded after packaging. No photo decisions, files, upload receipts, or publication state were changed for this task.
+Installed signed personal build: **v265.0, build 345**, source `2d8f769197bba5aab0844420eb6f27f7b641679a`. Build-source verification, isolated packaged-runtime smoke and strict signature verification passed.
+
+Installed UI verification on 2026-09-22:
+- Picked + Approved awaiting upload: **0** matching, with the new empty-state explanation.
+- Add Uploaded: **189** matching: 156 approved and 33 previously hidden uploaded photos. Both edited photos, D5H_2967 and D5H_2970, show Full-resolution Uploaded and retain Before / After comparison.
+- Remove Uploaded: **0** matching. Left the app on the requested pending view.
+- A digest covering all 189 fixture decisions, editorial states, delivery states, receipt versions and current source versions remained identical before and after installed checks (`22021de1f723a93130eddebccdcb7e273e31028eb156c5ab145d4368a45f4b7b`).
+- Prior build 344 retained locally for rollback. App Quit automation was unreliable; the exact verified app process was terminated before replacing its bundle.
+
+ No photo decisions, files, upload receipts, or publication state were changed for this task.

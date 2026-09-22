@@ -84,9 +84,31 @@ struct OwnerCoreTests {
             "59647679-9EB0-46ED-9C2B-C98F61B58733:001:",
             "59647679-9EB0-46ED-9C2B-C98F61B58733:001:not valid whitespace",
             "apple-photos-cloud://",
+            valid + ":",
+            valid + ":relative.photoslibrary",
+            valid + ":https://example.com/Photos.photoslibrary",
+            valid + ":/Users/test/Pictures/not-a-library",
+            valid + ":/Users/test/../Photos.photoslibrary",
+            valid + ":/Users/test/\nPhotos.photoslibrary",
+            valid + ":/" + String(repeating: "a", count: 2_048) + ".photoslibrary",
         ] {
             #expect(PhotoLibraryIdentifier.cloudValue(from: invalid) == nil)
         }
+    }
+
+    @Test("Library-qualified cloud IDs resolve the exact canonical identity without changing asset keys")
+    func libraryQualifiedPhotoKitCloudIdentifiers() {
+        let canonical = "2D6EA505-842A-4D9C-8531-3FA17544676E:001:ARBnhrL/L7i/ea0Vzg6V6iGEZBdQ"
+        for library in ["/Users/example/Pictures/Photos Library.photoslibrary",
+                        "/Volumes/Photo Archive/Family: photos.photoslibrary"] {
+            let qualified = canonical + ":" + library
+            #expect(PhotoLibraryIdentifier.cloudValue(from: qualified) == canonical)
+            #expect(PhotoLibraryIdentifier.cloudValue(from: "apple-photos-cloud://" + qualified) == canonical)
+        }
+        // Similar filenames never enter this resolver, and distinct cloud IDs
+        // remain distinct even when they carry the same library qualifier.
+        let other = "63BA2006-3D55-497D-91B6-0966AAA9FD95:001:Aduek8sHzW7OqFthWSPtcz2293f7"
+        #expect(PhotoLibraryIdentifier.cloudValue(from: other + ":/tmp/Photos.photoslibrary") == other)
     }
 
     @Test("Quick Look close handling is scoped to the configured panel")

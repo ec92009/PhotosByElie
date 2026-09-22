@@ -113,8 +113,9 @@ enum PhotoLibraryIdentifier {
         let value = identifier.hasPrefix(cloudPrefix)
             ? String(identifier.dropFirst(cloudPrefix.count))
             : identifier
-        let components = value.split(separator: ":", omittingEmptySubsequences: false)
-        guard components.count == 3,
+        let components = value.split(separator: ":", maxSplits: 3, omittingEmptySubsequences: false)
+        guard value.utf8.count <= 2_048,
+              (3...4).contains(components.count),
               UUID(uuidString: String(components[0])) != nil,
               components[1].count == 3,
               components[1].allSatisfy(\.isNumber),
@@ -126,7 +127,16 @@ enum PhotoLibraryIdentifier {
                       || scalar == "="
               })
         else { return nil }
-        return value
+        if components.count == 4 {
+            // Legacy index rows can qualify the cloud identity with the local
+            // library path. Resolve the exact cloud identity on this Mac; never
+            // open that path or infer a replacement from the photo's filename.
+            let library = String(components[3])
+            guard library.hasPrefix("/"), library.hasSuffix(".photoslibrary"),
+                  !library.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
+                  !library.split(separator: "/").contains("..") else { return nil }
+        }
+        return components.prefix(3).joined(separator: ":")
     }
 }
 

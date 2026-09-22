@@ -145,7 +145,7 @@ struct ReviewMutationContext {
         )
     }
 
-    private func writeVisualRequest(_ assetID: String, reasons: [String]) throws {
+    private func writeVisualRequest(_ assetID: String, reasons: [String], note: String) throws {
         let visualReasons = Set(reasons)
         guard visualReasons.allSatisfy({ VisualRepairDefectCategory(rawValue: $0) != nil }) else {
             throw OwnerReviewSQLiteError.invalid("unknown visual AI reason")
@@ -158,7 +158,7 @@ struct ReviewMutationContext {
             )?["version_id"]?.stringValue ?? "" : ""
             visualRequest = ["reasons": .array(visualReasons.sorted().map(JSONValue.string)),
                              "sourceVersionId": .string(version), "requestedAt": .string(timestamp),
-                             "status": .string("awaiting-generator")]
+                             "status": .string("awaiting-generator"), "note": .string(note)]
         }
         try connection.execute(
             "UPDATE asset_editorial_state SET visual_ai_request_json = ?, updated_at = ? WHERE asset_id = ?",
@@ -174,7 +174,7 @@ struct ReviewMutationContext {
     }
 
     private func requestAI(_ assetID: String, request: ReviewMutationAIRequest) throws -> Placement {
-        try writeVisualRequest(assetID, reasons: request.visualReasons)
+        try writeVisualRequest(assetID, reasons: request.visualReasons, note: request.note)
         let existingPlacement = try connection.queryOne(
             """
             SELECT placement_state, eligibility_state

@@ -63,7 +63,7 @@ struct OwnerReviewSQLiteStoreTests {
             #expect(item.visualAIReasons == ["contrast", "lighting-exposure"])
             #expect(item.aiReasons == (combined ? ["location"] : []))
             #expect(item.editorialState == (combined ? "requesting-ai" : "unreviewed"))
-            #expect(item.reviewStatusLabel == (combined ? "Visual + title/keyword AI requested" : "Visual AI requested"))
+            #expect(item.reviewStatusLabel == (combined ? "Review needed" : item.workflowStage.label))
         }
         #expect(reopened.summary.requestingAI == (combined ? 2 : 0))
         var newVersion = try #require(reopened.items.first)
@@ -105,7 +105,7 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
     }
 
-    @Test("Uploaded Review status includes hidden live photos without duplicates or cross-fixture leakage")
+    @Test("Hidden is excluded from Uploaded unless explicitly enabled; fixture scope and counts are preserved")
     func uploadedReviewStatus() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-uploaded-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -116,11 +116,11 @@ struct OwnerReviewSQLiteStoreTests {
         let before = try Data(contentsOf: databaseURL)
         let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
         let uploaded = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"])
-        #expect(uploaded.items.map(\.id) == ["asset-1"])
-        #expect(uploaded.summary.total == 1)
+        #expect(uploaded.items.isEmpty)
+        #expect(uploaded.summary.total == 0)
         let combined = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded", "picked"])
-        #expect(Set(combined.items.map(\.id)) == ["asset-1", "asset-2"])
-        #expect(combined.summary.total == 2)
+        #expect(Set(combined.items.map(\.id)) == ["asset-2"])
+        #expect(combined.summary.total == 1)
         let overlap = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded", "hidden"])
         #expect(overlap.items.map(\.id) == ["asset-1"])
         #expect(overlap.summary.total == 1)

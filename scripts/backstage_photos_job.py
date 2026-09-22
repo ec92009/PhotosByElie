@@ -137,6 +137,11 @@ def plan(root: Path, action: dict) -> dict:
             WHERE e.editorial_state='requesting-ai'
             AND NOT EXISTS (SELECT 1 FROM external_edit_asset_locks l WHERE l.asset_id=a.asset_id)""")
         from fixture_pipeline import ai_preview_targets
+        if "assetIds" in manifest:
+            selected = manifest["assetIds"]
+            if not isinstance(selected, list) or not selected or any(not isinstance(x, str) or not x for x in selected):
+                raise ValueError("Perform AI requires explicit selected asset IDs")
+            rows = [row for row in rows if row["asset_id"] in set(selected)]
         targets = ai_preview_targets(root, [row["asset_id"] for row in rows])
         result.update(operations=["photos.preview"],
                       assetIDs=sorted({item["photoLibraryIdentifier"] for item in targets}), maxPixel=1600)

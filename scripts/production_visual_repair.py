@@ -201,7 +201,8 @@ def run_generation(root: Path, proposal_id: str, *, editor=edit_image) -> dict:
                 if hashlib.sha256(before.read_bytes()).hexdigest() != row["original_preview_sha256"]:
                     raise ValueError("The visual input changed after capture.")
             _state(root, proposal_id, "running")
-            rendered, receipt = editor(before, categories)
+            note = str(request.get("note") or "")
+            rendered, receipt = editor(before, categories, note=note) if note else editor(before, categories)
             image_dimensions(rendered)
             digest = hashlib.sha256(rendered).hexdigest()
             if digest == row["original_preview_sha256"]:

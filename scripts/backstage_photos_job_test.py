@@ -105,6 +105,8 @@ class BackstagePhotosJobsTest(unittest.TestCase):
             ai = jobs.plan(root, {"actionKind":"sidecar-culling-review", "payload":{"manifest":{"mode":"fixture-ai-pass-start"}}})
             self.assertEqual(set(ai["assetIDs"]), {"asset-1", "asset-2"})
             self.assertEqual(ai["operations"], ["photos.preview"])
+            scoped = jobs.plan(root, {"actionKind":"sidecar-culling-review", "payload":{"manifest":{"mode":"fixture-ai-pass-start", "assetIds":["asset-2"]}}})
+            self.assertEqual(scoped["assetIDs"], ["asset-2"])
             delivery = jobs.plan(root, {"actionKind":"sidecar-upload-publish", "payload":{
                 "workflow":"fixture-delivery", "fixtureId":"fixture-expo", "assetIds":["asset-1", "unrequested"]}})
             self.assertEqual(delivery["assetIDs"], ["asset-1"])
@@ -204,6 +206,38 @@ class BackstagePhotosJobsTest(unittest.TestCase):
             with sidecar_state_db.connect(root) as conn:
                 self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_runs").fetchone()[0], 1)
                 self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_proposals").fetchone()[0], 2)
+
+    def test_selected_run_refuses_active_unrelated_worker(self):
+        with patch("local_server.ai_run_status", return_value={"active": True}):
+            with self.assertRaisesRegex(ValueError, "Another AI run"):
+                local_server._start_requested_ai_pass(Path("/unused"), asset_ids=["one"])
+        with self.assertRaisesRegex(ValueError, "explicit selected"):
+            local_server._start_requested_ai_pass(Path("/unused"), asset_ids=[])
+
+    def test_selected_run_rejects_changed_source_before_preview_or_worker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            with patch("requested_ai_previews.capture_requested_ai_previews") as preview:
+                with self.assertRaisesRegex(ValueError, "changed version"):
+                    local_server._start_requested_ai_pass(root, asset_ids=["asset-1"], source_version_ids={"asset-1": "stale"})
+            preview.assert_not_called()
+
+    def test_selected_run_preserves_legacy_requests_and_passes_exact_worker_scope(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            from unittest.mock import MagicMock
+            process = MagicMock()
+            process.pid = 123
+            with patch("requested_ai_previews.capture_requested_ai_previews") as capture, \
+                 patch("local_server.subprocess.Popen", return_value=process), \
+                 patch("requested_ai_proposal_pass.wait_for_ai_worker_claim", return_value={"active": True}):
+                local_server._start_requested_ai_pass(root, asset_ids=["asset-2"])
+            self.assertEqual(capture.call_args.args[1], ["asset-2"])
+            self.assertEqual(json.loads(process.stdin.write.call_args.args[0]), ["asset-2"])
+            with sidecar_state_db.connect(root) as conn:
+                self.assertEqual(conn.execute("SELECT editorial_state FROM asset_editorial_state WHERE asset_id='asset-1'").fetchone()[0], "requesting-ai")
 
     def test_launcher_waits_for_a_real_empty_worker_receipt(self):
         from fixture_pipeline import connect

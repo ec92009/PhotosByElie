@@ -1965,7 +1965,7 @@ def _fixture_review_from_sql(
     include_uploaded: bool = False,
 ) -> tuple[str, list[Any]]:
     placement_predicate = (
-        "IN ('picked', 'hidden', 'undecided')" if include_uploaded
+        ("IN ('picked', 'hidden', 'undecided')" if include_hidden else "IN ('picked', 'undecided')") if include_uploaded
         else "IN ('picked', 'hidden')" if include_hidden else "= 'picked'"
     )
     if fixture["parent_fixture_id"]:
@@ -2210,7 +2210,7 @@ def fixture_review_window(
             fixture,
             include_uploaded="uploaded" in selected_states,
             include_hidden=(
-                bool(selected_states & {"hidden", "uploaded"})
+                "hidden" in selected_states
                 if state_filters is not None
                 else clean_mode == "full"
             ),
@@ -2976,7 +2976,7 @@ def apply_fixture_review_action(
                 visual_request = {}
                 if clean_action == "request-ai" and visual_reasons:
                     version = conn.execute("SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1", (asset_id,)).fetchone()
-                    visual_request = {"reasons": visual_reasons, "sourceVersionId": str(version[0]) if version else "", "requestedAt": timestamp, "status": "awaiting-generator"}
+                    visual_request = {"reasons": visual_reasons, "sourceVersionId": str(version[0]) if version else "", "requestedAt": timestamp, "status": "awaiting-generator", "note": note}
                 conn.execute("UPDATE asset_editorial_state SET visual_ai_request_json = ? WHERE asset_id = ?", (_json(visual_request), asset_id))
 
             if clean_action == "hide":

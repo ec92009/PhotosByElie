@@ -56,7 +56,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             ? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
             : selectedStates
         let includeApproved = stateFilters != nil || mode == .full
-        let includeHidden = effectiveStates.contains("hidden") || effectiveStates.contains("uploaded")
+        let includeHidden = effectiveStates.contains("hidden")
         let selectedMedia = Set(mediaFilters.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
             .intersection(["photos", "videos"])
         let connection = try ReviewSQLiteConnection(
@@ -109,7 +109,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 AND tombstone.tombstone_state = 'active'
             )
             """,
-            effectiveStates.contains("uploaded") ? "1 = 1" : "current_decision.placement_state IN ('picked'\(includeHidden ? ", 'hidden'" : ""))",
+            effectiveStates.contains("uploaded") ? (includeHidden ? "1 = 1" : "current_decision.placement_state != 'hidden'") : "current_decision.placement_state IN ('picked'\(includeHidden ? ", 'hidden'" : ""))",
         ]
         let bindings: [ReviewSQLiteBinding] = [.string(cleanFixtureID)]
 

@@ -3338,11 +3338,15 @@ def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
     return {**_photos_sync_run_status(repo_root, run_id), "started": True}
 
 
-def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
+def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual", asset_ids: list[str] | None = None, source_version_ids: dict[str, str] | None = None, fixture_id: str | None = None) -> dict:
     if trigger not in {"manual", "scheduled"}:
         raise ValueError("AI pass trigger is invalid")
+    if asset_ids is not None and (not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(x, str) or not x for x in asset_ids)):
+        raise ValueError("Perform AI requires explicit selected asset IDs")
     status = ai_run_status(repo_root)
     if status.get("active"):
+        if asset_ids is not None:
+            raise ValueError("Another AI run is active. Retry these photos when it finishes.")
         return {**status, "attached": True, "started": False}
     # Prepare requested Photos bytes while the app-owned connector still holds
     # its bounded capability. The detached proposal engine gets no capability.
@@ -3352,6 +3356,23 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
     from requested_ai_previews import capture_requested_ai_previews
     with _runtime_connection(repo_root) as connection:
         candidates = _candidate_rows(connection, repo_root, None)
+        if fixture_id is not None:
+            for asset_id in asset_ids or []:
+                decision = connection.execute("SELECT placement_state,eligibility_state FROM fixture_asset_decisions WHERE fixture_id=? AND asset_id=?", (fixture_id, asset_id)).fetchone()
+                if not decision or tuple(decision) != ("picked", "active"):
+                    raise ValueError("A selected photo is no longer picked in this fixture. Refresh before performing AI.")
+        if source_version_ids is not None:
+            if not isinstance(source_version_ids, dict) or set(source_version_ids) != set(asset_ids or []):
+                raise ValueError("Perform AI source versions must match the selected photos")
+            for asset_id, expected in source_version_ids.items():
+                current = connection.execute("SELECT version_id FROM asset_source_versions WHERE asset_id=? AND source_exists=1 ORDER BY created_at DESC,version_id DESC LIMIT 1", (asset_id,)).fetchone()
+                if str(current[0] if current else "") != expected:
+                    raise ValueError("A selected photo changed version. Refresh and perform AI on the current photo.")
+    if asset_ids is not None:
+        selected = set(asset_ids)
+        candidates = [item for item in candidates if item["assetId"] in selected]
+        if {item["assetId"] for item in candidates} != selected:
+            raise ValueError("Selected AI photos changed or are unavailable. Refresh and retry.")
     capture_requested_ai_previews(repo_root, [item["assetId"] for item in candidates
                                             if not Path(item["previewPath"]).is_file()])
     log_root = repo_root / ".review-logs" / "requested-ai-runs"
@@ -3752,7 +3773,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
         })
     elif mode == "fixture-ai-pass-start":
-        result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root, str(manifest.get("trigger") or "manual"))})
+        result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root, str(manifest.get("trigger") or "manual"), manifest.get("assetIds"), manifest.get("sourceVersionIds"), manifest.get("fixtureId"))})
     elif mode == "fixture-ai-pass-cancel":
         result.update({"readOnly": False, "ai": request_ai_run_cancel(repo_root)})
     elif mode == "photos-sync-snapshot":

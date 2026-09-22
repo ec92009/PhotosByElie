@@ -293,7 +293,6 @@ struct ReviewView: View {
                     FlowLayout(spacing: 10) {
                         Text("\(summary.total.formatted()) matching")
                         Text("\(summary.unreviewed.formatted()) awaiting Review")
-                        Text("\(summary.requestingAI.formatted()) title/keyword AI requested")
                         Text("\(summary.availableProposals.formatted()) proposal ready")
                         if model.reviewMode == .full {
                             Text("\(summary.approved.formatted()) approved")
@@ -304,7 +303,7 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 if model.reviewProposalAvailableOnly {
-                    Button("Include photos awaiting AI") {
+                    Button("Include photos without proposals") {
                         model.reviewProposalAvailableOnly = false
                         model.reviewWindowOffset = 0
                         Task { await model.loadFixtureReviewWindow() }
@@ -330,35 +329,15 @@ struct ReviewView: View {
                         .backstageHelp("Replace the listed local conflicting drafts with the latest completed AI proposals.")
                     }
                     Spacer()
-                    Button(
-                        model.isRunningAIPass && model.fixtureAIStatus?.active != true
-                            ? "Starting AI pass…"
-                            : model.isAIPassActive ? "AI pass running…" : "Run AI pass now"
-                    ) {
-                        Task { await model.runAIProposalPass() }
-                    }
-                    .disabled(!model.canRunAIProposalPass)
-                    .backstageHelp("Start the prepared AI proposal pass for assets currently requesting AI review.")
-                    if model.fixtureAIStatus?.active == true {
-                        Button(model.isCancellingAIPass ? "Cancelling…" : "Cancel") {
-                            Task { await model.cancelAIProposalPass() }
-                        }
-                        .disabled(model.isCancellingAIPass)
-                        .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
-                    }
                 }
-                Toggle("Nightly AI at 02:00 (Madrid)", isOn: $model.nightlyAIJobsEnabled)
-                    .backstageHelp("Run requested AI work once nightly while Backstage is open and signed in. Off until enabled. Missed runs wait for the next night or Run AI pass now.")
-                BackstageFeedbackView(
-                    message: model.isRunningReview && !model.isAIPassActive
-                        ? "Refreshing Review availability…" : model.aiProposalStatus,
-                    isWorking: model.isRunningReview || model.isRunningAIPass || model.fixtureAIStatus?.active == true
-                )
-                if let run = model.fixtureAIStatus?.run, model.fixtureAIStatus?.active == true {
-                    ProgressView(
-                        value: Double(run.processed),
-                        total: Double(max(1, run.requested))
-                    )
+                if !model.reviewAIExecutionStatus.isEmpty {
+                    BackstageFeedbackView(message: model.reviewAIExecutionStatus,
+                        isWorking: model.isPerformingReviewAI)
+                }
+                if model.reviewAIRetry?.fixtureID == model.selectedFixtureID {
+                    Button("Retry failed AI") { model.performReviewAI(retry: true) }
+                        .disabled(model.isReviewMutationBlocked || model.isAIPassActive)
+                        .backstageHelp("Retry only incomplete parts of the previous AI run, retaining successful results.")
                 }
                 HStack(spacing: 10) {
                     if let window = model.fixtureReviewWindow {
@@ -497,7 +476,7 @@ struct ReviewView: View {
                                 "No photos match these filters",
                                 systemImage: "line.3.horizontal.decrease.circle",
                                 description: Text(model.reviewProposalAvailableOnly
-                                    ? "Proposal Available excludes photos still awaiting AI. Turn it off to include pending photos."
+                                    ? "Turn off Proposal Available to include photos without completed proposals."
                                     : model.reviewStateFilters.contains(.approved) && !model.reviewStateFilters.contains(.uploaded)
                                         ? "Approved shows photos awaiting upload. Select Uploaded to see completed uploads, or check the other filters."
                                         : "Check the selected fixture, states, search, and RAW filter.")
@@ -1097,8 +1076,7 @@ private struct ReviewInspector: View {
                                         .symbolRenderingMode(.palette)
                                         .foregroundStyle(.white, .secondary)
                                         .padding(8)
-                                } else if !model.reviewAIReasons.isEmpty
-                                    || item.workflowStage == .aiRequested {
+                                } else if model.isPerformingReviewAI && model.reviewAIProgress[item.id] != nil {
                                     Image(systemName: "questionmark.circle.fill")
                                         .font(.system(size: 30, weight: .bold))
                                         .symbolRenderingMode(.palette)
@@ -1175,11 +1153,11 @@ private struct ReviewInspector: View {
                         .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("u", modifiers: [])
                         .backstageHelp("Clear the fixture pick and return the selected assets to Culling as Undecided.")
-                        Button("Needs AI") {
-                            Task { await model.markReviewSelectionNeedsAI() }
+                        Button(model.isPerformingReviewAI ? "Performing AI…" : "Perform AI") {
+                            model.performReviewAI()
                         }
-                        .disabled(!model.canMarkReviewSelectionNeedsAI)
-                        .backstageHelp("Submit the selected AI-review reasons and optional note for the selected assets.")
+                        .disabled(!model.canPerformReviewAI)
+                        .backstageHelp("Immediately review all title and keyword details. RE photos also receive all five visual repairs. Results require approval.")
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
@@ -1193,27 +1171,10 @@ private struct ReviewInspector: View {
                         )
                     }
                     Divider()
-                    Text("Mark for AI review")
+                    Text("AI instructions")
                         .font(.headline)
-                    FlowLayout(spacing: 6) {
-                        ForEach(model.reviewAIReasonChoices, id: \.self) { reason in
-                            Button {
-                                model.toggleReviewAIReason(reason)
-                            } label: {
-                                Label(
-                                    reason,
-                                    systemImage: model.reviewAIReasons.contains(reason)
-                                        ? "checkmark.circle.fill"
-                                        : "circle"
-                                )
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(model.reviewAIReasons.contains(reason) ? .orange : nil)
-                            .backstageHelp("Toggle the \(reason) reason for the next Needs AI request.")
-                        }
-                    }
                     TextField(
-                        "Optional AI note",
+                        "Optional detailed instructions for AI",
                         text: Binding(
                             get: { model.reviewAINote },
                             set: { model.updateReviewAINote($0) }
@@ -1222,35 +1183,13 @@ private struct ReviewInspector: View {
                     )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Text("Prepare the reasons and optional note, then press Needs AI for the selection.")
+                    Text(model.isREReviewScope ? "Perform AI reviews metadata and repairs exposure, contrast, color, perspective and distracting items." : "Perform AI reviews all title, keyword and shoot-context details.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if model.isREReviewScope {
                         Divider()
-                        Text("Visual AI rework")
+                        Text("After image")
                             .font(.headline)
-                        FlowLayout(spacing: 6) {
-                            ForEach(VisualRepairDefectCategory.allCases) { category in
-                                Button {
-                                    model.toggleVisualRepairCategory(category)
-                                } label: {
-                                    Label(
-                                        category.label,
-                                        systemImage: model.visualRepairDefectCategories.contains(category)
-                                            ? "checkmark.circle.fill"
-                                            : "circle"
-                                    )
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(model.visualRepairDefectCategories.contains(category) ? .orange : nil)
-                                .backstageHelp("Select the \(category.label) defect category for a future visual repair draft.")
-                            }
-                        }
-                        if !item.visualAIReasons.isEmpty {
-                            Text("Visual request saved. Generate an after image when ready.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
                         if let proposal = model.reviewVisualProposals[item.id] {
                             let hasRenderedProposal = proposal.derivedAvailable
                                 && VisualRepairComparisonState.isRenderableReference(proposal.derivedReference)
@@ -1281,11 +1220,6 @@ private struct ReviewInspector: View {
                                     }
                                     .disabled(model.isRunningReview)
                                     .backstageHelp("Reject and hide this derived visual reference while retaining its audit provenance.")
-                                    Button("Regenerate draft") {
-                                        model.generateVisualRepair(for: item.id, regenerate: true)
-                                    }
-                                    .disabled(!model.visualRepairGenerationConfigured || model.isRunningReview || proposal.isGenerating)
-                                    .backstageHelp("Generate a new visual draft from the original using the saved visual request.")
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -1294,20 +1228,9 @@ private struct ReviewInspector: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        if model.reviewVisualProposals[item.id]?.isGenerating == true {
-                            Button(model.isCancellingVisualGeneration ? "Cancelling…" : "Cancel visual generation") { model.cancelVisualGeneration(for: item.id) }
-                                .disabled(model.isCancellingVisualGeneration)
-                                .backstageHelp("Cancel attachment of the draft. A provider request already in flight may still finish.")
-                        } else if model.reviewVisualProposals[item.id]?.derivedAvailable != true {
-                            Button(model.isStartingVisualGeneration ? "Preparing visual draft…" : "Generate visual draft") {
-                                model.generateVisualRepair(for: item.id)
-                            }
-                            .disabled(!model.visualRepairGenerationConfigured || model.isRunningReview || item.visualAIReasons.isEmpty)
-                            .backstageHelp("Send this photo’s bounded preview and saved visual reasons to OpenAI to generate a separate draft.")
-                        }
-                        Text(model.visualRepairStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    }
+                    if let progress = model.reviewAIProgress[item.id] {
+                        Text(progress).font(.caption).foregroundStyle(.secondary)
                     }
                     if !model.isREReviewScope {
                         Divider()

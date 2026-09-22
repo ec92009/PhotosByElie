@@ -49,7 +49,7 @@ def image_dimensions(data: bytes) -> tuple[int, int]:
         return image.size
 
 
-def edit_image(before: Path, categories: list[str]) -> tuple[bytes, dict]:
+def edit_image(before: Path, categories: list[str], *, note: str = "") -> tuple[bytes, dict]:
     """One provider attempt, with no automatic retries that could duplicate charges."""
     payload = before.read_bytes()
     if len(payload) > 8 * 1024 * 1024:
@@ -68,9 +68,12 @@ def edit_image(before: Path, categories: list[str]) -> tuple[bytes, dict]:
         "Edit this exact real-estate photograph into a photorealistic repair draft.",
         "Keep the same property, viewpoint, framing and aspect ratio. Do not invent or remove architectural features,",
         "windows, doors, permanent fixtures, appliances or structural defects. Do not add decoration, people or text.",
+        "Evaluate every requested category, correcting only what needs repair.",
         "Make only these owner-requested corrections:",
         *(instructions[category] for category in categories),
     ])
+    if note.strip():
+        prompt += " Owner instructions for this photo: " + note.strip()
     boundary = "pbe-" + uuid.uuid4().hex
     body = bytearray()
     fields = {"model": MODEL, "prompt": prompt, "n": "1", "quality": "medium",

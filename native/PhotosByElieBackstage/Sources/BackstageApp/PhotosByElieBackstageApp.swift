@@ -139,10 +139,6 @@ public struct BackstageApplication: App {
             }
             .task {
                 guard !model.isReadOnlyAccessibilitySmoke else { return }
-                await model.runAIJobSchedule()
-            }
-            .task {
-                guard !model.isReadOnlyAccessibilitySmoke else { return }
                 await model.bootstrapAuthentication()
             }
             .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in

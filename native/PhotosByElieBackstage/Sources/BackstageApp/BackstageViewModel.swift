@@ -402,6 +402,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var isLoadingVisualRepairProposals = false
     @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
+    @Published var reviewAIExecutionStatus = ""
+    @Published var isPerformingReviewAI = false
+    @Published var reviewAIProgress: [String: String] = [:]
+    @Published var reviewAIRetry: ReviewAIWork?
+    var reviewAITask: Task<Void, Never>?
     @Published var isRunningAIPass = false
     @Published private(set) var isCancellingAIPass = false
     @Published private(set) var isLoadingAIProposals = false
@@ -516,9 +521,6 @@ final class BackstageViewModel: ObservableObject {
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
-    var nightlyAIJobsEnabled = UserDefaults.standard.bool(forKey: BackstageAIJobSchedule.enabledKey) {
-        didSet { UserDefaults.standard.set(nightlyAIJobsEnabled, forKey: BackstageAIJobSchedule.enabledKey) }
-    }
     private var nativeEnrollmentTask: Task<Void, Never>?
     private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
     var hasPendingReviewMetadataAutosave: Bool {
@@ -565,7 +567,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isAIPassActive: Bool {
-        isRunningAIPass || fixtureAIStatus?.active == true
+        isPerformingReviewAI || isRunningAIPass || fixtureAIStatus?.active == true
     }
 
     var isUpdateOperationInProgress: Bool {
@@ -597,7 +599,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isReviewMutationBlocked: Bool {
-        isPhotosMaintenanceActive || isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
+        isPerformingReviewAI || isPhotosMaintenanceActive || isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
     }
 
     var canReceiveExternalEditReturn: Bool {
@@ -805,6 +807,7 @@ final class BackstageViewModel: ObservableObject {
         installedUpdateLauncher: any BackstageInstalledUpdateLaunching = SystemBackstageInstalledUpdateLauncher(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
+        visualRepairService: VisualRepairProposalService? = nil,
         lifecycleService: LifecycleService? = nil,
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
@@ -886,7 +889,7 @@ final class BackstageViewModel: ObservableObject {
         let decisionService = SidecarDecisionService(api: api)
         self.decisionService = decisionService
         self.metadataReviewService = MetadataReviewService(runner: runner)
-        self.visualRepairService = VisualRepairProposalService(
+        self.visualRepairService = visualRepairService ?? VisualRepairProposalService(
             runner: runner,
             connectorIdentity: LocalOwnerConnectorIdentity()
         )
@@ -1307,7 +1310,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private var fixtureSelectionOperationInFlight: Bool {
-        isPhotosMaintenanceActive || isLoadingFixturePolicy || isRunningFixture
+        isPerformingReviewAI || isPhotosMaintenanceActive || isLoadingFixturePolicy || isRunningFixture
             || isApplyingCullingDecision
             || isRunningReview
             || isRunningDelivery
@@ -4503,8 +4506,10 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Review items loaded. Checking visual repair drafts…"
             await refreshVisualRepairProposals(for: window.items)
             guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
-            reviewStatus = "Review items and visual drafts loaded. Checking AI status…"
-            await refreshAIStatus()
+            if !isPerformingReviewAI {
+                reviewStatus = "Review items and visual drafts loaded. Checking AI status…"
+                await refreshAIStatus()
+            }
             guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             reviewStatus = completedStatus
         } catch {
@@ -5388,6 +5393,7 @@ final class BackstageViewModel: ObservableObject {
         } else {
             state = .picked
         }
+        guard state != .hidden || reviewStateFilters.contains(.hidden) else { return false }
         let pendingStateMatches = reviewStateFilters.contains(state)
             && !(state == .approved && item.deliveryState == "live")
         guard pendingStateMatches
@@ -6442,7 +6448,7 @@ final class BackstageViewModel: ObservableObject {
         reviewWorkflow.installMetadataAutosaveTask(task)
     }
 
-    private func cancelReviewMetadataAutosave() {
+    func cancelReviewMetadataAutosave() {
         reviewWorkflow.cancelMetadataAutosave()
     }
 

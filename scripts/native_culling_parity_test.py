@@ -1872,9 +1872,9 @@ class NativeCullingParityTest(unittest.TestCase):
         upload = (source_dir / "UploadHeaderView.swift").read_text(encoding="utf-8")
 
         self.assertIn("BackstageFeedbackView(", review)
-        self.assertIn("message: model.aiProposalStatus", review)
+        self.assertIn("message: model.reviewAIExecutionStatus", review)
         self.assertIn(
-            "isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true",
+            "isWorking: model.isPerformingReviewAI",
             review,
         )
         self.assertNotIn("Text(model.aiProposalStatus)", review)
@@ -2339,9 +2339,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Task.sleep(for: .milliseconds(600))", model)
         self.assertNotIn("applyReviewAction", reason_toggle)
         self.assertNotIn("reviewLastAction", reason_toggle)
-        self.assertIn("model.toggleReviewAIReason(reason)", inspector)
+        self.assertNotIn("model.toggleReviewAIReason(reason)", inspector)
         self.assertNotIn("await model.toggleReviewAIReason(reason)", inspector)
-        self.assertIn('Text("Mark for AI review")', inspector)
+        self.assertIn('Text("AI instructions")', inspector)
         self.assertNotIn("reviewAIRequestButtonLabel", inspector)
         self.assertIn("model.updateReviewAINote($0)", inspector)
         self.assertNotIn("scheduleReviewAIRequestAutosave", model)
@@ -2373,25 +2373,14 @@ class NativeCullingParityTest(unittest.TestCase):
             "confirmingSelectedPublication: $confirmingSelectedPublication",
             backstage_ui_source(),
         )
-        self.assertIn('Button("Needs AI")', inspector)
-        self.assertIn("await model.markReviewSelectionNeedsAI()", inspector)
-        self.assertIn(".disabled(!model.canMarkReviewSelectionNeedsAI)", inspector)
-        self.assertIn(
-            "Prepare the reasons and optional note, then press Needs AI",
-            inspector,
-        )
-        self.assertNotIn("hasExplicitPendingMetadataEdit", model)
-        self.assertIn("if action == .approve", model)
-        self.assertIn(
-            'model.isRunningAIPass && model.fixtureAIStatus?.active != true\n'
-            '                            ? "Starting AI pass…"\n'
-            '                            : model.isAIPassActive ? "AI pass running…" : "Run AI pass now"',
-            ui,
-        )
-        self.assertIn(".disabled(!model.canRunAIProposalPass)", ui)
-        actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
+        self.assertIn("model.performReviewAI()", inspector)
+        self.assertIn(".disabled(!model.canPerformReviewAI)", inspector)
+        self.assertIn("Optional detailed instructions for AI", inspector)
+        for obsolete in ["Needs AI", "Run AI pass now", "Nightly AI", "title/keyword AI requested", "Mark for AI review", "Generate visual draft"]:
+            self.assertNotIn(obsolete, ui)
+        actions = inspector.split('? "Approve original" : "Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)
-        self.assertIn('Button("Needs AI")', actions)
+        self.assertIn("model.performReviewAI()", actions)
         self.assertNotIn('Button("Propagate")', actions)
         self.assertNotIn("Propagate for the two-hour shoot", inspector)
         self.assertIn('Image(systemName: "checkmark.circle.fill")', ui)
@@ -2521,8 +2510,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "decideProposal",
         ):
             self.assertNotIn(retired, model)
-        self.assertIn('Button("Approve")', review)
-        self.assertIn('Button("Needs AI")', review)
+        self.assertIn('? "Approve original" : "Approve")', review)
+        self.assertIn("model.performReviewAI()", review)
         self.assertNotIn('Button("Reject")', review)
         self.assertNotIn('Button("Block"', review)
 

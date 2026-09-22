@@ -1464,8 +1464,9 @@ class FixturePipelineTest(unittest.TestCase):
             self.assertEqual(gallery["summary"]["universe"], 2)
             self.assertEqual(gallery["summary"]["uploaded"], 1)
             review = fixture_review_window(self.root, child["fixtureId"], state_filters=filters)
-            self.assertEqual({item["assetId"] for item in review["items"]}, expected)
-            self.assertEqual(review["summary"]["total"], len(expected))
+            review_expected = expected if "hidden" in filters else expected - {"asset-1"}
+            self.assertEqual({item["assetId"] for item in review["items"]}, review_expected)
+            self.assertEqual(review["summary"]["total"], len(review_expected))
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "undecided")
         unpicked_live = fixture_review_window(self.root, child["fixtureId"], state_filters=["uploaded"])
         self.assertEqual([item["assetId"] for item in unpicked_live["items"]], ["asset-1"])

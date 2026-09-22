@@ -402,8 +402,7 @@ public extension FixtureReviewItem {
     }
 
     var reviewStatusLabel: String {
-        guard !visualAIReasons.isEmpty else { return workflowStage.label }
-        return editorialState == "requesting-ai" ? "Visual + title/keyword AI requested" : "Visual AI requested"
+        workflowStage == .aiRequested ? "Review needed" : workflowStage.label
     }
 
 }

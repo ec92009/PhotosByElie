@@ -412,7 +412,7 @@ public enum AssetWorkflowStage: String, Codable, Sendable, CaseIterable {
         case .discovered: "Discovered"
         case .undecided: "Undecided"
         case .awaitingReview: "Awaiting Review"
-        case .aiRequested: "AI Requested"
+        case .aiRequested: "Review needed"
         case .proposalReady: "Proposal Ready"
         case .approved: "Approved"
         case .needsUpload: "Needs Upload"
@@ -539,7 +539,7 @@ public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Ide
     public var label: String {
         switch self {
         case .needsReview: "Awaiting Review"
-        case .aiRequested: "AI Requested"
+        case .aiRequested: "Review needed"
         case .proposalAvailable: "Proposal Ready"
         case .approved: "Approved"
         }
@@ -1688,8 +1688,12 @@ public actor FixtureWorkflowService {
         return result["aiProposals"]?.objectValue?["count"]?.intValue ?? 0
     }
 
-    public func startAIPass(trigger: String = "manual") async throws -> FixtureAIStatus {
-        let result = try await run("fixture-ai-pass-start", extra: ["trigger": .string(trigger)])
+    public func startAIPass(trigger: String = "manual", assetIDs: [String]? = nil, fixtureID: String? = nil, sourceVersionIDs: [String: String]? = nil) async throws -> FixtureAIStatus {
+        var extra: [String: JSONValue] = ["trigger": .string(trigger)]
+        if let assetIDs { extra["assetIds"] = .array(assetIDs.map(JSONValue.string)) }
+        if let fixtureID { extra["fixtureId"] = .string(fixtureID) }
+        if let sourceVersionIDs { extra["sourceVersionIds"] = .object(sourceVersionIDs.mapValues(JSONValue.string)) }
+        let result = try await run("fixture-ai-pass-start", extra: extra)
         return try FixtureAIStatus.claimedStartResult(result)
     }
 

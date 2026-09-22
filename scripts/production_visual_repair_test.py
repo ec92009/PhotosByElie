@@ -49,6 +49,20 @@ class ProductionVisualRepairTests(unittest.TestCase):
         self.assertEqual(categories, ['contrast'])
         return self.after, {'requestId':'test-provider-request','model':production.MODEL}
 
+    def test_detailed_instructions_reach_visual_editor_and_are_version_bound(self):
+        with connect(self.root) as conn:
+            request = json.loads(conn.execute("SELECT visual_ai_request_json FROM asset_editorial_state WHERE asset_id='asset-1'").fetchone()[0])
+            request["note"] = "Keep the chair and recover window detail"
+            conn.execute("UPDATE asset_editorial_state SET visual_ai_request_json=? WHERE asset_id='asset-1'", (json.dumps(request),))
+        proposal = self.start()
+        calls = []
+        def editor(before, categories, *, note):
+            calls.append(note)
+            return self.after, {"requestId": "synthetic-note", "model": production.MODEL}
+        result = production.run_generation(self.root, proposal['proposalId'], editor=editor)
+        self.assertEqual(calls, [request["note"]])
+        self.assertEqual(result['generationState'], 'ready')
+
     def test_ready_has_real_artifacts_and_preserves_editorial_state(self):
         proposal = self.start(idempotency_key='one')
         result = production.run_generation(self.root, proposal['proposalId'], editor=self.editor)

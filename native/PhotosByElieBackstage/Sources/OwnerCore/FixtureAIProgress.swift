@@ -22,18 +22,18 @@ extension FixtureAIStatus {
         if let startupFailure { return startupFailure }
         if let run, run.status == "failed" || run.failed > 0 {
             let detail = run.lastError.isEmpty ? "Open the failed items in Review or Activity for details." : run.lastError
-            return "AI pass finished with \(run.failed.formatted()) failed item(s). \(detail) Retry with Run AI pass now."
+            return "AI pass finished with \(run.failed.formatted()) failed item(s). \(detail) Retry with Perform AI on the affected photos."
         }
         if let run, run.status == "cancelled" {
-            return "AI pass cancelled. \(run.proposed.formatted()) proposals were saved; \(requested.formatted()) requests remain available for another pass."
+            return "AI pass cancelled. \(run.proposed.formatted()) proposals were saved; \(requested.formatted()) photos need attention."
         }
-        if starting { return "Preparing requested previews and waiting for the AI worker to claim the queue…" }
+        if starting { return "Preparing selected previews and starting AI…" }
         if active { return "AI worker is active; checking its durable progress…" }
         if let count = availableInReview {
             return "\(count.formatted()) proposal\(count == 1 ? "" : "s") available in this Review view."
         }
         if ready > 0 { return "Across all fixtures: \(ready.formatted()) proposal\(ready == 1 ? "" : "s") ready." }
-        if requested > 0 { return "\(requested.formatted()) requested items are ready. Choose Run AI pass now, or wait for the enabled nightly schedule." }
-        return "No requested AI work is waiting."
+        if requested > 0 { return "\(requested.formatted()) photos need AI review. Select photos and choose Perform AI." }
+        return "No AI run is active."
     }
 }

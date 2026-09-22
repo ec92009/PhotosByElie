@@ -7,6 +7,58 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Perform AI immediately scopes all reasons to selected photos and retries only failed components", arguments: [false, true], [1, 2])
+    @MainActor
+    func performAISelectionAndRetry(realEstate: Bool, photoCount: Int) async throws {
+        let api = InstantAIActionAPI()
+        let runner = OwnerActionRunner(api: api, waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(),
+            fixtureService: FixtureWorkflowService(runner: runner),
+            visualRepairService: VisualRepairProposalService(runner: runner),
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            currentEquipmentCache: nil, equipmentBackfillStore: nil, customerPhotoLinks: nil)
+        let root = realEstate ? "fixture-re" : "fixture-expo"
+        model.installFixtureTree([FixtureNode(id: root, name: realEstate ? "RE" : "Expo",
+            children: [FixtureNode(id: "child", name: "Child")])], preferredFixtureID: "child", persistSelection: false)
+        let ids = Array(["a", "b"].prefix(photoCount))
+        let items = ids.map { FixtureReviewItem(id: $0, photoLibraryIdentifier: $0,
+            sourceVersionID: "v-\($0)", title: $0, keywords: [], filename: "\($0).jpg", capturedAt: "") }
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "child", mode: .full,
+            offset: 0, limit: 200, nextOffset: 0, hasNext: false,
+            summary: FixtureReviewSummary(total: 2, unreviewed: 2, requestingAI: 0, proposed: 0, approved: 0), items: items)
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ids, selectedIDs: Set(ids), anchorID: "a", focusedID: "a")
+        model.reviewAINote = "Retain the original furniture"
+        #expect(model.canPerformReviewAI)
+        model.performReviewAI()
+        #expect(model.isPerformingReviewAI && model.isReviewMutationBlocked && model.isFixtureChooserDisabled)
+        model.performReviewAI() // A duplicate activation must not start another run.
+        await model.reviewAITask?.value
+        let first = await api.requests
+        let apply = try #require(first.first { $0["mode"]?.stringValue == "fixture-review-apply" })
+        #expect(apply["aiReasons"]?.arrayValue?.count == 6)
+        #expect(apply["aiNote"]?.stringValue == "Retain the original furniture")
+        #expect(apply["visualAIReasons"]?.arrayValue?.count == (realEstate ? 5 : 0))
+        #expect(first.filter { $0["mode"]?.stringValue == "fixture-review-apply" }.count == 1)
+        #expect(first.filter { $0["mode"]?.stringValue == "fixture-visual-repair-generate" }.count == (realEstate ? photoCount : 0))
+        #expect((model.reviewAIRetry?.metadataIDs ?? []) == (photoCount == 2 ? ["b"] : []))
+        #expect((model.reviewAIRetry?.visualIDs ?? []) == (realEstate ? ["a"] : []))
+        model.performReviewAI(retry: true)
+        await model.reviewAITask?.value
+        #expect(model.reviewAIRetry == nil)
+        #expect(!model.isPerformingReviewAI)
+        let all = await api.requests
+        let starts = all.filter { $0["mode"]?.stringValue == "fixture-ai-pass-start" }
+        #expect(starts.count == photoCount)
+        #expect(starts[0]["assetIds"]?.arrayValue == ids.map(JSONValue.string))
+        if photoCount == 2 { #expect(starts[1]["assetIds"]?.arrayValue == [.string("b")]) }
+        #expect(all.filter { $0["mode"]?.stringValue == "fixture-review-apply" }.count == 1)
+        let visuals = all.filter { $0["mode"]?.stringValue == "fixture-visual-repair-generate" }
+        if realEstate {
+            #expect(visuals.map { $0["assetId"]?.stringValue ?? "" } == ids + ["a"])
+            #expect(visuals.allSatisfy { $0["defectCategories"]?.arrayValue?.count == 5 })
+        }
+    }
+
     @Test("Before After requires a real rendered draft for the exact photo, fixture and source")
     @MainActor
     func comparisonRequiresRenderedAfter() throws {
@@ -901,7 +953,7 @@ struct BackstageFixtureSelectionTests {
     @Test("AI progress distinguishes preparation, durable failures and valid claims")
     func aiProgressReceipts() throws {
         let queued = FixtureAIStatus(json: ["requested": .number(25)])
-        #expect(queued.progressMessage(starting: true).contains("waiting for the AI worker to claim"))
+        #expect(queued.progressMessage(starting: true).contains("Preparing selected previews"))
         #expect(!queued.progressMessage(starting: true).contains("nightly"))
         let failed = FixtureAIStatus(json: ["requested": .number(25), "run": .object([
             "runId": .string("synthetic-run"), "status": .string("failed"),
@@ -5233,4 +5285,43 @@ private actor DelayedRefundTransport: OwnerAPITransport {
         pending = nil
         continuation?.resume(throwing: URLError(.timedOut))
     }
+}
+
+private actor InstantAIActionAPI: OwnerActionServing {
+    private(set) var requests: [[String: JSONValue]] = []
+    private var starts = 0
+    private var visualAStarts = 0
+    func createAction(_ action: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
+        let manifest = action.payload["manifest"]?.objectValue ?? [:]
+        requests.append(manifest)
+        let mode = manifest["mode"]?.stringValue ?? ""
+        var result: [String: JSONValue] = [:]
+        switch mode {
+        case "fixture-review-apply": result = ["reviewAction": .object(["changes": .array([])])]
+        case "fixture-ai-pass-start":
+            starts += 1
+            result = ["ai": .object(["started": true, "active": false,
+                "run": .object(["runId": .string("run-\(starts)"), "status": "completed", "requested": 2])])]
+        case "fixture-ai-proposals-ready":
+            result = ["aiProposals": .object(["items": .array([.object([
+                "proposalId": "p", "assetId": .string(starts == 1 ? "a" : "b"),
+                "runId": .string("run-\(starts)"), "status": "ready"
+            ])])])]
+        case "fixture-visual-repair-generate":
+            let id = manifest["assetId"]?.stringValue ?? ""
+            if id == "a" {
+                visualAStarts += 1
+                if visualAStarts == 1 { throw OwnerActionRunError.failed("Synthetic visual failure") }
+            }
+            result = ["visualRepairProposal": .object(["proposalId": .string("visual-\(id)"),
+                "assetId": .string(id), "sourceVersionId": .string("v-\(id)"),
+                "generationState": "ready", "derivedAvailable": true, "status": "draft"])]
+        case "fixture-review-window": result = ["reviewWindow": .object(["fixtureId": "child", "items": .array([])])]
+        case "fixture-ai-status": result = ["ai": .object(["active": false])]
+        default: break
+        }
+        return OwnerActionEnvelope(action: OwnerAction(id: UUID().uuidString, actionKind: action.actionKind,
+            target: action.target, state: .completed, result: result))
+    }
+    func getAction(id: String) async throws -> OwnerAction { throw CancellationError() }
 }

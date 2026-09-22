@@ -1,6 +1,6 @@
 ---
 name: photosbyelie-requested-ai-proposals
-description: Generate title and keyword proposal drafts only for PhotosByElie assets explicitly marked Request AI. Use for the nightly 02:00 Europe/Madrid pass, the Backstage Run AI pass now action, or a safe status or resume check of the requested proposal queue.
+description: Generate title and keyword proposal drafts only for PhotosByElie assets explicitly marked Request AI. Use for Backstage Perform AI execution and safe status checks of directly initiated proposal work.
 ---
 
 # PhotosByElie Requested AI Proposals
@@ -18,18 +18,19 @@ Generate bounded, auditable title and keyword drafts without changing canonical 
      --status
    ```
 
-3. Start or attach through Backstage **Run AI pass now**, or enable Review's
-   **Nightly AI at 02:00 (Madrid)** setting for app-managed scheduling. Backstage
-   must be open and signed in. The schedule defaults off and missed runs wait;
-   do not create a duplicate external scheduled task. Backstage prepares missing
-   previews under its bounded Photos job authority, then starts the detached
-   proposal engine with prepared asset IDs and no Photos authority.
+3. Use Backstage Review **Perform AI** for the selected photos. This starts immediately,
+   covers every metadata review reason, and also starts all five visual repairs for RE
+   fixtures. The optional instructions field applies to both jobs. Backstage captures
+   bounded previews under its signed Photos authority and passes only the selected
+   asset IDs to the detached metadata worker.
 
-   Direct invocation of the old proposal script is not a replacement for this
-   app-owned Photos preparation path. The `--status` command remains read-only.
+   There is no deferred AI interface or nightly scheduler. Do not recreate either or
+   start the entire legacy request queue. Existing requests remain available for a
+   deliberate Perform AI action. Direct invocation of the old proposal script is not
+   a replacement for app-owned Photos preparation; `--status` remains read-only.
 
 4. Report the final `requested`, `processed`, `proposed`, `skipped`, `failed`, and `remaining` counts.
-5. Leave failed items in Requesting AI. The next manual or scheduled pass retries them.
+5. Retain successful components. Retry failed AI retries only the incomplete metadata or visual components for the captured selection.
 
 If a run is already active, attach to it. Never start a competing run.
 
@@ -47,7 +48,7 @@ If a run is already active, attach to it. Never start a competing run.
 
 ## Backstage behavior
 
-- Backstage polls durable status and shows progress for manual and Scheduled passes.
+- Backstage polls durable status and shows progress for directly initiated runs.
 - `X new proposals ready` is a persistent non-modal notice.
 - Load proposals into editable drafts only.
 - Load clean rows immediately and preserve manual conflicts until a deliberate replacement.

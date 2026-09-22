@@ -7,10 +7,27 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("AI progress separates metadata processing from rendered After readiness and failures")
+    func aiProgressCounts() {
+        var progress = ReviewAIBatchProgress(metadataTotal: 63, visualTotal: 63,
+            metadataProcessed: 13, metadataFailed: 1, visualReady: 24, visualFailed: 2)
+        #expect(progress.summary.contains("13 of 63 processed · 50 remaining · 1 need attention"))
+        #expect(progress.summary.contains("24 of 63 ready · 37 remaining · 2 need attention"))
+        progress.visualRefreshUnavailable = true
+        #expect(progress.summary.contains("last checked"))
+        progress.metadataReady = 12
+        progress.metadataFailed = 51
+        #expect(progress.summary.contains("12 of 63 ready · 51 need attention"))
+        #expect(!progress.summary.contains("63 of 63 processed"))
+        let metadataOnly = ReviewAIBatchProgress(metadataTotal: 2, visualTotal: 0, metadataProcessed: 2)
+        #expect(!metadataOnly.summary.contains("After"))
+        #expect(metadataOnly.summary.contains("0 remaining"))
+    }
+
     @Test("Perform AI immediately scopes all reasons to selected photos and retries only failed components", arguments: [false, true], [1, 2])
     @MainActor
     func performAISelectionAndRetry(realEstate: Bool, photoCount: Int) async throws {
-        let api = InstantAIActionAPI()
+        let api = InstantAIActionAPI(reportsRunningProgress: true)
         let runner = OwnerActionRunner(api: api, waker: RejectingFixtureSelectionWaker(), pollInterval: .milliseconds(1))
         let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(),
             fixtureService: FixtureWorkflowService(runner: runner),
@@ -29,10 +46,19 @@ struct BackstageFixtureSelectionTests {
         model.reviewSelection = OwnerSelectionModel(orderedIDs: ids, selectedIDs: Set(ids), anchorID: "a", focusedID: "a")
         model.reviewAINote = "Retain the original furniture"
         #expect(model.canPerformReviewAI)
+        var messages: [String] = []
+        let observation = model.$reviewAIExecutionStatus.sink { messages.append($0) }
+        defer { observation.cancel() }
         model.performReviewAI()
+        #expect(model.reviewStatus.contains("0 of \(photoCount) processed"))
         #expect(model.isPerformingReviewAI && model.isReviewMutationBlocked && model.isFixtureChooserDisabled)
         model.performReviewAI() // A duplicate activation must not start another run.
         await model.reviewAITask?.value
+        #expect(messages.contains { $0.contains("1 of \(photoCount) processed") })
+        #expect(model.reviewStatus == model.reviewAIExecutionStatus)
+        if realEstate {
+            #expect(model.reviewStatus.contains("\(photoCount - 1) of \(photoCount) ready · 0 remaining · 1 need attention"))
+        }
         let first = await api.requests
         let apply = try #require(first.first { $0["mode"]?.stringValue == "fixture-review-apply" })
         #expect(apply["aiReasons"]?.arrayValue?.count == 6)
@@ -5365,6 +5391,9 @@ private actor InstantAIActionAPI: OwnerActionServing {
     private(set) var requests: [[String: JSONValue]] = []
     private var starts = 0
     private var visualAStarts = 0
+    private var requestedCount = 0
+    var reportsRunningProgress = false
+    init(reportsRunningProgress: Bool = false) { self.reportsRunningProgress = reportsRunningProgress }
     func createAction(_ action: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
         let manifest = action.payload["manifest"]?.objectValue ?? [:]
         requests.append(manifest)
@@ -5374,8 +5403,10 @@ private actor InstantAIActionAPI: OwnerActionServing {
         case "fixture-review-apply": result = ["reviewAction": .object(["changes": .array([])])]
         case "fixture-ai-pass-start":
             starts += 1
-            result = ["ai": .object(["started": true, "active": false,
-                "run": .object(["runId": .string("run-\(starts)"), "status": "completed", "requested": 2])])]
+            requestedCount = manifest["assetIds"]?.arrayValue?.count ?? 0
+            result = ["ai": .object(["started": true, "active": .bool(reportsRunningProgress),
+                "run": .object(["runId": .string("run-\(starts)"), "status": "running",
+                    "processed": 1, "requested": .number(Double(requestedCount))])])]
         case "fixture-ai-proposals-ready":
             result = ["aiProposals": .object(["items": .array([.object([
                 "proposalId": "p", "assetId": .string(starts == 1 ? "a" : "b"),
@@ -5388,10 +5419,19 @@ private actor InstantAIActionAPI: OwnerActionServing {
                 if visualAStarts == 1 { throw OwnerActionRunError.failed("Synthetic visual failure") }
             }
             result = ["visualRepairProposal": .object(["proposalId": .string("visual-\(id)"),
-                "assetId": .string(id), "sourceVersionId": .string("v-\(id)"),
-                "generationState": "ready", "derivedAvailable": true, "status": "draft"])]
+                "assetId": .string(id), "fixtureId": "child", "sourceVersionId": .string("v-\(id)"),
+                "generationState": .string(reportsRunningProgress && id == "b" ? "queued" : "ready"),
+                "derivedAvailable": .bool(!(reportsRunningProgress && id == "b")), "status": "draft"])]
+        case "fixture-visual-repair-proposal-list":
+            result = ["visualRepairProposals": .object(["items": .array([.object([
+                "proposalId": "visual-b", "assetId": "b", "fixtureId": "child", "sourceVersionId": "v-b",
+                "generationState": "ready", "derivedAvailable": true, "status": "draft"
+            ])])])]
         case "fixture-review-window": result = ["reviewWindow": .object(["fixtureId": "child", "items": .array([])])]
-        case "fixture-ai-status": result = ["ai": .object(["active": false])]
+        case "fixture-ai-status":
+            result = ["ai": .object(["active": false,
+                "run": .object(["runId": .string("run-\(starts)"), "status": "completed",
+                    "processed": .number(Double(requestedCount)), "requested": .number(Double(requestedCount))])])]
         default: break
         }
         return OwnerActionEnvelope(action: OwnerAction(id: UUID().uuidString, actionKind: action.actionKind,

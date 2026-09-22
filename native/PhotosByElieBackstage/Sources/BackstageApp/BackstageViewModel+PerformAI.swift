@@ -11,6 +11,36 @@ struct ReviewAIWork {
     var prepared = false
 }
 
+/// Counts describe each independent pass; a metadata result is not a finished After.
+struct ReviewAIBatchProgress {
+    var metadataTotal: Int
+    var visualTotal: Int
+    var metadataProcessed = 0
+    var metadataFailed = 0
+    var visualReady = 0
+    var visualFailed = 0
+    var visualRefreshUnavailable = false
+    var metadataReady: Int? = nil
+
+    var summary: String {
+        var lines: [String] = []
+        if metadataTotal > 0 {
+            if let metadataReady {
+                lines.append("Titles / keywords: \(metadataReady) of \(metadataTotal) ready · \(metadataFailed) need attention")
+            } else {
+                let processed = min(metadataTotal, max(0, metadataProcessed))
+                lines.append("Titles / keywords: \(processed) of \(metadataTotal) processed · \(metadataTotal - processed) remaining · \(metadataFailed) need attention")
+            }
+        }
+        if visualTotal > 0 {
+            let remaining = max(0, visualTotal - visualReady - visualFailed)
+            lines.append("After images: \(visualReady) of \(visualTotal) ready · \(remaining) remaining · \(visualFailed) need attention")
+            if visualRefreshUnavailable { lines.append("After counts last checked; refreshing progress is temporarily unavailable.") }
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
 extension BackstageViewModel {
     var canPerformReviewAI: Bool {
         !isReviewMutationBlocked && !isAIPassActive && !isCloudWorkflowActive
@@ -41,6 +71,8 @@ extension BackstageViewModel {
         isRunningReview = true
         reviewAIRetry = nil
         reviewAIExecutionStatus = "Starting AI for \(work.items.count) photo(s)…"
+        reviewAIExecutionStatus += "\n" + ReviewAIBatchProgress(metadataTotal: work.metadataIDs.count,
+            visualTotal: work.visualIDs.count).summary
         reviewStatus = reviewAIExecutionStatus
         reviewAITask = Task { [weak self] in
             guard let self else { return }
@@ -50,6 +82,8 @@ extension BackstageViewModel {
 
     func executeReviewAI(_ captured: ReviewAIWork) async {
         var work = captured
+        var progress = ReviewAIBatchProgress(metadataTotal: work.metadataIDs.count, visualTotal: work.visualIDs.count)
+        var visualLaunchFailures: Set<String> = []
         defer {
             isPerformingReviewAI = false
             isRunningReview = false
@@ -65,6 +99,7 @@ extension BackstageViewModel {
                 work.prepared = true
             } catch {
                 reviewAIExecutionStatus = "AI could not start: \(userFacingMessage(for: error)). Retry failed AI."
+                reviewStatus = reviewAIExecutionStatus
                 reviewAIRetry = work
                 return
             }
@@ -72,6 +107,7 @@ extension BackstageViewModel {
         var visualRuns: [String: VisualRepairProposal] = [:]
         // Each launch captures one bounded preview, then its worker runs independently.
         for item in work.items where work.visualIDs.contains(item.id) {
+            publishReviewAIProgress(progress, stage: "Preparing After images · \(visualRuns.count + visualLaunchFailures.count) of \(progress.visualTotal) submitted")
             reviewAIProgress[item.id] = "Preparing visual repair…"
             do {
                 let proposal = try await visualRepairService.generate(fixtureID: work.fixtureID,
@@ -80,11 +116,18 @@ extension BackstageViewModel {
                 reviewVisualProposals[item.id] = proposal
                 reviewAIProgress[item.id] = "Visual repair running…"
             } catch {
+                visualLaunchFailures.insert(item.id)
                 reviewAIProgress[item.id] = "Visual repair failed: \(userFacingMessage(for: error))"
             }
+            updateReviewAIVisualCounts(&progress, proposals: visualRuns, failures: visualLaunchFailures)
+            if (visualRuns.count + visualLaunchFailures.count).isMultiple(of: 8) {
+                await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns,
+                    failures: visualLaunchFailures, progress: &progress)
+            }
         }
+        updateReviewAIVisualCounts(&progress, proposals: visualRuns, failures: visualLaunchFailures)
         if !work.metadataIDs.isEmpty {
-            reviewAIExecutionStatus = "Performing title and keyword AI for \(work.metadataIDs.count) photo(s)…"
+            publishReviewAIProgress(progress, stage: "Performing AI…")
             do {
                 var status = try await fixtureService.startAIPass(assetIDs: work.metadataIDs.sorted(), fixtureID: work.fixtureID,
                     sourceVersionIDs: Dictionary(uniqueKeysWithValues: work.items.filter { work.metadataIDs.contains($0.id) }.map { ($0.id, $0.sourceVersionID) }))
@@ -92,7 +135,10 @@ extension BackstageViewModel {
                 fixtureAIStatus = status
                 let deadline = Date().addingTimeInterval(60 * 60)
                 while status.active && Date() < deadline {
-                    reviewAIExecutionStatus = "Performing AI · \(status.run?.processed ?? 0)/\(status.run?.requested ?? work.metadataIDs.count) metadata results"
+                    progress.metadataProcessed = status.run?.processed ?? 0
+                    progress.metadataFailed = status.run?.failed ?? 0
+                    await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns, failures: visualLaunchFailures, progress: &progress)
+                    publishReviewAIProgress(progress, stage: "Performing AI…")
                     try await Task.sleep(for: .seconds(2))
                     status = try await fixtureService.aiStatus()
                     guard status.run?.id == runID else {
@@ -107,25 +153,28 @@ extension BackstageViewModel {
                     reviewAIProgress[id] = [message, reviewAIProgress[id]].compactMap { $0 }.joined(separator: " · ")
                 }
                 work.metadataIDs.subtract(completed)
+                progress.metadataReady = progress.metadataTotal - work.metadataIDs.count
+                progress.metadataFailed = work.metadataIDs.count
             } catch {
+                progress.metadataReady = 0
+                progress.metadataFailed = work.metadataIDs.count
                 for id in work.metadataIDs {
                     reviewAIProgress[id] = "Metadata failed: \(userFacingMessage(for: error)) · \(reviewAIProgress[id] ?? "")"
                 }
             }
         }
+        await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns, failures: visualLaunchFailures, progress: &progress)
+        publishReviewAIProgress(progress, stage: "Checking After images…")
         for item in work.items where visualRuns[item.id] != nil {
             do {
                 var proposal = visualRuns[item.id]!
                 let deadline = Date().addingTimeInterval(20 * 60)
                 while proposal.isGenerating && Date() < deadline {
-                    reviewAIExecutionStatus = "Generating After for \(item.filename)…"
+                    publishReviewAIProgress(progress, stage: "Generating After images…")
                     try await Task.sleep(for: .seconds(3))
-                    let current = try await visualRepairService.proposals(fixtureID: work.fixtureID, assetIDs: [item.id])
-                    guard let updated = current.first(where: { $0.id == proposal.id }) else {
-                        throw OwnerActionRunError.failed("Visual run receipt unavailable")
-                    }
-                    proposal = updated
-                    reviewVisualProposals[item.id] = proposal
+                    await refreshReviewAIVisualProgress(fixtureID: work.fixtureID, proposals: &visualRuns, failures: visualLaunchFailures, progress: &progress)
+                    proposal = visualRuns[item.id]!
+                    publishReviewAIProgress(progress, stage: "Generating After images…")
                 }
                 if proposal.derivedAvailable {
                     work.visualIDs.remove(item.id)
@@ -143,7 +192,40 @@ extension BackstageViewModel {
             ? "AI complete. Review the proposals\(visualRuns.isEmpty ? "" : " and Before / After comparisons") before approving."
             : "AI finished with \(failed.count) photo(s) needing attention. Successful results are retained; Retry failed AI continues only incomplete parts."
         await loadFixtureReviewWindow(preferredAssetID: work.items.first?.id)
-        reviewAIExecutionStatus = finished
-        reviewStatus = finished
+        // A timed-out component is attention-required, never silently reported as ready.
+        progress.visualFailed = work.visualIDs.count
+        progress.visualReady = progress.visualTotal - progress.visualFailed
+        publishReviewAIProgress(progress, stage: finished)
+    }
+
+    func publishReviewAIProgress(_ progress: ReviewAIBatchProgress, stage: String) {
+        reviewAIExecutionStatus = stage + "\n" + progress.summary
+        reviewStatus = reviewAIExecutionStatus
+    }
+
+    private func updateReviewAIVisualCounts(_ progress: inout ReviewAIBatchProgress,
+                                           proposals: [String: VisualRepairProposal], failures: Set<String>) {
+        progress.visualReady = proposals.values.filter { $0.derivedAvailable }.count
+        progress.visualFailed = failures.count + proposals.values.filter { !$0.derivedAvailable && !$0.isGenerating }.count
+    }
+
+    private func refreshReviewAIVisualProgress(fixtureID: String,
+        proposals: inout [String: VisualRepairProposal], failures: Set<String>, progress: inout ReviewAIBatchProgress) async {
+        guard proposals.values.contains(where: { $0.isGenerating }) else { return }
+        do {
+            let current = try await visualRepairService.proposals(fixtureID: fixtureID, assetIDs: proposals.keys.sorted())
+            var found: Set<String> = []
+            for updated in current {
+                guard let expected = proposals[updated.assetID], updated.id == expected.id,
+                      updated.fixtureID == fixtureID, updated.sourceVersionID == expected.sourceVersionID else { continue }
+                found.insert(updated.assetID)
+                proposals[updated.assetID] = updated
+                reviewVisualProposals[updated.assetID] = updated
+            }
+            progress.visualRefreshUnavailable = !Set(proposals.keys).isSubset(of: found)
+        } catch {
+            progress.visualRefreshUnavailable = true
+        }
+        updateReviewAIVisualCounts(&progress, proposals: proposals, failures: failures)
     }
 }

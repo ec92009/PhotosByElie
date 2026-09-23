@@ -21,6 +21,7 @@ REQUIRED_FIXTURE_SCRIPTS = {
     "pbe_owner_host_tracked_paths.txt",
     "pbe_owner_web_bundle_paths.txt",
     "pbe_owner_session.py",
+    "public_access_verification.py",
     "requested_ai_proposal_pass.py",
     "sidecar_server.py",
     "sidecar_state_db.py",

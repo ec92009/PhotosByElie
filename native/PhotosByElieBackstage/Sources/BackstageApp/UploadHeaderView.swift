@@ -48,6 +48,12 @@ struct UploadHeaderView: View {
                     .backstageHelp("Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.")
                     .accessibilityLabel("Upload selection")
                     .accessibilityIdentifier("backstage.uploads.primary-selection")
+                Button(model.isVerifyingPublicAccess ? "Verifying access…" : "Verify public access (20)") {
+                    model.startPublicAccessVerification()
+                }
+                .disabled(!model.canVerifyPublicAccess || isPreviewMode)
+                .backstageHelp("Check up to 20 oldest-unchecked current photos against the exact catalog, public preview bytes and lifecycle registration. Records expire after 5 minutes. No media upload or registration is performed.")
+                .accessibilityIdentifier("backstage.uploads.verify-public-access")
                 if let plan = model.nativeUploadPlan,
                    plan.projectionPendingCount + plan.projectionFailedCount > 0 {
                     Button(model.isRunningCatalogRecovery ? "Recovering catalog…" : "Recover catalog entries…") {
@@ -65,7 +71,7 @@ struct UploadHeaderView: View {
                     .backstageHelp("Deploy the exact approved Owner catalog projection, then wait until the public website returns the same verified checksum.")
                 }
             }
-            Text("Upload prepares full-resolution media and catalog entries. Deploy & verify website is the separate final step; only checksum-verified website items are Live.")
+            Text("Upload stores media; Deploy verifies the catalog. Only a fresh exact photo-and-preview access check counts as Live. Pending registration does not require re-uploading.")
                 .foregroundStyle(.secondary)
             if model.isRunningDelivery, model.nativeUploadPlan == nil {
                 ProgressView("Loading approved upload eligibility…")

@@ -434,6 +434,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
             with (
                 patch("fixture_pipeline.connect_owner", side_effect=open_database),
                 patch("fixture_pipeline.ensure_schema") as ensure_schema,
+                patch("public_access_verification.ensure_schema") as ensure_access_schema,
             ):
                 first = fixture_pipeline.connect(Path(directory), database)
                 second = fixture_pipeline.connect(Path(directory), database)
@@ -443,6 +444,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
             fixture_pipeline._SCHEMA_READY.clear()
 
         self.assertEqual(ensure_schema.call_count, 1)
+        self.assertEqual(ensure_access_schema.call_count, 1)
 
     def test_retries_owner_database_lock_then_returns_result(self):
         attempts = 0

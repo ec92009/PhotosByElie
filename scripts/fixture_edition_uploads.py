@@ -59,7 +59,7 @@ def upload_plan(root, conn, fixture_id, *, offset=0, limit=200, order="oldest", 
         if not policy_allows_catalog(policy): continue
         catalog = conn.execute('SELECT * FROM public_catalog_publications WHERE asset_id=? AND source_version_hash=?', (row['asset_id'],row['receipt_version_hash'])).fetchone()
         state = catalog['state'] if catalog else 'pending'
-        key = {'pending':'projectionPendingCount','local':'deploymentPendingCount','live':'liveOnWebsiteCount'}.get(state)
+        key = {'pending':'projectionPendingCount','local':'deploymentPendingCount'}.get(state)
         if state=='failed': key='deploymentFailedCount' if catalog['catalog_sha256'] else 'projectionFailedCount'
         if key: counts[key]+=1
     items=[]
@@ -69,9 +69,14 @@ def upload_plan(root, conn, fixture_id, *, offset=0, limit=200, order="oldest", 
             title=row['title'],keywords=json.loads(row['keywords_json']),filename=row['filename'],
             capturedAt=row['captured_at'] or '',deliveryState=row['delivery_state'],errorText=row['last_error'],
             sourceVersionId=row['source_version_id'],revisionHash=row['approved_revision_hash']))
+    from public_access_verification import current_counts
+    public_access = current_counts(conn, fixture_id)
+    counts['liveOnWebsiteCount'] = public_access['liveOnWebsiteCount'] if policy_allows_catalog(policy) else 0
     return dict(ok=True,readOnly=True,fixtureId=fixture_id,fixtureName=fixture['name'],cloudAllowed=cloud,
         pickedCount=len(rows),approvedCount=len(approved),needsReviewCount=len(rows)-len(approved),
         needsUploadCount=len(uploadable),liveCount=counts['liveOnWebsiteCount'],**counts,
+        publicAccessExpiresAt=public_access['publicAccessExpiresAt'],
+        catalogDeployedCount=public_access['catalogDeployedCount'],
         offset=offset,limit=limit,order=order,count=len(items),hasNext=offset+len(items)<len(uploadable),items=items)
 
 

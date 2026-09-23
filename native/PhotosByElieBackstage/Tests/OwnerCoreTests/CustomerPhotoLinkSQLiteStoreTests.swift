@@ -28,6 +28,11 @@ struct CustomerPhotoLinkSQLiteStoreTests {
         "INSERT INTO sidecar_tombstones VALUES ('private-photos-id', 'active')",
         "INSERT INTO media_lifecycle VALUES ('public-123', 'hidden')",
         "INSERT INTO media_lifecycle VALUES ('public-123', 'discarded')"
+        ,"DELETE FROM public_access_observations"
+        ,"UPDATE public_access_observations SET state='blocked'"
+        ,"UPDATE public_access_observations SET expires_at='2026-01-01T00:00:00Z'"
+        ,"UPDATE public_access_observations SET source_version_hash='stale'"
+        ,"UPDATE public_access_observations SET media_id='wrong'"
     ])
     func rejectsNonPublicState(sql: String) throws {
         let fixture = try CustomerLinkDatabase()
@@ -85,6 +90,7 @@ struct CustomerPhotoLinkSQLiteStoreTests {
         try fixture.execute("""
             INSERT INTO asset_publications VALUES ('private-photos-id', 'expo', 'v2', 'live', NULL);
             UPDATE public_catalog_publications SET state = 'live', verified_at = '2026-08-27T07:00:00Z';
+            INSERT INTO public_access_observations SELECT fixture_id,asset_id,'v2','public-456',state,expires_at FROM public_access_observations;
             """)
         #expect(throws: CustomerPhotoLinkError.ambiguousPublication) {
             try fixture.store.resolve(assetID: "private-photos-id", fixtureID: "expo")
@@ -143,6 +149,10 @@ private struct CustomerLinkDatabase {
                 );
                 CREATE TABLE sidecar_tombstones (asset_id TEXT, tombstone_state TEXT);
                 CREATE TABLE media_lifecycle (media_id TEXT, lifecycle_state TEXT);
+                CREATE TABLE public_access_observations (fixture_id TEXT,asset_id TEXT,source_version_hash TEXT,media_id TEXT,state TEXT,expires_at TEXT);
+                CREATE VIEW public_access_current AS SELECT * FROM public_access_observations
+                  WHERE state='allowed' AND julianday(expires_at)>julianday('now');
+                INSERT INTO public_access_observations VALUES ('expo','private-photos-id','v1','public-123','allowed',datetime('now','+5 minutes'));
                 INSERT INTO fixtures VALUES ('expo', NULL);
                 INSERT INTO asset_publications VALUES ('private-photos-id', 'expo', 'v1', 'live', NULL);
                 INSERT INTO public_catalog_publications VALUES (

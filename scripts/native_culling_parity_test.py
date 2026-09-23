@@ -885,7 +885,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "selection: $model.selectedDeliveryIDs",
             "model.nativeUploadThumbnails[item.id]",
             ".frame(width: 50, height: 50)",
-            "Use Command-click or Shift-click",
+            "Space previews • Arrows navigate • ⌘A selects all shown",
             'Button("Return to Review…")',
             "confirmingReturnToReview",
             "shown of",
@@ -1551,7 +1551,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "normalizeCullingMediaFilters(for: cullingMediaFilterControls)",
             model,
         )
-        reset = model.split("private func resetFixtureScopedViewState()", 1)[1].split(
+        reset = model.split("private func resetFixtureScopedViewState(previousFixtureID: String)", 1)[1].split(
             "func refreshVisibleFixtureSurface", 1
         )[0]
         apply_filters = model.split("func applyCullingFilters", 1)[1].split(

@@ -675,8 +675,8 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(deployed["projectionFailedCount"], 0)
         self.assertEqual(deployed["deploymentFailedCount"], 1)
         self.assertEqual(deployed["deploymentPendingCount"], 0)
-        self.assertEqual(deployed["liveOnWebsiteCount"], 1)
-        self.assertEqual(deployed["liveCount"], 1)
+        self.assertEqual(deployed["liveOnWebsiteCount"], 0)  # Catalog is not lifecycle/preview proof.
+        self.assertEqual(deployed["liveCount"], 0)
 
     def test_source_missing_withdraws_but_preserves_r2(self):
         record_photos_sync_snapshot(

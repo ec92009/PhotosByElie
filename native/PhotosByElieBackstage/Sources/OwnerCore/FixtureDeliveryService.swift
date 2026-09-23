@@ -112,11 +112,12 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
     public var status: String
     public var catalogState: String
     public var errorText: String
+    public var publicAccessExpiresAt: Date? = nil
 
     public var workflowStage: AssetWorkflowStage {
         let cleanCatalog = catalogState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if cleanCatalog == "live" { return .live }
-        if ["pending", "local"].contains(cleanCatalog) { return .publishing }
+        if cleanCatalog == "live", let expiry = publicAccessExpiresAt, expiry > Date() { return .live }
+        if ["pending", "local", "live"].contains(cleanCatalog) { return .publishing }
         let cleanStatus = status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if ["live", "verified", "uploaded"].contains(cleanStatus) {
             return .fullResolutionUploaded
@@ -220,8 +221,15 @@ public struct NativeUploadPlan: Sendable, Equatable {
     public var projectionFailedCount: Int
     public var deploymentPendingCount: Int
     public var deploymentFailedCount: Int
-    public var liveOnWebsiteCount: Int
-    public var liveCount: Int
+    private var observedLiveCount: Int
+    public var publicAccessExpiresAt: Date?
+    public var catalogDeployedCount: Int
+    public var publicAccessPendingCount: Int { max(0, catalogDeployedCount - liveOnWebsiteCount) }
+    public var liveOnWebsiteCount: Int {
+        guard let expiry = publicAccessExpiresAt, expiry > Date() else { return 0 }
+        return observedLiveCount
+    }
+    public var liveCount: Int { liveOnWebsiteCount }
     public var order: NativeUploadPlanOrder
     public var offset: Int
     public var limit: Int
@@ -262,6 +270,8 @@ public struct NativeUploadPlan: Sendable, Equatable {
         deploymentPendingCount: Int = 0,
         deploymentFailedCount: Int = 0,
         liveOnWebsiteCount: Int? = nil,
+        publicAccessExpiresAt: Date? = nil,
+        catalogDeployedCount: Int = 0,
         order: NativeUploadPlanOrder = .oldest,
         offset: Int,
         limit: Int,
@@ -280,8 +290,9 @@ public struct NativeUploadPlan: Sendable, Equatable {
         self.projectionFailedCount = projectionFailedCount
         self.deploymentPendingCount = deploymentPendingCount
         self.deploymentFailedCount = deploymentFailedCount
-        self.liveOnWebsiteCount = liveOnWebsiteCount ?? liveCount
-        self.liveCount = liveOnWebsiteCount ?? liveCount
+        self.observedLiveCount = liveOnWebsiteCount ?? liveCount
+        self.publicAccessExpiresAt = publicAccessExpiresAt
+        self.catalogDeployedCount = catalogDeployedCount
         self.order = order
         self.offset = offset
         self.limit = limit
@@ -586,6 +597,8 @@ public actor FixtureDeliveryService {
             deploymentPendingCount: plan["deploymentPendingCount"]?.intValue ?? 0,
             deploymentFailedCount: plan["deploymentFailedCount"]?.intValue ?? 0,
             liveOnWebsiteCount: plan["liveOnWebsiteCount"]?.intValue,
+            publicAccessExpiresAt: publicAccessDate(plan["publicAccessExpiresAt"]?.stringValue),
+            catalogDeployedCount: plan["catalogDeployedCount"]?.intValue ?? 0,
             order: NativeUploadPlanOrder(
                 rawValue: plan["order"]?.stringValue ?? NativeUploadPlanOrder.oldest.rawValue
             ) ?? .oldest,
@@ -648,6 +661,34 @@ public actor FixtureDeliveryService {
             attempts: deployment["attempts"]?.intValue ?? 0,
             errorText: deployment["error"]?.stringValue ?? ""
         )
+    }
+
+    public func verifyPublicAccess(fixtureID: String) async throws -> String {
+        let action = try await fixtureAction(mode: "public-access-verify", fixtureID: fixtureID,
+            extra: ["limit": .number(20)])
+        guard let result = action.result?["publicAccessVerification"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("publicAccessVerification")
+        }
+        let checked = result["checked"]?.intValue ?? 0
+        let allowed = result["allowed"]?.intValue ?? 0
+        let pending = result["pending"]?.intValue ?? 0
+        let blocked = result["blocked"]?.intValue ?? 0
+        let failed = result["failed"]?.intValue ?? 0
+        let reasons = result["items"]?.arrayValue?.compactMap { value -> String? in
+            guard let item = value.objectValue, item["state"]?.stringValue != "allowed" else { return nil }
+            return item["reason"]?.stringValue
+        } ?? []
+        return "Checked \(checked): \(allowed) public access verified for up to 5 minutes, \(pending) registration pending, \(blocked) blocked, \(failed) failed. Uploads unchanged."
+            + (reasons.first.map { " \($0). Reconcile the exact registration or receipt, then retry; do not re-upload." } ?? "")
+    }
+
+    private func publicAccessDate(_ text: String?) -> Date? {
+        guard let text, !text.isEmpty else { return nil }
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = parser.date(from: text) { return date }
+        parser.formatOptions = [.withInternetDateTime]
+        return parser.date(from: text)
     }
 
     public func cancelNativeUpload(runID: String) async throws -> NativeUploadRun {
@@ -998,7 +1039,8 @@ public actor FixtureDeliveryService {
                     ?? "not-applicable",
                 errorText: item["error_text"]?.stringValue
                     ?? item["errorText"]?.stringValue
-                    ?? ""
+                    ?? "",
+                publicAccessExpiresAt: publicAccessDate(item["public_access_expires_at"]?.stringValue)
             )
         }
         return NativeUploadRun(

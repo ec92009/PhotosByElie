@@ -461,6 +461,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isRunningNativePublication = false
     @Published var isRunningCatalogRecovery = false
     @Published var isDeployingPublicCatalog = false
+    @Published var isVerifyingPublicAccess = false
     @Published var publicCatalogDeployment: PublicCatalogDeploymentReport?
     @Published var isCancellingNativePublication = false
     @Published var nativePublicationBatchNumber = 0
@@ -586,7 +587,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isCloudWorkflowActive: Bool {
-        isRunningDelivery || isRunningNativePublication || isRunningR2Reconciliation
+        isRunningDelivery || isRunningNativePublication || isRunningR2Reconciliation || isVerifyingPublicAccess
     }
 
     var canStartCloudWorkflow: Bool {
@@ -682,6 +683,33 @@ final class BackstageViewModel: ObservableObject {
             && (plan.deploymentPendingCount + plan.deploymentFailedCount > 0)
     }
 
+    var canVerifyPublicAccess: Bool {
+        canStartCloudWorkflow && !selectedFixtureID.isEmpty && (nativeUploadPlan?.mediaUploadedCount ?? 0) > 0
+    }
+
+    /// Latch in the button's synchronous handler, before creating the Task.
+    func startPublicAccessVerification() {
+        guard canVerifyPublicAccess else { return }
+        let fixtureID = selectedFixtureID
+        isVerifyingPublicAccess = true
+        isRunningDelivery = true
+        nativeUploadStatus = "Verifying up to 20 exact public preview pairs; no uploads or registrations…"
+        nativeUploadPlan?.publicAccessExpiresAt = nil
+        Task {
+            defer { isVerifyingPublicAccess = false; isRunningDelivery = false }
+            do {
+                let message = try await deliveryService.verifyPublicAccess(fixtureID: fixtureID)
+                let plan = try await deliveryService.nativeUploadPlan(fixtureID: fixtureID)
+                guard selectedFixtureID == fixtureID else { return }
+                nativeUploadPlan = plan
+                nativeUploadStatus = message
+            } catch {
+                guard selectedFixtureID == fixtureID else { return }
+                nativeUploadStatus = "Public access verification failed safely: \(userFacingMessage(for: error)). Uploads unchanged."
+            }
+        }
+    }
+
     var isPhotoLibraryOperationInProgress: Bool {
         isPhotosMaintenanceActive || isAuthorizingPhotos || isLoadingPhotos || isReconcilingPhotosIndex
     }
@@ -711,7 +739,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isFixtureChooserDisabled: Bool {
-        isPhotosMaintenanceActive || fixtureSelectionCoordinator.chooserDisabled
+        isPhotosMaintenanceActive || isVerifyingPublicAccess || fixtureSelectionCoordinator.chooserDisabled
             || fixtureSelectionOperationInFlight
             || isLaunchingPBEOwner
     }
@@ -811,6 +839,7 @@ final class BackstageViewModel: ObservableObject {
         installedUpdateLauncher: any BackstageInstalledUpdateLaunching = SystemBackstageInstalledUpdateLauncher(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
+        deliveryService: FixtureDeliveryService? = nil,
         visualRepairService: VisualRepairProposalService? = nil,
         lifecycleService: LifecycleService? = nil,
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
@@ -898,7 +927,7 @@ final class BackstageViewModel: ObservableObject {
             connectorIdentity: LocalOwnerConnectorIdentity()
         )
         self.lifecycleService = lifecycleService ?? LifecycleService(runner: runner)
-        self.deliveryService = FixtureDeliveryService(runner: runner)
+        self.deliveryService = deliveryService ?? FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost ?? PBEOwnerNativeHostService(
             api: api,
             photoLibrary: photoLibrary,
@@ -7962,7 +7991,7 @@ final class BackstageViewModel: ObservableObject {
             await hydrateCurrentImageByteCounts(for: plan.items.map(\.id))
             selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
             if report.isVerified {
-                nativeUploadStatus = "Website catalog revision \(report.projectionRevision) is verified live with \(report.mediaCount.formatted()) items."
+                nativeUploadStatus = "Website catalog revision \(report.projectionRevision) is deployed with \(report.mediaCount.formatted()) items. Verify public access separately before calling photos Live."
             } else {
                 nativeUploadStatus = report.errorText.isEmpty
                     ? "The catalog push completed, but the website checksum was not verified. Retry deploy and verify."
@@ -8193,6 +8222,8 @@ final class BackstageViewModel: ObservableObject {
                     deploymentPendingCount: current.deploymentPendingCount,
                     deploymentFailedCount: current.deploymentFailedCount,
                     liveOnWebsiteCount: current.liveOnWebsiteCount,
+                    publicAccessExpiresAt: current.publicAccessExpiresAt,
+                    catalogDeployedCount: current.catalogDeployedCount,
                     order: current.order,
                     offset: current.offset,
                     limit: current.limit,
@@ -8244,6 +8275,8 @@ final class BackstageViewModel: ObservableObject {
                     deploymentPendingCount: current.deploymentPendingCount,
                     deploymentFailedCount: current.deploymentFailedCount,
                     liveOnWebsiteCount: current.liveOnWebsiteCount,
+                    publicAccessExpiresAt: current.publicAccessExpiresAt,
+                    catalogDeployedCount: current.catalogDeployedCount,
                     order: current.order,
                     offset: current.offset,
                     limit: current.limit,

@@ -66,13 +66,16 @@ struct UploadView: View {
                     LabeledContent("Media Uploaded", value: "\(plan.fullResolutionUploadedCount)")
                     LabeledContent("Catalog Preparing", value: "\(plan.projectionPendingCount)")
                     LabeledContent("Ready to Deploy", value: "\(plan.deploymentPendingCount)")
-                    LabeledContent("Live", value: "\(plan.liveOnWebsiteCount)")
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        LabeledContent("Verified Live", value: "\(plan.liveOnWebsiteCount)")
+                    }
                     if plan.failedHealthCount > 0 {
                         LabeledContent("Failed health", value: "\(plan.failedHealthCount)")
                             .foregroundStyle(.red)
                     }
                 }
                 if plan.needsUploadCount > 0 {
+                    // Upload eligibility is independent of public-access checks.
                     HStack {
                         let outsideWindow = max(0, plan.needsUploadCount - plan.items.count)
                         Text(
@@ -93,6 +96,10 @@ struct UploadView: View {
                         .disabled(!model.canStartCloudWorkflow || plan.items.isEmpty)
                         .backstageHelp("Review the confirmation for continuously uploading every eligible asset. Failed items remain independently retryable without blocking later windows.")
                     }
+                }
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
+                    Text("\(plan.catalogDeployedCount) catalog deployed • \(plan.publicAccessPendingCount) public access pending or blocked. Verification expires after 5 minutes; successful uploads are retained.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 if plan.items.isEmpty {
                     ContentUnavailableView(
@@ -230,7 +237,7 @@ struct UploadView: View {
                             + " • \(run.processed) of \(run.requested)"
                             + (model.isRunningCatalogRecovery
                                 ? " • existing R2 only"
-                                : " • \(run.live) website live")
+                                : " • \(run.live) historical catalog receipts (not a fresh access check)")
                             + " • \(run.failed) failed"
                             + " • \(run.remaining) remaining"
                         )
@@ -398,7 +405,7 @@ struct UploadView: View {
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without uploading or preparing the selection.")
         } message: {
-            Text("This uploads the media and prepares its catalog entries. The assets are not called Live until Deploy & verify website completes with an exact checksum match.")
+            Text("This uploads media and prepares catalog entries. Deploy verifies the catalog; a separate fresh public access check is required before photos are called Live.")
         }
         .confirmationDialog(
             "Upload and prepare all \(model.nativeUploadPlan?.needsUploadCount ?? 0) eligible assets?",
@@ -441,7 +448,7 @@ struct UploadView: View {
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without changing the public website catalog.")
         } message: {
-            Text("Backstage uses an isolated checkout, publishes only the catalog file, and records Live only after the website returns the same checksum. A failed verification remains safely retryable.")
+            Text("Backstage uses an isolated checkout and publishes only the catalog file. A matching website checksum records catalog deployment, not public photo access. Run Verify public access afterwards; failed checks preserve successful uploads.")
         }
     }
 

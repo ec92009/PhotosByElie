@@ -965,6 +965,8 @@ def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
             try:
                 owner_state_db.ensure_schema(conn)
                 ensure_schema(conn)
+                from public_access_verification import ensure_schema as ensure_public_access_schema
+                ensure_public_access_schema(conn)
                 conn.commit()
             except Exception:
                 conn.close()

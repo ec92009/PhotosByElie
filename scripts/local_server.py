@@ -3943,6 +3943,14 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             "readOnly": False,
             "catalogDeployment": deploy_public_catalog(repo_root),
         })
+    elif mode == "public-access-verify":
+        from public_access_verification import verify_public_access
+        result.update({
+            "readOnly": False,  # Only the local observation ledger changes.
+            "publicAccessVerification": verify_public_access(
+                repo_root, str(manifest.get("fixtureId") or ""), limit=int(manifest.get("limit") or 20),
+            ),
+        })
     elif mode == "asset-sale-reference-record":
         result.update({
             "readOnly": False,
@@ -4512,6 +4520,7 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         "asset-upload-run-resume",
         "asset-upload-run-cancel",
         "public-catalog-deploy",
+        "public-access-verify",
         "asset-sale-reference-record",
         "r2-reconciliation-plan",
         "r2-reconciliation-commit",

@@ -241,6 +241,9 @@ def upload_eligibility_plan(
                         AND catalog.state = 'live'
                         AND length(trim(COALESCE(catalog.catalog_sha256, ''))) = 64
                         AND trim(COALESCE(catalog.verified_at, '')) <> ''
+                        AND EXISTS (SELECT 1 FROM public_access_current access
+                          WHERE access.asset_id=decision.asset_id AND access.fixture_id=decision.fixture_id
+                            AND access.source_version_hash=catalog.source_version_hash)
                         {retired_media_filter}
                        THEN 1 ELSE 0 END)
                 AS live_on_website_count
@@ -340,6 +343,8 @@ def upload_eligibility_plan(
                 }
                 for row in rows
             ]
+        from public_access_verification import current_counts
+        access_counts = current_counts(conn, clean_fixture_id)
     needs_upload_count = int(summary["needs_upload_count"] or 0) if cloud_allowed else 0
     return {
         "ok": True,
@@ -357,6 +362,8 @@ def upload_eligibility_plan(
         "deploymentPendingCount": int(summary["deployment_pending_count"] or 0),
         "deploymentFailedCount": int(summary["deployment_failed_count"] or 0),
         "liveOnWebsiteCount": int(summary["live_on_website_count"] or 0),
+        "publicAccessExpiresAt": access_counts['publicAccessExpiresAt'],
+        "catalogDeployedCount": access_counts['catalogDeployedCount'],
         # Compatibility alias. It is deliberately verified website visibility,
         # never the local media-upload state that the old counter exposed.
         "liveCount": int(summary["live_on_website_count"] or 0),
@@ -1377,6 +1384,17 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
             """,
             (run_id,),
         ).fetchall()
+        has_public_observations = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='public_access_current'"
+        ).fetchone() is not None
+        observed_items = []
+        for item in items:
+            value = dict(item)
+            verified = conn.execute("""SELECT expires_at FROM public_access_current
+                WHERE fixture_id=? AND asset_id=? AND source_version_hash=?""",
+                (row['fixture_id'] if 'fixture_id' in row.keys() else '',item['asset_id'],item['source_version_hash'])).fetchone() if has_public_observations else None
+            value['public_access_expires_at'] = verified['expires_at'] if verified else ''
+            observed_items.append(value)
     return {
         "ok": True,
         "runId": run_id,
@@ -1391,7 +1409,7 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         "startedAt": str(row["started_at"] or ""),
         "completedAt": str(row["completed_at"] or ""),
         "lastError": str(row["last_error"] or ""),
-        "items": [dict(item) for item in items],
+        "items": observed_items,
     }
 
 

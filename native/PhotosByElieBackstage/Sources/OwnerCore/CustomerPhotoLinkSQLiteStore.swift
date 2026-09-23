@@ -38,9 +38,8 @@ public protocol CustomerPhotoLinkResolving: Sendable {
 }
 
 /// No database creation, migration, Photos access, networking, or Owner session.
-/// A local upload is not proof of publication. Match the fixture's live source
-/// version to a verified public-catalog receipt, retaining an older live version
-/// while a new editorial version is under review.
+/// A local upload or catalog receipt alone is not proof of public access.
+/// The shared view checks expiry and exact current source/preview evidence.
 public struct CustomerPhotoLinkSQLiteStore: CustomerPhotoLinkResolving {
     private let databaseURL: URL
     private static let catalogURL = "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite"
@@ -73,6 +72,9 @@ public struct CustomerPhotoLinkSQLiteStore: CustomerPhotoLinkResolving {
         JOIN public_catalog_publications AS catalog
           ON catalog.asset_id = publication.asset_id
          AND catalog.source_version_hash = publication.source_version_hash
+        JOIN public_access_current AS access
+          ON access.fixture_id=publication.fixture_id AND access.asset_id=publication.asset_id
+         AND access.source_version_hash=publication.source_version_hash AND access.media_id=catalog.media_id
         WHERE publication.asset_id = ? AND publication.fixture_id = ?
           AND publication.state = 'live' AND publication.withdrawn_at IS NULL
           AND trim(publication.source_version_hash) <> ''

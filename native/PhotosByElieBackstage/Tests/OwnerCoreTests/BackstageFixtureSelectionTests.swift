@@ -7,6 +7,62 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Public access acknowledges immediately, excludes competing work, suppresses duplicates and ignores another fixture")
+    @MainActor
+    func publicAccessFeedbackAndScope() async throws {
+        let api = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(id: "verify",actionKind: "sidecar-culling-review",target: "max",state: .completed,
+                result: ["publicAccessVerification": ["checked": 1,"allowed": 1]]),
+            OwnerAction(id: "plan",actionKind: "sidecar-culling-review",target: "max",state: .completed,
+                result: ["uploadPlan": ["fixtureId": "expo","mediaUploadedCount": 1]]),
+        ],holdsTerminalActions: true)
+        let runner = OwnerActionRunner(api: api,waker: RejectingFixtureSelectionWaker(),pollInterval: .milliseconds(1),timeout: .seconds(3))
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(),
+            deliveryService: FixtureDeliveryService(runner: runner),workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,currentEquipmentCache: nil,equipmentBackfillStore: nil,customerPhotoLinks: nil)
+        model.installFixtureTree([FixtureNode(id: "expo",name: "Expo"),FixtureNode(id: "other",name: "Other")],
+            preferredFixtureID: "expo",persistSelection: false)
+        model.nativeUploadPlan = NativeUploadPlan(fixtureID: "expo",fixtureName: "Expo",cloudAllowed: true,
+            pickedCount: 1,approvedCount: 1,needsReviewCount: 0,needsUploadCount: 0,liveCount: 0,
+            mediaUploadedCount: 1,offset: 0,limit: 200,hasNext: false,items: [])
+        model.isRunningNativePublication = true
+        model.startPublicAccessVerification()
+        #expect(!model.isVerifyingPublicAccess)
+        model.isRunningNativePublication = false
+        model.startPublicAccessVerification()
+        #expect(model.isVerifyingPublicAccess && model.isRunningDelivery)
+        #expect(model.nativeUploadStatus.contains("Verifying up to 20"))
+        #expect(!model.canStartCloudWorkflow && !model.canPerformBackstageUpdateActions && model.isFixtureChooserDisabled)
+        model.startPublicAccessVerification()
+        let deadline = Date().addingTimeInterval(3)
+        while await api.requests().isEmpty && Date()<deadline { await Task.yield() }
+        #expect(await api.requests().count == 1)
+        model.installFixtureTree([FixtureNode(id: "other",name: "Other")],preferredFixtureID: "other",persistSelection: false)
+        model.nativeUploadStatus = "Other fixture"
+        await api.releaseTerminalAction("verify")
+        await api.releaseTerminalAction("plan")
+        while model.isVerifyingPublicAccess && Date()<deadline { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(!model.isVerifyingPublicAccess && !model.isRunningDelivery)
+        #expect(model.nativeUploadStatus == "Other fixture")
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "public-access-verify")
+        #expect(requests[0].payload["manifest"]?.objectValue?["limit"]?.intValue == 20)
+    }
+
+    @Test("Live counts and stages expire without destroying uploaded counts")
+    func publicAccessExpiry() {
+        var plan = NativeUploadPlan(fixtureID: "expo",fixtureName: "Expo",cloudAllowed: true,
+            pickedCount: 1,approvedCount: 1,needsReviewCount: 0,needsUploadCount: 0,liveCount: 1,
+            mediaUploadedCount: 1,publicAccessExpiresAt: Date().addingTimeInterval(60),catalogDeployedCount: 1,
+            offset: 0,limit: 200,hasNext: false,items: [])
+        #expect(plan.liveOnWebsiteCount == 1 && plan.publicAccessPendingCount == 0)
+        plan.publicAccessExpiresAt = .distantPast
+        #expect(plan.liveOnWebsiteCount == 0 && plan.publicAccessPendingCount == 1 && plan.mediaUploadedCount == 1)
+        let item = NativeUploadRunItem(assetID: "a",status: "verified",catalogState: "live",errorText: "")
+        #expect(item.workflowStage != .live)
+    }
+
     @Test("After retry survives relaunch and preserves metadata while excluding successful and stale results")
     @MainActor
     func retryPersistedFailedAfter() async throws {

@@ -24,6 +24,7 @@ REQUIRED_RUNTIME_FILES = frozenset(
         "scripts/fixture_pipeline.py",
         "scripts/fixture_editions.py",
         "scripts/fixture_edition_uploads.py",
+        "scripts/public_access_verification.py",
         "scripts/fixture_edition_review.py",
         "scripts/backstage_photos_client.py",
         "scripts/local_server.py",

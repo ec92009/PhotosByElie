@@ -79,6 +79,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     if proposal_columns:
         conn.execute("DROP INDEX IF EXISTS idx_asset_ai_proposals_attempt")
         conn.execute("CREATE UNIQUE INDEX idx_asset_ai_proposals_attempt ON asset_ai_proposals(fixture_id,asset_id,attempt)")
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE name='public_access_observations'").fetchone():
+        from public_access_verification import ensure_schema as ensure_public_access_schema
+        ensure_public_access_schema(conn)
 
 
 

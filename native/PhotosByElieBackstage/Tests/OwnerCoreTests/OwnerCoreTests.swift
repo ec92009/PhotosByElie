@@ -5412,7 +5412,8 @@ struct OwnerCoreTests {
         #expect(plan.needsReviewCount == 3)
         #expect(plan.approvedOnlyCount == 0)
         #expect(plan.publishingCount == 0)
-        #expect(plan.fullResolutionUploadedCount == 0)
+        #expect(plan.fullResolutionUploadedCount == 7) // Legacy counts lack fresh public-access evidence.
+        #expect(plan.liveOnWebsiteCount == 0)
         #expect(plan.failedHealthCount == 0)
         #expect(plan.items[0].photoLibraryIdentifier == "photos-asset-1")
         #expect(plan.items[0].workflowStage == .needsUpload)

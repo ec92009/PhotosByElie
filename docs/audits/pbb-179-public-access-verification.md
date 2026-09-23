@@ -66,3 +66,49 @@ photos or register lifecycle identities.
 
 Next installable identity: v266.5/build 362. Build, installation and archive
 publication remain separate pending steps at this source checkpoint.
+
+## Installed and released acceptance, 23 September 2026
+
+- Source: `b352bc35b626df45fe0ab37824da2ac1d8557422`, pushed to canonical
+  `refs/heads/release/backstage`; clean-source provenance checked before and
+  after the release compilation (86.20 seconds).
+- Build **266.5 / 362**, arm64, minimum macOS 14, signed by
+  `Apple Development: Elie Cohen (L9958JSM92)`, team `CB7FE399AL`.
+  Strict/deep signature verification passed for the built and installed app.
+  Sealed Owner runtime: 218 files; manifest SHA-256
+  `e56f307f3665bdf05c55b753fa9d00adc92c5b8d15915b280805f32469e32da8`.
+  Isolated runtime smoke produced both watermarked preview sizes successfully.
+- Installed at `/Applications/PhotosByElie Backstage.app`; launched and
+  visually verified v266.5/build 362. Normal quit respected the Gallery-loading
+  prompt using Wait and Quit; no force termination. Previous signed build 361
+  is retained at `~/Library/Application Support/PhotosByElie/Backstage/Rollback/PhotosByElie Backstage-v266.4-build361-before-PBB179.app`.
+- Installed Uploads/Expo initially showed 344 catalog-deployed photos, zero
+  fresh Live observations and zero Needs Upload. Clicking only **Verify public
+  access (20)** latched immediately and disabled fixture/upload/deploy actions.
+  At 18:50:35–18:50:38 UTC its supported local ledger recorded **11 pending
+  identity-missing, 9 blocked identity-mismatch, 0 allowed, 0 failed**. The
+  visible result explicitly retained uploads and instructed reconciliation,
+  not re-upload. No new upload run was created. This is a bounded historical
+  sample, not a claim about all photos or a registration repair.
+- Installed Gallery **View as customer** on the selected uploaded Málaga
+  tapestry photo refused the unverified link with the visible message
+  "No verified public page for this photo in this fixture." No customer page
+  opened. An initial desktop-control clipboard timeout cleared on reselecting
+  the app; the final check succeeded. A separate transient Gallery cancellation
+  banner appeared during navigation; no culling decisions were changed.
+- Live Worker checks cover an approved exact pair, a wrong asset identity,
+  nonexistent identity (pending), and unauthenticated denial. They performed
+  no registration, private-object access or D1 mutation.
+- Release archive and latest.json published using the canonical guarded
+  publisher. At **2026-09-23T18:52:18.875Z**, both public HTTPS downloads returned
+  200; archive size **13,932,264 bytes**, exact SHA-256
+  `da551579b50b14353522ff8654b117cad3274671c97405c25d93ffb47536a96d`.
+  [Release archive](https://download.photos-by-elie.com/backstage/releases/PhotosByElie-Backstage-v266.5-build-362.zip)
+  and [update manifest](https://download.photos-by-elie.com/backstage/releases/latest.json).
+- Final committed-source Python rerun: **656 passed**; Swift **432 / 32 suites**.
+  The unrelated public-site catalog/bootstrap validation failure above remains
+  reported, not waived or fixed by this native ticket.
+
+PBB-179's false-Live boundary is implemented and installed/live verified.
+Historical registration reconciliation is separate work. Bilbao/Seville
+campaign publication and the daily FIFO remain paused; no next ticket started.

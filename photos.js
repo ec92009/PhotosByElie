@@ -3074,11 +3074,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
         returnFocus.focus({ preventScroll: true });
       }
     };
-    const openAdjacent = (delta) => {
+    const openAdjacent = (delta, { wrap = wrapNavigation } = {}) => {
       if (previewItems.length < 2) return false;
       const candidateIndex = currentIndex + delta;
-      if (!wrapNavigation && (candidateIndex < 0 || candidateIndex >= previewItems.length)) return false;
-      const nextIndex = wrapNavigation
+      if (!wrap && (candidateIndex < 0 || candidateIndex >= previewItems.length)) return false;
+      const nextIndex = wrap
         ? (candidateIndex + previewItems.length) % previewItems.length
         : candidateIndex;
       const nextPhoto = previewItems[nextIndex];
@@ -3091,6 +3091,9 @@ window.photosByElieVideoDurationLabel = (photo) => (
       });
       return true;
     };
+    const navigationColumns = Number.isInteger(Number(options.navigationColumns))
+      ? Math.max(1, Number(options.navigationColumns))
+      : 0;
     const centerPanoStage = () => {
       if (!stage || !modal.classList.contains("is-pano-scroll")) return;
       stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
@@ -3139,9 +3142,14 @@ window.photosByElieVideoDurationLabel = (photo) => (
     };
     async function onKeydown(event) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) revealKeyLegend();
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
         if (event.target instanceof HTMLElement && event.target.closest("video")) return;
-        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
+        const vertical = event.key === "ArrowUp" || event.key === "ArrowDown";
+        if (!navigationColumns && vertical) {
+          event.preventDefault();
+          return;
+        }
+        if (!vertical && isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
           panoPan?.stopAutoPan?.({ user: true });
           stage?.scrollBy?.({
             left: (event.key === "ArrowRight" ? 1 : -1) * Math.max(80, (stage.clientWidth || 0) * 0.14),
@@ -3150,7 +3158,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
           event.preventDefault();
           return;
         }
-        if (openAdjacent(event.key === "ArrowRight" ? 1 : -1)) event.preventDefault();
+        const delta = event.key === "ArrowRight" ? 1
+          : event.key === "ArrowLeft" ? -1
+            : event.key === "ArrowDown" ? navigationColumns : -navigationColumns;
+        const moved = openAdjacent(delta, { wrap: vertical ? false : wrapNavigation });
+        if (moved || vertical) event.preventDefault();
         return;
       }
       if (event.key.toLowerCase() === "f") {

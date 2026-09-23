@@ -130,6 +130,7 @@ export const createLocalZipDelivery = ({
   now = () => new Date(),
 } = {}) => {
   const roots = sourceRoots.map((root) => path.resolve(root));
+  outputDir = path.resolve(outputDir);
 
   const resolveSource = async (item) => {
     const sourcePath = item.source?.path || "";
@@ -200,8 +201,40 @@ export const createLocalZipDelivery = ({
     await fs.writeFile(path.join(stagingDir, "ORDER.txt"), lines.join("\n"));
   };
 
+  const archivePathFor = (orderId) => {
+    if (!/^PBE-\d{8}-[A-F0-9]{10}$/.test(String(orderId || ""))) {
+      throw Object.assign(new Error("Invalid local delivery order identity."), { status: 400, code: "invalid_local_order_id" });
+    }
+    return path.resolve(outputDir, `photosbyelie-order-${orderId}.zip`);
+  };
+
   return {
+    // Called only after the shared Worker validates the stored capability and its limits.
+    getDownloadResponse: async (download) => {
+      const expected = archivePathFor(download.orderId);
+      if (download.zipKey !== expected) return new Response("Invalid delivery path", { status: 403 });
+      let handle;
+      try {
+        const root = await fs.realpath(outputDir);
+        const resolved = await fs.realpath(expected);
+        if (resolved !== path.join(root, path.basename(expected))) return new Response("Invalid delivery path", { status: 403 });
+        handle = await fs.open(resolved, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+        const stat = await handle.stat();
+        if (!stat.isFile()) return new Response("Invalid delivery file", { status: 403 });
+        return new Response(await handle.readFile(), { headers: {
+          "content-type": "application/zip",
+          "content-disposition": `attachment; filename="${path.basename(expected)}"`,
+          "cache-control": "private, no-store",
+        } });
+      } catch (error) {
+        if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error.code)) return new Response("Delivery file unavailable", { status: 404 });
+        throw error;
+      } finally {
+        await handle?.close();
+      }
+    },
     createDelivery: async (order) => {
+      archivePathFor(order.id);
       const zipBase = `photosbyelie-order-${order.id}`;
       const stagingDir = path.join(outputDir, zipBase);
       const zipPath = path.join(outputDir, `${zipBase}.zip`);

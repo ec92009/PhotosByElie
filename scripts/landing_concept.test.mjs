@@ -8,9 +8,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "landing-concept", "index.html"), "utf8");
 const productionHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const socialHtml = fs.readFileSync(path.join(root, "social.html"), "utf8");
 const productionVersion = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
 const css = fs.readFileSync(path.join(root, "landing-concept", "landing.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "utf8");
+const campaignsJs = fs.readFileSync(path.join(root, "campaigns.js"), "utf8");
+const campaignsCss = fs.readFileSync(path.join(root, "campaigns.css"), "utf8");
 
 const translationMatch = js.match(/const translations = (\{[\s\S]*?\n  \});\n\n  const activeLanguage/);
 assert.ok(translationMatch, "landing translations object is readable");
@@ -64,7 +67,7 @@ test("landing French and Spanish copy covers all visible and accessible strings"
   assert.deepEqual(Object.keys(translations.fr).sort(), Object.keys(translations.en).sort());
   assert.deepEqual(Object.keys(translations.es).sort(), Object.keys(translations.en).sort());
   assert.match(translations.fr.introBody, /habités/);
-  assert.match(translations.es.usageIntro, /país/);
+  assert.match(translations.es.usageIntro, /lugar/);
   assert.match(js, /\[data-i18n-aria-label\]/);
   assert.match(js, /\[data-i18n-alt\]/);
   assert.equal((productionHtml.match(/data-title-i18n=/g) || []).length, 6);
@@ -292,23 +295,42 @@ test("the production landing presents the six substantial country collections", 
 test("the production landing restores the latest social shelf in the open grid slot", () => {
   assert.match(productionHtml, /class="social-shelf"/);
   assert.equal((productionHtml.match(/class="social-shelf-item"/g) || []).length, 3);
-  for (const campaign of [
+  const socialShelf = (productionHtml.match(/<aside class="social-shelf"[\s\S]*?<\/aside>/) || [""])[0];
+  const socialRoutes = [...socialShelf.matchAll(/campaign\.html\?c=([^&"]+)/g)].map(([, campaign]) => campaign);
+  const expectedSocialRoutes = [
     "facebook-del-mar-dog-beach-sunset-2026-07-14",
     "instagram-fuengirola-moon-mediterranean-2026-07-14",
     "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
-  ]) {
-    assert.match(productionHtml, new RegExp(`campaign\\.html\\?c=${campaign}`));
-  }
+  ];
+  assert.deepEqual(socialRoutes, expectedSocialRoutes);
+  assert.match(socialShelf, new RegExp(`class="social-shelf-all" href="\\./social\\.html\\?v=${productionVersion}"`));
+  assert.match(productionHtml, new RegExp(`class="social-campaign-link" href="\\./social\\.html\\?v=${productionVersion}"`));
+  assert.match(productionHtml, /id="country-links"[\s\S]*class="social-campaign-link" href="\.\/social\.html/);
+  assert.match(productionHtml, /data-i18n="socialCampaigns"/);
   assert.match(productionHtml, /data-i18n="latestSocial"/);
-  const socialShelf = (productionHtml.match(/<aside class="social-shelf"[\s\S]*?<\/aside>/) || [""])[0];
   assert.doesNotMatch(socialShelf, /<img|latestSocialTitle/);
   assert.match(js, /latestSocial: "Latest social"/);
   assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);
   assert.match(css, /\.social-shelf \{[\s\S]*?overflow: hidden/);
   assert.match(css, /\[data-theme="day"\] \.social-shelf/);
+  assert.match(css, /\.explore-menu \{[\s\S]*?width: max-content[\s\S]*?max-width: 100%/);
+  assert.doesNotMatch(css, /\.social-campaign-link \{/);
 });
 
-test("the production landing opens on the Louvre and explains image use", () => {
+test("the social campaigns page filters the shared campaign directory", () => {
+  assert.match(socialHtml, /<title>Social campaigns \| Photos By Elie<\/title>/);
+  assert.match(socialHtml, /rel="canonical" href="https:\/\/photos-by-elie\.com\/social\.html"/);
+  assert.match(socialHtml, /data-campaign-sources="facebook,instagram,threads,pinterest,youtube"/);
+  assert.match(socialHtml, /data-directory-title="Social campaigns"/);
+  assert.match(socialHtml, /data-directory-noun="social collections"/);
+  assert.match(socialHtml, new RegExp(`campaigns\.js\\?v=${productionVersion}`));
+  assert.match(campaignsJs, /sourceFilter/);
+  assert.match(campaignsJs, /campaign\.source/);
+  assert.match(campaignsJs, /data-directory-title/);
+  assert.match(campaignsCss, /campaign-directory-meta/);
+});
+
+test("the production landing opens on the Louvre and presents the browse/use block", () => {
   const slides = [...productionHtml.matchAll(/<figure class="hero-slide([^>]*)data-title="([^"]+)"/g)];
   assert.equal(slides[0]?.[2], "Paris after the crowds");
   assert.match(slides[0]?.[1] || "", /is-active/);
@@ -316,20 +338,26 @@ test("the production landing opens on the Louvre and explains image use", () => 
   assert.match(productionHtml, /class="usage-guide"/);
   assert.match(productionHtml, /data-i18n="licensingTitle"/);
   assert.match(productionHtml, /data-i18n="provenanceTitle"/);
-  assert.match(productionHtml, /assets\/usage-guide\/wall-art-notre-dame\.webp/);
+  assert.match(productionHtml, /assets\/usage-guide\/wall-art-credenza\.webp/);
+  assert.match(productionHtml, /assets\/usage-guide\/del-mar-browser-operator\.webp/);
   assert.match(productionHtml, /assets\/usage-guide\/licensing-contexts\.webp/);
-  assert.match(productionHtml, /assets\/usage-guide\/location-provenance\.webp/);
   assert.equal((productionHtml.match(/class="usage-guide-visual"/g) || []).length, 3);
+  assert.match(productionHtml, /class="usage-guide-feature"/);
+  assert.match(productionHtml, /class="usage-guide-stack"/);
   assert.doesNotMatch(productionHtml, /data-i18n="(?:wallArtBody|licensingBody|provenanceBody)"/);
-  assert.match(js, /usageTitle: "Find the image\. Know what you can do with it\."/);
-  assert.match(js, /licensingTitle: "Personal, editorial, or commercial"/);
-  assert.match(js, /provenanceTitle: "Location"/);
+  assert.match(js, /usageTitle: "Browse at your leisure\."/);
+  assert.match(js, /usageIntro: "Find the image that fits by place, time, keywords, or the photographer’s own note\."/);
+  assert.match(js, /wallArtTitle: "Enjoy it"/);
+  assert.match(js, /licensingTitle: "Work with it"/);
+  assert.match(js, /provenanceTitle: "Remember it"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
-  assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 20px/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 3px/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?background: #3d3c35/);
   assert.match(css, /\.usage-guide-visual/);
+  assert.match(css, /\.usage-guide-visual::after[\s\S]*?linear-gradient\(90deg[\s\S]*?transparent 50%/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?grid-template-columns: minmax\(0, 2fr\) minmax\(0, 1fr\)/);
   assert.match(css, /\[data-theme="day"\] \.usage-guide/);
-  assert.match(css, /color: rgba\(27, 27, 24, 0\.74\)/);
 });
 
 test("each production country card fans into catalog-backed destinations", () => {

@@ -33,7 +33,16 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v247.1`
+- Current visible version: `v262.2`
+- `v256.1` adds the approved Sintra and Les Invalides daily collections to All campaigns and the social listing, with twelve original selected still IDs each, vertical public YouTube previews and matching wide-film links. Their existing public preview lifecycle registrations were reconciled through the supported connector; no video was rerendered or reposted.
+- `v256.0` sends each All campaigns Watch on YouTube link to its matching public widescreen film. The vertical preview and still-photo detail remain unchanged. Future campaign pairs must retain the verified wide ID in `video.videoId` and portrait ID in `video.shortId`; the shared directory renderer uses the former for the external CTA.
+- `v254.3` keeps public YouTube Shorts on the All campaigns directory only.
+  Their campaign detail links now open the public photo collection, with no
+  embedded player; still-only subjects continue to require exactly four
+  lifecycle-authorized public photos for each collage.
+- `v252.0` adds optional public YouTube video metadata to first-party campaign
+  pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
+  and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
@@ -350,7 +359,7 @@ Backstage guide and the relevant source/release receipt.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Latest social shelf. It filters the generated campaign index to Facebook, Instagram, Pinterest, and Threads targets, shows the newest social springboards first, and keeps static fallback cards for the 2026-06-15 themes plus the 2026-05-27 acceptance-criteria package themes.
 - `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
-- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
+- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent. Campaign JSON may also include an optional explicit-public `video` object (`provider`, widescreen `videoId`, optional `shortId`, `title`, `durationSeconds`, and `visibility`); PBE derives YouTube URLs from validated IDs and refuses invalid or non-public video metadata.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Catalog totals and R2 coverage are volatile operational facts: read them from the latest verified Owner projection/deployment receipt and Backstage health surfaces rather than this README, which must not become a competing source of truth.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
@@ -533,7 +542,7 @@ Backstage guide and the relevant source/release receipt.
 
 ## Worker Checkout Track
 
-`worker/checkout-worker.mjs` is the trusted checkout/fulfillment track. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, delivery metadata, Real Estate originals sessions, signed-link-style download tokens, recent-purchase allowance checks, optional buyer delivery email status, and privacy-conscious first-party conversion analytics. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, sends the buyer email into Stripe receipt metadata, sets the card statement descriptor suffix to `DOWNLOAD` by default, then waits for a verified paid webhook before marking delivery ready and, when Resend is configured, sending the delivery email. For local end-to-end testing, `worker/local-server.mjs` runs the Worker on `http://localhost:8787`, uses `worker/local-zip-delivery.mjs` to write mock ZIPs under `deliveries/`, serves token downloads during the live mock session, and serves order-ID fallback downloads from `/download-order/:orderId` when the ZIP exists on disk. For public checkout, `worker/deployed-worker.mjs` uses Cloudflare KV for order state, real Stripe when `STRIPE_SECRET_KEY` is configured, private R2 per-file download tokens for full-resolution masters, Real Estate originals, and generated JPG renders, plus Resend for post-payment delivery emails when `RESEND_API_KEY` is installed as a Worker secret. Download tokens default to 30 days and 100 successful downloads, with KV retention controlled by Worker environment values; the basket's duplicate-purchase check uses the same Worker order records as the purchase/download history source. `media-config.js` can point the public site at that deployed Worker with `checkoutWorkerBaseUrl`.
+`worker/checkout-worker.mjs` is the trusted checkout/fulfillment track. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, delivery metadata, Real Estate originals sessions, signed-link-style download tokens, recent-purchase allowance checks, optional buyer delivery email status, and privacy-conscious first-party conversion analytics. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, sends the buyer email into Stripe receipt metadata, sets the card statement descriptor suffix to `DOWNLOAD` by default, then waits for a verified paid webhook before marking delivery ready and, when Resend is configured, sending the delivery email. For local end-to-end testing, `worker/local-server.mjs` runs the Worker on `http://localhost:8787`, uses `worker/local-zip-delivery.mjs` to write mock ZIPs under `deliveries/`, serves authorized token downloads during the live mock session, and requires a new mock checkout after in-memory state is restarted. For public checkout, `worker/deployed-worker.mjs` uses Cloudflare KV for order state, real Stripe when `STRIPE_SECRET_KEY` is configured, private R2 per-file download tokens for full-resolution masters, Real Estate originals, and generated JPG renders, plus Resend for post-payment delivery emails when `RESEND_API_KEY` is installed as a Worker secret. Download tokens default to 30 days and 100 successful downloads, with KV retention controlled by Worker environment values; the basket's duplicate-purchase check uses the same Worker order records as the purchase/download history source. `media-config.js` can point the public site at that deployed Worker with `checkoutWorkerBaseUrl`.
 
 Live Stripe dashboard state as of 2026-05-22:
 
@@ -551,3 +560,5 @@ node --test worker/checkout-worker.test.mjs
 ```
 
 See `worker/README.md` for route examples and Stripe/mock configuration.
+
+All campaigns: `campaign.html` is the permanent public campaign directory (PBE-198). Large composite cards use at most two columns and link to complete public campaign membership. `npm run campaigns:index` is already part of social package finalization; membership is filtered against the live lifecycle-authorized catalog in the browser.

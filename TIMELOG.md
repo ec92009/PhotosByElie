@@ -806,11 +806,20 @@ Clock state: running
 | 2026-09-03 | 14:59 CEST | 15:00 CEST | 0:01 | Requested a PBB GSA cycle; presented the build-310 acceptance gate and audited the seven required domains after the gate timed out; background queue reads and Graphify analysis excluded. |
 | 2026-09-03 | 15:26 CEST | 15:27 CEST | 0:01 | Requested one standalone strengthened PBB audit covering architecture, long-action UX, accessibility, tests, documentation, reliability/security, and release boundaries; background repository analysis, test execution, security review, and ticket API runtime excluded. |
 | 2026-09-03 | 18:55 CEST | 18:56 CEST | 0:01 | Resumed the PBB GSA loop, presented the PBB-60 owner-acceptance gate, and left it unchanged after the 120-second timeout; background waiting and queue reads excluded. |
+| 2026-09-06 | 22:08 CEST | 22:16 CEST | 0:02 | Refined the landing wall-art environment against the supplied reference, tightened the chair crop, and verified the usage-guide release candidate; background image generation and test runtime excluded. |
+| 2026-09-06 | 22:26 CEST | 22:28 CEST | 0:01 | Refined the usage-guide labels and search sentence across the three site languages; background test and release runtime excluded. |
+| 2026-09-06 | 22:37 CEST | 22:51 CEST | 0:04 | Refined the usage-guide separation and hero CTA sizing, and reviewed the social-campaign directory direction; background implementation and test runtime excluded. |
+| 2026-09-06 | 23:09 CEST | 23:11 CEST | 0:01 | Folded the social-campaign route into the expandable country picker after the pill-width review; background tests and release runtime excluded. |
+| 2026-09-06 | 23:27 CEST | 23:28 CEST | 0:01 | Simplified campaign header navigation by removing the duplicate archive route from the social view and flattening the route trail; background tests and release runtime excluded. |
 | 2026-09-09 | 10:00 CEST | 10:01 CEST | 0:01 | Requested a read-only Gallery audit for current R2 uploads missing the combined Picked and Approved history; background implementation, tests, build, and ticket work excluded. |
-
+| 2026-09-11 | 10:37 CEST | 10:52 CEST | 0:01 | Directed the PBE-203 All campaigns repair: vertical public YouTube Shorts and exact four-photo still collages; background implementation, test, and release runtime excluded. |
+| 2026-09-11 | 10:59 CEST | 11:01 CEST | 0:01 | Clarified that YouTube cards belong only in All campaigns; campaign details open their still-photo collections; background implementation, test, and release runtime excluded. |
+| 2026-09-13 | 16:00 CEST | 16:01 CEST | 0:01 | Directed the PBE-205 All campaigns link correction to matching wide YouTube videos while retaining portrait previews and still-photo details; background implementation, checks and release time excluded. |
+| 2026-09-13 | 16:14 CEST | 16:15 CEST | 0:01 | Requested the missing Sintra and Les Invalides daily campaign integrations; background reconciliation, tests and release excluded. |
+| 2026-09-19 | 19:17 CEST | 19:17 CEST | 0:00 | Delegated Albi campaign hosting and publication; independent validation and deployment excluded from active human collaboration. |
 | 2026-09-23 | 20:05 CEST | 20:05 CEST | 0:00 | Directed completion of PBB-179; autonomous implementation, testing and release work excluded from active human collaboration. |
 
 ## Totals
 
-Active collaboration time used: 38:55
+Active collaboration time used: 39:08
 Remaining budget: not set

@@ -9,6 +9,7 @@ import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import deployedWorker, { realEstateGalleriesFor } from "./deployed-worker.mjs";
+import { createMemoryGoogleOAuthTransactionStore } from "./google-oauth-transaction-store.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
@@ -268,6 +269,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   let tokenExchangeSeen = false;
   const auth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -287,6 +289,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
       assert.equal(idToken, "verified-id-token");
       assert.equal(context.clientId, "google-client-id");
       return {
+        nonce: context.nonce,
         email: "ec92009@gmail.com",
         provider: "google-oauth",
         expiresAt: "2026-06-21T13:00:00.000Z",
@@ -295,10 +298,11 @@ test("Google OAuth auth requests account choice and stores a signed session cook
     },
   });
 
-  const loginUrl = new URL(await auth.loginUrlFor(new Request("https://worker.test/auth/google/login"), {
+  const login = await auth.beginLogin(new Request("https://worker.test/auth/google/login"), {
     returnTo: "https://photos-by-elie.com/?account=1",
     intent: "signin",
-  }));
+  });
+  const loginUrl = new URL(login.url);
   assert.equal(loginUrl.origin, "https://accounts.google.com");
   assert.equal(loginUrl.pathname, "/o/oauth2/v2/auth");
   assert.equal(loginUrl.searchParams.get("client_id"), "google-client-id");
@@ -308,7 +312,8 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   assert.equal(loginUrl.searchParams.get("prompt"), "select_account");
 
   const callback = await auth.handleCallback(new Request(
-    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(loginUrl.searchParams.get("state"))}`
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(loginUrl.searchParams.get("state"))}`,
+    { headers: { cookie: login.cookie.split(";")[0] } }
   ));
   assert.equal(tokenExchangeSeen, true);
   assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
@@ -1150,7 +1155,7 @@ test("native Mac enrollment handoff is short-lived, browser-authorized, bound an
   const googleOAuthAuth = {
     optionalSession: async () => activeIdentity,
     requireSession: async () => activeIdentity,
-    loginUrlFor: async (_request, { returnTo }) => `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`,
+    beginLogin: async (_request, { returnTo }) => ({ url: `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`, cookie: "test=bound" }),
     issueSessionToken: async (identity) => `access-${identity.deviceId}`,
   };
   const worker = createPhotosByElieWorker({
@@ -1300,6 +1305,7 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   const now = () => currentNow;
   const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
   const googleOAuthAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client",
     clientSecret: "google-secret",
     sessionSecret: "test-session-secret",
@@ -1477,6 +1483,39 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     headers: bearer(secondMint.sessionToken),
   }));
   assert.equal(expiredStatus.status, 401);
+});
+
+test("public preview verification requires enrolled Owner or connector authority and never mutates lifecycle", async () => {
+  let calls = 0;
+  const backstage = backstageOwnerFixture();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(), googleOAuthAuth: backstage.googleOAuthAuth,
+    ownerDeviceAuthStore: backstage.ownerDeviceAuthStore,
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    ownerConnectorAuth: { requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector required"), { status: 401 });
+      }
+      return { connectorId: "max" };
+    } },
+    lifecycleDenyStore: { verifyPublicPreviews: async (payload) => {
+      calls += 1;
+      return { readOnly: true, items: payload.items };
+    } },
+  });
+  const url = "https://worker.test/api/v1/lifecycle/public-previews/verify";
+  const unauthorized = await worker.fetch(jsonRequest(url, { items: [] }));
+  assert.equal(unauthorized.status, 401);
+  assert.equal(calls, 0);
+  for (const headers of [backstage.headers, { authorization: "Bearer connector-secret" }]) {
+    const response = await worker.fetch(jsonRequest(url, { items: [] }, headers));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal((await response.json()).readOnly, true);
+  }
+  const oversized = await worker.fetch(jsonRequest(url, { padding: "x".repeat(65536) }, backstage.headers));
+  assert.equal(oversized.status, 413);
+  assert.equal(calls, 2);
 });
 
 test("background Owner connectors use scoped credentials and report health", async () => {
@@ -2338,6 +2377,7 @@ test("real-estate Owner bypass requires Backstage while explicit Google client g
 test("direct Google OAuth session feeds account roles, RE login, and logout", async () => {
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   const googleAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -2346,7 +2386,8 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
       status: 200,
       headers: { "content-type": "application/json" },
     }),
-    verifyIdToken: async () => ({
+    verifyIdToken: async (_token, { nonce }) => ({
+      nonce,
       email: "corine@example.com",
       provider: "google-oauth",
       expiresAt: "2026-06-21T13:00:00.000Z",
@@ -2388,7 +2429,7 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
 
   const callbackResponse = await worker.fetch(new Request(
     `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
-    { headers: { origin: "https://photos-by-elie.com" } }
+    { headers: { origin: "https://photos-by-elie.com", cookie: loginResponse.headers.get("set-cookie").split(";")[0] } }
   ));
   assert.equal(callbackResponse.status, 302);
   assert.equal(callbackResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
@@ -2421,17 +2462,19 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.equal(logoutResponse.status, 302);
   assert.equal(logoutResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
   const logoutCookies = logoutResponse.headers.getSetCookie();
-  assert.equal(logoutCookies.length, 2);
+  assert.equal(logoutCookies.length, 3);
   assert.match(logoutCookies[0], /^pbe_google_session=; Max-Age=0/);
   assert.match(logoutCookies[0], /SameSite=None/);
   assert.match(logoutCookies[0], /Secure/);
-  assert.match(logoutCookies[1], /^pbe_re_session=; Max-Age=0/);
-  assert.match(logoutCookies[1], /Path=\/real-estate/);
+  assert.match(logoutCookies[1], /^__Host-pbe_google_transaction=; Max-Age=0/);
+  assert.match(logoutCookies[2], /^pbe_re_session=; Max-Age=0/);
+  assert.match(logoutCookies[2], /Path=\/real-estate/);
 });
 
 test("direct Google OAuth rejects local and Tailscale provisioning origins", async () => {
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   const googleAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -4057,6 +4100,32 @@ test("local ZIP delivery creates a real ZIP from a developed source", async () =
   assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-1mp.jpg`)));
   assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-1mp.jpg`)));
 
+  const token = paid.order.delivery.downloadUrl.split("/").pop();
+  const url = `https://worker.test/download/${token}`;
+  const response = await worker.fetch(new Request(url));
+  assert.equal(response.status, 200);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), zip);
+  assert.match(response.headers.get("cache-control"), /no-store/);
+  const capability = await store.getDownload(token);
+  assert.equal(capability.downloadCount, 1);
+  assert.equal((await worker.fetch(new Request("https://worker.test/download/unknown"))).status, 404);
+  await store.putDownload({ ...capability, expiresAt: "2020-01-01T00:00:00Z" });
+  assert.equal((await worker.fetch(new Request(url))).status, 410);
+  await store.putDownload({ ...capability, downloadLimit: 1 });
+  assert.equal((await worker.fetch(new Request(url))).status, 429);
+  await store.putDownload(capability);
+  await store.updateOrder(paid.order.id, (order) => ({ ...order, refund: { status: "pending" } }));
+  assert.equal((await worker.fetch(new Request(url))).status, 410);
+  await store.updateOrder(paid.order.id, (order) => ({ ...order, refund: null }));
+  fs.unlinkSync(internalOrder.delivery.zipKey);
+  assert.equal((await worker.fetch(new Request(url))).status, 404);
+  assert.equal((await store.getDownload(token)).downloadCount, 1);
+  for (const id of [paid.order.id, "x%2f..%2f..%2foutside", "x%252f..%252foutside"]) {
+    for (const method of ["GET", "HEAD"]) {
+      assert.equal((await worker.fetch(new Request(`https://worker.test/download-order/${id}`, { method }))).status, 404);
+    }
+  }
+
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.rmSync(sourceRoot, { recursive: true, force: true });
 });
@@ -4670,7 +4739,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   assert.equal(wrongPassword.status, 401);
 });
 
-test("real-estate saved PDF and video email failures do not block saved products", async () => {
+test("real-estate saved PDF and video stay pending until output completion", async () => {
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
   const emailClient = createFakeEmailClient({ fail: true });
@@ -4722,16 +4791,11 @@ test("real-estate saved PDF and video email failures do not block saved products
     }, { cookie }));
     assert.equal(saveResponse.status, 201);
     const saved = await saveResponse.json();
-    assert.equal(saved.deliverable.status, "ready");
-    assert.equal(saved.deliverable.deliveryEmail.status, "failed");
-    assert.equal(saved.deliverable.deliveryEmail.error.code, "fake_email_failed");
+    assert.equal(saved.deliverable.status, "pending");
+    assert.equal(saved.deliverable.deliveryEmail.status, "not_sent");
   }
 
-  assert.equal(emailClient.sent.length, 2);
-  assert.match(emailClient.sent[0].text, /Hello Corine/);
-  assert.match(emailClient.sent[0].text, /La Concha 1 Apt 8AB1/);
-  assert.match(emailClient.sent[0].text, /Real Estate shelf/);
-  assert.doesNotMatch(emailClient.sent[0].text, /backup/i);
+  assert.equal(emailClient.sent.length, 0);
 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",
@@ -4740,7 +4804,7 @@ test("real-estate saved PDF and video email failures do not block saved products
   assert.equal(listResponse.status, 200);
   const listed = await listResponse.json();
   assert.equal(listed.count, 2);
-  assert.equal(listed.deliverables.filter((record) => record.deliveryEmail?.status === "failed").length, 2);
+  assert.equal(listed.deliverables.filter((record) => record.status === "pending").length, 2);
 });
 
 test("real-estate cloud assembly jobs persist status and serve completed assets", async () => {
@@ -5054,15 +5118,17 @@ test("real-estate delivery links deny the full batch before object reads or toke
       type: "pdf",
       status: "ready",
       filename: "denied.pdf",
-      outputs: { pdf: { key: "outputs/denied.pdf", contentType: "application/pdf" } },
       batch: { batchId: "denied-batch", projects: [{ items: [{ photoId: "photo-denied" }] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+  const completed = await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
+  });
   let outputReads = 0;
   const originalGet = privateR2.get;
   privateR2.get = async (key, options) => {
-    if (key === record.outputs.pdf.key) outputReads += 1;
+    if (key === completed.outputs.pdf.key) outputReads += 1;
     return originalGet(key, options);
   };
 
@@ -5102,11 +5168,13 @@ test("real-estate delivery links recheck their lifecycle fence before token pers
       type: "pdf",
       status: "ready",
       filename: "raced.pdf",
-      outputs: { pdf: { key: "outputs/raced.pdf", contentType: "application/pdf" } },
       batch: { batchId: "raced-batch", projects: [{ items: [{ photoId: "photo-raced" }] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+  const completed = await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
+  });
 
   await assert.rejects(deliverables.createDeliveryLinks({
     galleryKey: "corine-real-estate",
@@ -5677,16 +5745,217 @@ test("real-estate delivery links fail closed when their batch has no canonical m
       type: "pdf",
       status: "ready",
       filename: "identityless.pdf",
-      outputs: { pdf: { key: "outputs/identityless.pdf", contentType: "application/pdf" } },
       batch: { batchId: "identityless", projects: [{ items: [] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"), {
-    httpMetadata: { contentType: "application/pdf" },
+  await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
   });
   await assert.rejects(deliverables.createDeliveryLinks({
     galleryKey: "corine-real-estate",
     realEstateSession: session,
     deliverableIds: [record.id],
   }), { code: "lifecycle_identity_unavailable" });
+});
+
+test("real-estate output authorization rejects forged writes and legacy object pointers", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "gallery-a", username: "Client", deliverablesPrefix: "custom/gallery-a/products" };
+  const session = { galleryKey: gallery.key, username: "Client" };
+  const service = createRealEstateDeliverables({ privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed });
+  const payload = { galleryKey: gallery.key, realEstateSession: session };
+  const base = { id: "forged", type: "pdf", status: "ready", batch: { batchId: "test", projects: [{ items: [{ photoId: "visible-unrelated" }] }] } };
+  for (const field of ["output", "outputs", "outputKey"]) {
+    const pointer = { key: "private/unrelated-master.pdf", contentType: "application/pdf" };
+    const record = { ...base, [field]: field === "outputs" ? { pdf: pointer } : field === "outputKey" ? pointer.key : pointer };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: record }), { code: "real_estate_output_override_forbidden" });
+  }
+  const targets = ["private/unrelated-master.pdf", "custom/gallery-b/products/outputs/forged.pdf", "custom/gallery-a/products/outputs/other.pdf", "/custom/gallery-a/products/outputs/forged.pdf"];
+  for (const key of targets) {
+    await bucket.put(key, new TextEncoder().encode("private bytes"));
+    await bucket.put("custom/gallery-a/products/forged.json", new TextEncoder().encode(JSON.stringify({ ...base, outputKey: key })));
+    const originalGet = bucket.get;
+    let targetReads = 0;
+    bucket.get = async (...args) => { if (args[0] === key) targetReads++; return originalGet(...args); };
+    for (const action of ["view", "download", "head"]) {
+      await assert.rejects(service.getDeliverableAsset({ ...payload, id: base.id, action }), { code: "real_estate_output_identity_unverified" });
+    }
+    await assert.rejects(service.createDeliveryLinks({ ...payload, deliverableIds: [base.id] }), { code: "real_estate_output_identity_unverified" });
+    assert.equal(targetReads, 0);
+    bucket.get = originalGet;
+  }
+  assert.equal(store._debug.downloads.size, 0);
+});
+
+test("real-estate completed bytes retain gallery and media identity through rename and record reuse", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "gallery-a", username: "Client", deliverablesPrefix: "custom/gallery-a/products" };
+  const payload = { galleryKey: gallery.key, realEstateSession: { galleryKey: gallery.key, username: "Client" } };
+  const service = createRealEstateDeliverables({ privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed });
+  for (const [type, mime, filename] of [["pdf", "application/pdf", "test.pdf"], ["video", "video/mp4", "test.mp4"], ["video", "video/webm", "test.webm"], ["originals", "application/zip", "test.zip"]]) {
+    const draft = { id: filename, type, batch: { batchId: filename, projects: [{ items: [{ photoId: "actual-media" }] }] } };
+    await service.putDeliverable({ ...payload, deliverable: draft });
+    const ready = await service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: mime, body: new TextEncoder().encode("owned bytes") });
+    const renamed = await service.putDeliverable({ ...payload, deliverable: { ...ready, title: "Renamed" } });
+    assert.equal(renamed.status, "ready");
+    assert.equal((await service.getDeliverableAsset({ ...payload, id: draft.id })).headers["content-type"], mime);
+    const links = await service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] });
+    assert.equal(links.links.length, 1);
+    const token = links.links[0].url.split("/").pop();
+    const capability = await store.getDownload(token);
+    assert.equal((await service.getDeliveryAsset(capability)).status, 200);
+    await assert.rejects(service.getDeliveryAsset({ ...capability, outputIdentityVersion: undefined }), { code: "real_estate_output_identity_unverified" });
+    await assert.rejects(service.getDeliveryAsset({ ...capability, canonicalMediaIds: ["unrelated-visible"] }), { code: "real_estate_output_identity_unverified" });
+    const modifiedBatch = { ...draft.batch, projects: [{ items: [{ photoId: "unrelated-visible" }] }] };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: { ...ready, batch: modifiedBatch } }), { code: "real_estate_deliverable_identity_conflict" });
+    // Model persisted legacy tampering or delete/recreate retaining old output bytes.
+    await bucket.put(`custom/gallery-a/products/${draft.id}.json`, new TextEncoder().encode(JSON.stringify({ ...ready, batch: modifiedBatch })));
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id }), { code: "real_estate_output_identity_unverified" });
+    await assert.rejects(service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] }), { code: "real_estate_output_identity_unverified" });
+    await bucket.put(`custom/gallery-a/products/${draft.id}.json`, new TextEncoder().encode(JSON.stringify(ready)));
+    await bucket.put(ready.outputs[type].key, new TextEncoder().encode("unbound legacy bytes"), { customMetadata: { galleryKey: gallery.key, deliverableId: draft.id, type } });
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id }), { code: "real_estate_output_identity_unverified" });
+  }
+});
+
+
+test("local ZIP adapter confines paths and rejects escaping symlinks", async () => {
+  const root = fs.mkdtempSync("/tmp/pbe-local-confinement-");
+  const outputDir = `${root}/alternate-deliveries`;
+  fs.mkdirSync(outputDir);
+  const orderId = "PBE-20260905-AABBCCDDEE";
+  const zipKey = `${outputDir}/photosbyelie-order-${orderId}.zip`;
+  const outside = `${root}/outside.zip`;
+  fs.writeFileSync(outside, "private fixture");
+  const adapter = createLocalZipDelivery({ outputDir });
+  try {
+    for (const id of ["x/../../outside", "x%2f..%2foutside", "PBE-20260905-AABBCCDDEE/..", "", "../outside"]) {
+      await assert.rejects(adapter.getDownloadResponse({ orderId: id, zipKey: outside }), { code: "invalid_local_order_id" });
+    }
+    assert.equal((await adapter.getDownloadResponse({ orderId, zipKey: outside })).status, 403);
+    fs.symlinkSync(outside, zipKey);
+    assert.equal((await adapter.getDownloadResponse({ orderId, zipKey })).status, 403);
+    fs.unlinkSync(zipKey);
+    fs.writeFileSync(zipKey, "PK-owned-fixture");
+    const good = await adapter.getDownloadResponse({ orderId, zipKey });
+    assert.equal(good.status, 200);
+    assert.equal(await good.text(), "PK-owned-fixture");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("local HTTP server binds loopback and never bypasses Worker download authorization", async () => {
+  const http = await import("node:http");
+  const path = await import("node:path");
+  const root = fs.mkdtempSync("/tmp/pbe-local-http-");
+  fs.mkdirSync(`${root}/deliveries`);
+  fs.writeFileSync(`${root}/outside.zip`, "private-test-fixture");
+  fs.writeFileSync(`${root}/deliveries/photosbyelie-order-PBE-20260905-AABBCCDDEE.zip`, "order-test-fixture");
+  const source = fs.readFileSync(new URL("./local-server.mjs", import.meta.url), "utf8");
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), store: createMemoryStore() });
+  const start = new Function("http", "fs", "path", "repoRoot", "port", "worker", "stripe", "realEstateGalleries", "console",
+    `${source.slice(source.indexOf("const toWebRequest ="))}\nreturn server;`);
+  const server = start(http, fs, path, root, 0, worker, null, [], { log() {} });
+  try {
+    if (!server.listening) await new Promise((resolve, reject) => { server.once("listening", resolve); server.once("error", reject); });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    for (const method of ["GET", "HEAD"]) {
+      for (const route of ["/download-order/PBE-20260905-AABBCCDDEE", "/download-order/x%2f..%2f..%2foutside", "/download-order/x%252f..%252foutside", "/download/unknown"]) {
+        assert.equal((await fetch(`${origin}${route}`, { method })).status, 404, `${method} ${route}`);
+      }
+    }
+    assert.equal(server.address().address, "127.0.0.1");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Google login routes carry binding cookies and callback failures clear them without sessions", async () => {
+  let exchanges = 0;
+  const googleOAuthAuth = createGoogleOAuthAuth({
+    clientId: "client", clientSecret: "secret", sessionSecret: "session-secret",
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
+    fetcher: async () => { exchanges++; return Response.json({ id_token: "token" }); },
+    verifyIdToken: async (_token, { nonce }) => ({ email: "buyer@example.test", nonce }),
+  });
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), googleOAuthAuth });
+  for (const path of ["/auth/login", "/auth/google/login"]) {
+    const login = await worker.fetch(new Request(`https://worker.test${path}`));
+    assert.equal(login.status, 302);
+    assert.match(login.headers.get("cache-control"), /no-store/);
+    const cookie = login.headers.getSetCookie()[0];
+    assert.match(cookie, /^__Host-pbe_google_transaction=/);
+    assert.match(cookie, /HttpOnly; SameSite=Lax; Secure/);
+    const state = new URL(login.headers.get("location")).searchParams.get("state");
+    const callbackURL = `https://worker.test/auth/google/callback?code=code&state=${encodeURIComponent(state)}`;
+    const wrong = await worker.fetch(new Request(callbackURL));
+    assert.equal(wrong.status, 401);
+    assert.match(wrong.headers.getSetCookie()[0], /^__Host-pbe_google_transaction=; Max-Age=0/);
+    assert.equal(exchanges, 0);
+    const logout = await worker.fetch(new Request("https://worker.test/auth/logout", { headers: { cookie: cookie.split(";")[0] } }));
+    assert.equal(logout.status, 302);
+    const stale = await worker.fetch(new Request(callbackURL, { headers: { cookie: cookie.split(";")[0] } }));
+    assert.equal(stale.status, 401);
+    assert.equal((await stale.json()).error.code, "google_oauth_transaction_used");
+    assert.equal(exchanges, 0);
+  }
+});
+
+test("logout clears sessions even when pending OAuth transaction cancellation fails", async () => {
+  const googleOAuthAuth = createGoogleOAuthAuth({
+    clientId: "client", clientSecret: "secret", sessionSecret: "session-secret",
+    transactionStore: { cancel: async () => { throw new Error("D1 unavailable"); } },
+  });
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), googleOAuthAuth,
+    realEstateAuth: { clearCookieFor: () => "pbe_re_session=; Max-Age=0; Path=/real-estate" } });
+  for (const [method, path] of [["GET", "/auth/logout"], ["POST", "/owner/auth/logout"]]) {
+    const response = await worker.fetch(new Request(`https://worker.test${path}`, {
+      method, headers: { cookie: "__Host-pbe_google_transaction=" + "A".repeat(43) },
+    }));
+    assert.equal(response.status, 503);
+    const cookies = response.headers.getSetCookie();
+    for (const name of ["pbe_google_session", "__Host-pbe_google_transaction", "pbe_re_session"]) {
+      assert.ok(cookies.some(cookie => cookie.startsWith(name + "=; Max-Age=0")), name);
+    }
+  }
+});
+
+test("deliverable views enforce passive MIME and sandbox active-looking bytes", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "passive-gallery", username: "Client" };
+  const payload = { galleryKey: gallery.key, realEstateSession: { galleryKey: gallery.key, username: "Client" } };
+  const options = { privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed };
+  const service = createRealEstateDeliverables(options);
+  const body = new TextEncoder().encode("<!doctype html><script>fetch('/account/profile',{method:'POST'})</script>");
+  for (const [type, mime, filename] of [["pdf", "application/pdf", "test.pdf"], ["video", "video/mp4", "test.mp4"], ["video", "video/webm", "test.webm"], ["originals", "application/zip", "test.zip"]]) {
+    const draft = { id: filename, type, batch: { batchId: filename, projects: [{ items: [{ photoId: "visible-media" }] }] } };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: { ...draft, status: "ready", output: { key: "self.json", contentType: "text/html" } } }), { code: "real_estate_output_override_forbidden" });
+    await service.putDeliverable({ ...payload, deliverable: draft });
+    for (const bad of ["text/html", "application/xhtml+xml", "image/svg+xml", "video/html", "video/svg+xml"]) {
+      await assert.rejects(service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: bad, body }), { code: "invalid_real_estate_assembly_content_type" });
+    }
+    const ready = await service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: mime, body });
+    for (const action of ["view", "head", "download"]) {
+      const asset = await service.getDeliverableAsset({ ...payload, id: draft.id, action });
+      assert.equal(asset.headers["content-type"], mime);
+      assert.equal(asset.headers["x-content-type-options"], "nosniff");
+      assert.equal(asset.headers["content-security-policy"], "sandbox allow-same-origin; script-src 'none'; base-uri 'none'; form-action 'none'");
+      assert.match(asset.headers["content-disposition"], new RegExp("^" + (action === "view" && type !== "originals" ? "inline" : "attachment")));
+    }
+    const links = await service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] });
+    const capability = await store.getDownload(links.links[0].url.split("/").pop());
+    const response = await service.getDeliveryAsset(capability);
+    assert.equal(response.headers.get("content-type"), mime);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    const object = await bucket.get(ready.outputs[type].key);
+    await bucket.put(ready.outputs[type].key, body, { httpMetadata: { contentType: "text/html" }, customMetadata: object.customMetadata });
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id, action: "view" }), { code: "invalid_real_estate_assembly_content_type" });
+    await assert.rejects(service.getDeliveryAsset(capability), { code: "invalid_real_estate_assembly_content_type" });
+  }
+  const transcoded = createRealEstateDeliverables({ ...options, videoTranscoder: { toMp4: async () => ({ body, contentType: "text/html", filename: "active.html" }) } });
+  await assert.rejects(transcoded.completeAssemblyOutput({ ...payload, id: "test.mp4", filename: "test.mp4", contentType: "video/mp4", body }), { code: "invalid_real_estate_assembly_content_type" });
 });

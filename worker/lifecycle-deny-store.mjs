@@ -1277,6 +1277,71 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     }));
   };
 
+  // One read snapshot, no registration, no private bindings, no source-version
+  // claim. The native caller must separately bind these observations to its
+  // current approved edition and checksum-verified public preview bytes.
+  const verifyPublicPreviews = async ({ items } = {}) => {
+    const members = normalizeMembers(items, { maxMembers: 20, maxBindings: 40 });
+    for (const member of members) {
+      const keys = member.bindings.map((binding) => binding.objectKey);
+      if (member.canonicalAssetId.length > 256 || member.canonicalMediaId.length > 256
+          || member.bindings.length !== 2
+          || member.bindings.some((binding) => binding.bucket !== "public"
+            || !/^expo\/[a-zA-Z0-9._-]+_(900|1800)\.jpg$/.test(binding.objectKey))
+          || !keys.includes(keys[0].replace(/_(900|1800)\.jpg$/, "_900.jpg"))
+          || !keys.includes(keys[0].replace(/_(900|1800)\.jpg$/, "_1800.jpg"))) {
+        throw lifecycleError("public_preview_query_invalid", "Verification requires each exact public 900/1800 preview pair; private objects are not supported.", 400);
+      }
+    }
+    const checkedAt = now().toISOString();
+    const requested = members.flatMap((member) => member.bindings.map((binding) => ({
+      asset: member.canonicalAssetId, media: member.canonicalMediaId, key: binding.objectKey,
+    })));
+    let rows;
+    try {
+      rows = await rowsFrom(database.prepare(`WITH requested AS (
+          SELECT json_extract(value, '$.asset') AS asset,
+            json_extract(value, '$.media') AS media, json_extract(value, '$.key') AS object_key
+          FROM json_each(?)
+        ) SELECT requested.*, control.schema_version, control.state AS authority_state,
+          identity.canonical_asset_id, binding.canonical_media_id AS binding_media_id,
+          projection.revision, projection.denied, projection.lifecycle_state, projection.receipt_id,
+          (SELECT MAX(revision) FROM pbe_lifecycle_barriers WHERE canonical_media_id = requested.media) AS barrier_revision
+        FROM requested
+        LEFT JOIN pbe_lifecycle_control control ON control.control_id = ?
+        LEFT JOIN pbe_lifecycle_media_identity identity ON identity.canonical_media_id = requested.media
+        LEFT JOIN pbe_lifecycle_media_bindings binding ON binding.bucket = 'public' AND binding.object_key = requested.object_key
+        LEFT JOIN pbe_lifecycle_projection projection ON projection.canonical_media_id = requested.media`
+      ).bind(JSON.stringify(requested), CONTROL_ID));
+    } catch {
+      throw lifecycleError("lifecycle_authority_unavailable", "Public verification is unavailable; no access observation was issued.");
+    }
+    if (rows.length !== requested.length || rows.some((row) => Number(row.schema_version) !== SCHEMA_VERSION || row.authority_state !== "ready")) {
+      throw lifecycleError("lifecycle_authority_unavailable", "Public verification authority is not ready.");
+    }
+    const observations = members.map((member) => {
+      const matches = rows.filter((row) => row.media === member.canonicalMediaId);
+      let reason = "allowed";
+      if (matches.some((row) => !row.canonical_asset_id)) reason = "identity-missing";
+      else if (matches.some((row) => row.canonical_asset_id !== member.canonicalAssetId)) reason = "identity-mismatch";
+      else if (matches.some((row) => !row.binding_media_id)) reason = "binding-missing";
+      else if (matches.some((row) => row.binding_media_id !== member.canonicalMediaId)) reason = "binding-mismatch";
+      else if (matches.some((row) => row.revision == null)) reason = "projection-missing";
+      else if (matches.some((row) => row.barrier_revision != null && Number(row.barrier_revision) >= Number(row.revision))) reason = "barrier-armed";
+      else if (matches.some((row) => Number(row.denied) !== 0)) reason = "lifecycle-denied";
+      return {
+        ...member, allowed: reason === "allowed", reason,
+        revision: matches[0].revision == null ? null : Number(matches[0].revision),
+        receiptId: clean(matches[0].receipt_id),
+      };
+    });
+    return {
+      schema: "photosbyelie.publicPreviewObservation.v1", readOnly: true,
+      checkedAt, expiresAt: new Date(Date.parse(checkedAt) + 5 * 60 * 1000).toISOString(),
+      items: observations,
+    };
+  };
+
   const listDeniedAssetIds = async () => {
     await assertReady();
     const rows = await rowsFrom(database.prepare(`SELECT canonical_media_id FROM pbe_lifecycle_projection WHERE denied = 1
@@ -1302,6 +1367,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     abort,
     decisionsFor,
     visibilityFor,
+    verifyPublicPreviews,
     assertAllowed,
     assertObjectAllowed,
     listDeniedAssetIds,

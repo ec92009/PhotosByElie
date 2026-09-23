@@ -121,7 +121,7 @@ const redirect = (location, status = 302, headers = {}) => new Response(null, {
 });
 
 const redirectWithCookies = (location, cookies = [], status = 302) => {
-  const headers = new Headers({ location });
+  const headers = new Headers({ location, "cache-control": "private, no-store" });
   cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
   return new Response(null, { status, headers });
 };
@@ -2092,7 +2092,12 @@ export const createPhotosByElieWorker = ({
       return noStore(errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order."));
     }
     let response;
-    if (typeof deliveryClient.getDownloadResponse === "function") {
+    if (downloadRecord.realEstateDeliverableId) {
+      if (typeof realEstateDeliverables?.getDeliveryAsset !== "function") {
+        return noStore(errorJson(503, "real_estate_delivery_links_unavailable", "Product output verification is unavailable."));
+      }
+      response = await realEstateDeliverables.getDeliveryAsset(downloadRecord);
+    } else if (typeof deliveryClient.getDownloadResponse === "function") {
       response = await deliveryClient.getDownloadResponse(downloadRecord);
     } else {
       response = json({
@@ -2285,46 +2290,73 @@ export const createPhotosByElieWorker = ({
     });
   };
 
+  const googleLoginRedirect = async (request, options) => {
+    const result = await googleOAuthAuth.beginLogin(request, options);
+    return redirectWithCookies(result.url, [result.cookie]);
+  };
+
   const loginAuth = async (request) => {
-    if (googleOAuthAuth?.loginUrlFor) {
-      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+    if (googleOAuthAuth?.beginLogin) {
+      return googleLoginRedirect(request, {
         returnTo: safeAuthReturnUrl(request),
         intent: new URL(request.url).searchParams.get("intent") || "",
         prompt: new URL(request.url).searchParams.get("prompt") || "select_account",
-      }));
+      });
     }
     await accessIdentityFor(request, { required: true });
     return redirect(safeAuthReturnUrl(request));
   };
 
   const loginGoogleAuth = async (request) => {
-    if (!googleOAuthAuth?.loginUrlFor) {
+    if (!googleOAuthAuth?.beginLogin) {
       const legacyUrl = new URL("/auth/login", new URL(request.url).origin);
       for (const [key, value] of new URL(request.url).searchParams.entries()) legacyUrl.searchParams.append(key, value);
       return redirect(legacyUrl.href);
     }
     const url = new URL(request.url);
-    return redirect(await googleOAuthAuth.loginUrlFor(request, {
+    return googleLoginRedirect(request, {
       returnTo: safeAuthReturnUrl(request),
       intent: url.searchParams.get("intent") || "",
       prompt: url.searchParams.get("prompt") || "select_account",
-    }));
+    });
   };
 
   const callbackGoogleAuth = async (request) => {
     if (!googleOAuthAuth?.handleCallback) {
       return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
     }
-    const result = await googleOAuthAuth.handleCallback(request);
-    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
+    try {
+      const result = await googleOAuthAuth.handleCallback(request);
+      return redirectWithCookies(result.returnTo, [result.cookie, result.clearTransactionCookie]);
+    } catch (error) {
+      return credentialedErrorJson(request, error.status || 500, error.code || "worker_error", error.message, undefined,
+        { "set-cookie": googleOAuthAuth.clearTransactionCookie() });
+    }
+  };
+
+  const cancelPendingGoogleLogin = async (request) => {
+    try {
+      await googleOAuthAuth?.cancelLogin?.(request);
+      return null;
+    } catch {
+      const response = credentialedErrorJson(request, 503, "google_logout_transaction_unavailable",
+        "Local login cookies were cleared, but the pending login transaction could not be revoked. Retry sign-out when the service recovers.");
+      for (const cookie of [googleOAuthAuth?.clearCookieFor?.(request), googleOAuthAuth?.clearTransactionCookie?.(), realEstateAuth?.clearCookieFor?.()]) {
+        if (cookie) response.headers.append("set-cookie", cookie);
+      }
+      return response;
+    }
   };
 
   const logoutAuth = async (request) => {
+    const cancellationError = await cancelPendingGoogleLogin(request);
+    if (cancellationError) return cancellationError;
     const baseUrl = new URL(request.url).origin;
     const realEstateCookie = realEstateAuth?.clearCookieFor?.() || "";
     if (googleOAuthAuth?.clearCookieFor) {
       return redirectWithCookies(safeAuthReturnUrl(request), [
         googleOAuthAuth.clearCookieFor(request),
+        googleOAuthAuth.clearTransactionCookie?.(),
         realEstateCookie,
       ]);
     }
@@ -2474,8 +2506,11 @@ export const createPhotosByElieWorker = ({
   };
 
   const logoutOwnerTokens = async (request) => {
+    const cancellationError = await cancelPendingGoogleLogin(request);
+    if (cancellationError) return cancellationError;
     const headers = new Headers(credentialedCorsHeaders(request));
     if (googleOAuthAuth?.clearCookieFor) headers.append("set-cookie", googleOAuthAuth.clearCookieFor(request));
+    if (googleOAuthAuth?.clearTransactionCookie) headers.append("set-cookie", googleOAuthAuth.clearTransactionCookie());
     if (realEstateAuth?.clearCookieFor) headers.append("set-cookie", realEstateAuth.clearCookieFor());
     headers.set("content-type", "application/json; charset=utf-8");
     return new Response(JSON.stringify({ ok: true }), {
@@ -2581,13 +2616,13 @@ export const createPhotosByElieWorker = ({
       ? await googleOAuthAuth.optionalSession(request).catch(() => null)
       : null;
     if (!browserIdentity) {
-      if (!googleOAuthAuth?.loginUrlFor) {
+      if (!googleOAuthAuth?.beginLogin) {
         return enrollmentHTML("Sign-in unavailable", "Google Owner sign-in is not configured.", "", 503);
       }
-      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+      return googleLoginRedirect(request, {
         returnTo: request.url,
         intent: "backstage-enrollment",
-      }));
+      });
     }
     const session = await authSessionFor(request, { requiredRole: "owner" });
     if (session.email !== PBE_OWNER_PROVISIONER_EMAIL
@@ -2894,6 +2929,43 @@ export const createPhotosByElieWorker = ({
     const payload = await parseJson(request);
     const result = await lifecycleDenyStore[command]({ ...payload, actorId: connector.connectorId });
     return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
+  };
+
+  const verifyPublicPreviews = async (request) => {
+    await requireOwnerOrConnector(request);
+    if (!lifecycleDenyStore?.verifyPublicPreviews) {
+      return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Public preview verification is unavailable.");
+    }
+    // Bound streamed input too: Content-Length is neither mandatory nor trusted.
+    const reader = request.body?.getReader();
+    const chunks = [];
+    let bytes = 0;
+    if (reader) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if (bytes > 65536) {
+            await reader.cancel();
+            return credentialedErrorJson(request, 413, "public_preview_query_too_large", "Public verification request exceeds 64 KiB.");
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+    const body = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+    let payload;
+    try { payload = JSON.parse(new TextDecoder().decode(body)); }
+    catch { return credentialedErrorJson(request, 400, "invalid_json", "Request body must be valid JSON."); }
+    const result = await lifecycleDenyStore.verifyPublicPreviews(payload || {});
+    return credentialedJson(request, { ok: true, ...result }, 200, {
+      "cache-control": "no-store", "cdn-cache-control": "no-store",
+    });
   };
 
   const createOwnerAction = async (request) => {
@@ -4091,6 +4163,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
       if (request.method === "POST" && path === "/owner/lifecycle/reconcile") return await lifecycleOwnerCommand(request, "reconcileManifest");
+      if (request.method === "POST" && path === "/owner/lifecycle/public-previews/verify") return await verifyPublicPreviews(request);
       if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");
       if (request.method === "POST" && path === "/owner/lifecycle/apply") return await lifecycleOwnerCommand(request, "applyBatch");

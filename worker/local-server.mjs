@@ -317,45 +317,14 @@ const createLocalRealEstateDeliverables = ({ privateBucket, galleries, store }) 
           continue;
         }
         const bytes = record.type === "pdf" ? pdfBytesForRecord(record) : videoBytesForRecord(record);
-        await privateBucket.put(key, bytes, {
-          httpMetadata: { contentType: output.contentType || (record.type === "pdf" ? "application/pdf" : "video/mp4") },
-          customMetadata: {
-            galleryKey: record.galleryKey,
-            deliverableId: record.id,
-            type: record.type,
-            localRehearsal: "true",
-          },
-        });
-        const readyRecord = {
-          ...record,
-          status: "ready",
-          updatedAt: now,
-          bytes: bytes.byteLength,
-          viewUrl: assetUrlFor(record.id, "view"),
-          downloadUrl: assetUrlFor(record.id, "download"),
-          assemblyJob: {
-            ...(record.assemblyJob || {}),
-            status: "ready",
-            completedAt: now,
-            localRehearsal: true,
-          },
-          deliveryEmail: {
-            status: "not_sent",
-            decision: "local_rehearsal_only",
-            reason: "local_worker_does_not_send_real_estate_email",
-            decidedAt: now,
-          },
-        };
-        await privateBucket.put(deliverableKeyFor(gallery, record.id), new TextEncoder().encode(JSON.stringify(readyRecord, null, 2)), {
-          httpMetadata: { contentType: "application/json; charset=utf-8" },
-          customMetadata: {
-            galleryKey: record.galleryKey,
-            deliverableId: record.id,
-            type: record.type,
-            assemblyJobId: record.assemblyJob?.id || "",
-            status: "ready",
-            localRehearsal: "true",
-          },
+        const readyRecord = await base.completeAssemblyOutput({
+          ...payload,
+          id: record.id,
+          filename: record.filename,
+          contentType: output.contentType || (record.type === "pdf" ? "application/pdf" : "video/mp4"),
+          contentLength: bytes.byteLength,
+          body: bytes,
+          assembler: "local-rehearsal",
         });
         readyDeliverables.push(readyRecord);
       }
@@ -435,55 +404,8 @@ const readBody = (req) => new Promise((resolve, reject) => {
   req.on("error", reject);
 });
 
-const serveLocalDownload = async (req, res) => {
-  const pathname = new URL(req.url, `http://localhost:${port}`).pathname;
-  if (!["GET", "HEAD"].includes(req.method || "GET")) return false;
-  const orderMatch = pathname.match(/^\/download-order\/([^/]+)$/);
-  if (orderMatch) {
-    const orderId = decodeURIComponent(orderMatch[1]);
-    const zipPath = path.join(repoRoot, "deliveries", `photosbyelie-order-${orderId}.zip`);
-    if (!fs.existsSync(zipPath)) return false;
-    const filename = path.basename(zipPath);
-    res.writeHead(200, {
-      "access-control-allow-origin": "*",
-      "content-type": "application/zip",
-      "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-      "content-length": fs.statSync(zipPath).size,
-    });
-    if (req.method === "HEAD") {
-      res.end();
-      return true;
-    }
-    fs.createReadStream(zipPath).pipe(res);
-    return true;
-  }
-
-  const match = pathname.match(/^\/download\/([^/]+)$/);
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const download = await worker.store.getDownload(token);
-  if (!download || !path.isAbsolute(download.zipKey)) return false;
-  if (!fs.existsSync(download.zipKey)) return false;
-
-  await worker.store.recordDownload(token, new Date().toISOString());
-  const filename = path.basename(download.zipKey);
-  res.writeHead(200, {
-    "access-control-allow-origin": "*",
-    "content-type": "application/zip",
-    "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-    "content-length": fs.statSync(download.zipKey).size,
-  });
-  if (req.method === "HEAD") {
-    res.end();
-    return true;
-  }
-  fs.createReadStream(download.zipKey).pipe(res);
-  return true;
-};
-
 const server = http.createServer(async (req, res) => {
   try {
-    if (await serveLocalDownload(req, res)) return;
     const body = await readBody(req);
     const response = await worker.fetch(toWebRequest(req, body.length ? body : undefined));
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
@@ -499,7 +421,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
+server.listen(port, "127.0.0.1", () => {
   console.log(`PhotosByElie local ${stripe ? "Stripe" : "mock"} Worker listening on http://localhost:${port}`);
   console.log(`Delivery ZIPs will be written under ${path.resolve(repoRoot, process.env.PBE_DELIVERY_OUTPUT_DIR || "deliveries")}`);
   if (realEstateGalleries.length) {

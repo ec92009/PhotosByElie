@@ -1,6 +1,9 @@
 import { launch } from "@cloudflare/playwright";
-import { WorkflowEntrypoint } from "cloudflare:workers";
+import { WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
 import { waitForCloudRenderCompletion } from "./cloud-render-browser.mjs";
+import { createKvStore } from "./kv-store.mjs";
+import { createStripeClient } from "./stripe-client.mjs";
+import { buildWstCommerceSnapshot } from "./wst-commerce-snapshot.mjs";
 import worker, {
   realEstateClientContextFor,
   realEstateDeliverablesFor,
@@ -65,4 +68,24 @@ export class RealEstateRenderWorkflow extends WorkflowEntrypoint {
   }
 }
 
-export default worker;
+export default class PhotosByElieWorker extends WorkerEntrypoint {
+  fetch(request) {
+    return worker.fetch(request, this.env);
+  }
+
+  wstCommerceSnapshot() {
+    if (!this.env.STRIPE_SECRET_KEY || !this.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error("Live Stripe is unavailable for the WST commerce snapshot.");
+    }
+    const store = createKvStore({
+      namespace: this.env.ORDERS_KV,
+      prefix: this.env.KV_PREFIX || "pbe",
+    });
+    const stripe = createStripeClient({
+      secretKey: this.env.STRIPE_SECRET_KEY,
+      webhookSecret: this.env.STRIPE_WEBHOOK_SECRET,
+      apiVersion: this.env.STRIPE_API_VERSION,
+    });
+    return buildWstCommerceSnapshot({ store, stripe });
+  }
+}

@@ -38,6 +38,7 @@ test("Owner API v1 exposes explicit compatibility routes", () => {
   );
   assert.equal(resolveOwnerApiV1Route("/api/v1/actions"), "/api/owner/actions");
   assert.equal(resolveOwnerApiV1Route("/api/v1/lifecycle/reconcile"), "/api/owner/lifecycle/reconcile");
+  assert.equal(resolveOwnerApiV1Route("/api/v1/lifecycle/public-previews/verify"), "/api/owner/lifecycle/public-previews/verify");
   assert.equal(
     resolveOwnerApiV1Route("/api/v1/actions/action%201/complete"),
     "/api/owner/actions/action%201/complete"

@@ -118,6 +118,59 @@ const readyStore = async (database, members = [member()]) => {
   return store;
 };
 
+const publicMember = (suffix = "one") => ({ ...member(suffix), bindings: [
+  { bucket: "public", objectKey: `expo/${suffix}_900.jpg` },
+  { bucket: "public", objectKey: `expo/${suffix}_1800.jpg` },
+] });
+
+test("public preview observations bind exact identities and keys without writes or private leakage", async () => {
+  const database = new TransactionalD1();
+  const source = publicMember();
+  const store = await readyStore(database, [{ ...source, bindings: [
+    ...source.bindings, { bucket: "private", objectKey: "masters/secret.jpg" },
+  ] }]);
+  const before = database.sqlite.prepare("SELECT total_changes() AS n").get().n;
+  for (let retry = 0; retry < 2; retry += 1) {
+    const result = await store.verifyPublicPreviews({ items: [source] });
+    assert.equal(result.schema, "photosbyelie.publicPreviewObservation.v1");
+    assert.equal(result.readOnly, true);
+    assert.equal(Date.parse(result.expiresAt) - Date.parse(result.checkedAt), 300000);
+    assert.equal(result.items[0].allowed, true);
+    assert.equal(result.items[0].canonicalAssetId, source.canonicalAssetId);
+    assert.deepEqual(result.items[0].bindings, [...source.bindings].reverse());
+    assert.doesNotMatch(JSON.stringify(result), /secret|sourceVersion|private/);
+  }
+  assert.equal(database.sqlite.prepare("SELECT total_changes() AS n").get().n, before);
+});
+
+test("public verification fails closed for missing registration, mismatched identity and swapped allowed keys", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database, [publicMember(), publicMember("two")]);
+  const check = async (item) => (await store.verifyPublicPreviews({ items: [item] })).items[0];
+  assert.equal((await check(publicMember("missing"))).reason, "identity-missing");
+  assert.equal((await check({ ...publicMember(), canonicalAssetId: "wrong-asset" })).reason, "identity-mismatch");
+  assert.equal((await check({ ...publicMember(), bindings: publicMember("two").bindings })).reason, "binding-mismatch");
+  assert.equal((await check({ ...publicMember(), bindings: publicMember("missing").bindings })).reason, "binding-missing");
+  const arm = await store.armBatch({ operationId: "op-public-deny", operation: "x", denied: true, items: [publicMember()] });
+  assert.equal((await check(publicMember())).reason, "barrier-armed");
+  await store.markLocallyCommitted(arm);
+  await store.applyBatch({ ...arm, receipts: [receiptFor(arm, "one", true, "recoverable")] });
+  assert.equal((await check(publicMember())).allowed, false);
+});
+
+test("public verification bounds its batch and fails closed on unavailable authority", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database, [publicMember()]);
+  for (const items of [[], Array.from({ length: 21 }, (_, n) => publicMember(String(n))),
+    [{ ...publicMember(), bindings: [{ bucket: "private", objectKey: "masters/one.jpg" }] }],
+    [{ ...publicMember(), bindings: [publicMember().bindings[0]] }],
+    [{ ...publicMember(), bindings: [publicMember().bindings[0], publicMember("two").bindings[1]] }]]) {
+    await assert.rejects(store.verifyPublicPreviews({ items }));
+  }
+  database.sqlite.prepare("UPDATE pbe_lifecycle_control SET state='blocked'").run();
+  await assert.rejects(store.verifyPublicPreviews({ items: [publicMember()] }), { code: "lifecycle_authority_unavailable" });
+});
+
 test("migration installs blocked dedicated ACCESS_DB authority and runtime does no DDL", async () => {
   const database = new TransactionalD1();
   const store = createD1LifecycleDenyStore({ database });

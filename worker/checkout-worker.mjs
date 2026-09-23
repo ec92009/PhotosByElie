@@ -2931,6 +2931,43 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
   };
 
+  const verifyPublicPreviews = async (request) => {
+    await requireOwnerOrConnector(request);
+    if (!lifecycleDenyStore?.verifyPublicPreviews) {
+      return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Public preview verification is unavailable.");
+    }
+    // Bound streamed input too: Content-Length is neither mandatory nor trusted.
+    const reader = request.body?.getReader();
+    const chunks = [];
+    let bytes = 0;
+    if (reader) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if (bytes > 65536) {
+            await reader.cancel();
+            return credentialedErrorJson(request, 413, "public_preview_query_too_large", "Public verification request exceeds 64 KiB.");
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+    const body = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+    let payload;
+    try { payload = JSON.parse(new TextDecoder().decode(body)); }
+    catch { return credentialedErrorJson(request, 400, "invalid_json", "Request body must be valid JSON."); }
+    const result = await lifecycleDenyStore.verifyPublicPreviews(payload || {});
+    return credentialedJson(request, { ok: true, ...result }, 200, {
+      "cache-control": "no-store", "cdn-cache-control": "no-store",
+    });
+  };
+
   const createOwnerAction = async (request) => {
     const session = await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
@@ -4126,6 +4163,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
       if (request.method === "POST" && path === "/owner/lifecycle/reconcile") return await lifecycleOwnerCommand(request, "reconcileManifest");
+      if (request.method === "POST" && path === "/owner/lifecycle/public-previews/verify") return await verifyPublicPreviews(request);
       if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");
       if (request.method === "POST" && path === "/owner/lifecycle/apply") return await lifecycleOwnerCommand(request, "applyBatch");

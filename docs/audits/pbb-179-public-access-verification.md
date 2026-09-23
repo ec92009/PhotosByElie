@@ -42,5 +42,27 @@ photos or register lifecycle identities.
   Python tests cover historical upgrade, private scope, exact bytes, retry,
   expiry, source/approval/policy changes and revocation during verification.
 
-Build, installation, cloud deployment and live verification are separate
-pending steps; no released/installed claim is made by this checkpoint.
+## Integrated checkpoint, 23 September 20:45 CEST
+
+- Public contract `caefcf5f` is on main; native implementation `89a9c190`
+  and complete reviewed-main merge `c72a9d24` are on release/backstage.
+- Full Python discovery: 656 passed. Full Swift: 432 tests in 32 suites passed.
+  Added migration rollback protection (schema setup never implicitly commits),
+  fail-closed old-schema upload status, and packaged/standalone Python imports.
+  Two inherited source-parity assertions now match the current UI text/signature.
+- Post-merge npm ci and audit: zero vulnerabilities. JS pretest 56 passed;
+  Python pretest 13 passed; main JS remains 303/304 with the same inherited
+  catalog/bootstrap synchronization failure. This is a public-site artifact
+  gate, not a native/Worker test failure; no validation bypass or catalog edit.
+- Read-only publication validation still rejects missing reviewed Owner
+  authority. Native contract generation check passes (API 1.3.0, 42 operations).
+- Worker deployed from public main with unchanged bindings and preserved vars:
+  `7beecbde-3369-4611-b632-fa65c3d39f5d`. Live 18:44 UTC checks returned
+  200/allowed for an exact registered public pair, 200/identity-mismatch for a
+  wrong canonical asset, and 401 unauthenticated; all no-store.
+- Graphify refreshed in the canonical root, native-only/code-only scope,
+  preserving its prior semantic backup. SQL-parser and partial Swift parser
+  warnings are retained as graph limitations; Swift compilation is authoritative.
+
+Next installable identity: v266.5/build 362. Build, installation and archive
+publication remain separate pending steps at this source checkpoint.

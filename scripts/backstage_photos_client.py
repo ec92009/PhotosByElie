@@ -18,7 +18,10 @@ import time
 import unicodedata
 import uuid
 
-import backstage_photos_job
+try:
+    from . import backstage_photos_job
+except ImportError:
+    import backstage_photos_job
 
 
 SCHEMA_VERSION = 1

@@ -75,6 +75,7 @@
 		78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */; };
 		796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */; };
 		798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */; };
+		79F0662DB4B0CD72F69872F8 /* ReviewAIBatchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3730AEDC5F4E37B5964C46DE /* ReviewAIBatchState.swift */; };
 		8053F33F07AB4E516EE2751F /* UploadHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */; };
 		8077F8898C21BE1C6B7D8BAD /* BackstageUpdateLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01441856D7903029CB4FF097 /* BackstageUpdateLauncher.swift */; };
 		80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */; };
@@ -95,6 +96,7 @@
 		8FA02DD897A92112EBE914F1 /* PBEOwnerNativeActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8482A52D159E9B4DF4B96E32 /* PBEOwnerNativeActionTests.swift */; };
 		901C71C9CD7AC4619696781B /* OwnerFixtureSQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2911D3BBE0DC89DD73BFF719 /* OwnerFixtureSQLiteStoreTests.swift */; };
 		909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AFF8771D0832D9829AB0B6 /* ReviewView.swift */; };
+		969B53E9E561D045AF90BF81 /* fixture_editions_schema.sql in Resources */ = {isa = PBXBuildFile; fileRef = A956035307FE1E8193B6EF13 /* fixture_editions_schema.sql */; };
 		9C59D4D560EF49B87168E780 /* BackstagePhotosJobLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0E05BC33D32081B26225214 /* BackstagePhotosJobLauncher.swift */; };
 		9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */; };
 		A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */; };
@@ -156,6 +158,7 @@
 		F933F5273FBCB6B7A2578C4E /* OwnerWorkflowRecoverySQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D38D7A974EE7EDE80F9EA8 /* OwnerWorkflowRecoverySQLiteStoreTests.swift */; };
 		FA61CFA63F49A08273BCF800 /* OwnerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		FC8D99F5044FD7E94A1F4A9B /* BackstageViewModel+PerformAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4650D7E72D530E6A1CDDB /* BackstageViewModel+PerformAI.swift */; };
+		FFC6AB479BA5075F232381AA /* OwnerFixtureEditionSQLite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 691D411CDE4EF1AA4A25353A /* OwnerFixtureEditionSQLite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -236,6 +239,7 @@
 		318909B671149A59F8C67056 /* BackstageExternalEditWorkflowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageExternalEditWorkflowState.swift; sourceTree = "<group>"; };
 		33560C19008A85261515A1F3 /* VisualRepairRendition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualRepairRendition.swift; sourceTree = "<group>"; };
 		354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostTests.swift; sourceTree = "<group>"; };
+		3730AEDC5F4E37B5964C46DE /* ReviewAIBatchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewAIBatchState.swift; sourceTree = "<group>"; };
 		3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifecycleService.swift; sourceTree = "<group>"; };
 		3D89FEC4BB9E6E6994912536 /* OwnerCurrentEquipmentSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCurrentEquipmentSQLiteStore.swift; sourceTree = "<group>"; };
 		3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureSelectionCoordinator.swift; sourceTree = "<group>"; };
@@ -260,6 +264,7 @@
 		61DB41B48614D37555A1B342 /* proposed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = proposed.png; sourceTree = "<group>"; };
 		67FD2E316641B2E1B630A901 /* LocalFixtureReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFixtureReviewService.swift; sourceTree = "<group>"; };
 		68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerConnectorIdentity.swift; sourceTree = "<group>"; };
+		691D411CDE4EF1AA4A25353A /* OwnerFixtureEditionSQLite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerFixtureEditionSQLite.swift; sourceTree = "<group>"; };
 		6A7E4C6C8EEB120B3E49805E /* GalleryAuditPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryAuditPresentation.swift; sourceTree = "<group>"; };
 		6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoMetadataService.swift; sourceTree = "<group>"; };
 		6E8BC3BAFA9F5729FF5B49D3 /* VisualRepairProposalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualRepairProposalService.swift; sourceTree = "<group>"; };
@@ -295,6 +300,7 @@
 		A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		A72FBBC4B7F109BF2BB12740 /* BackstagePhotosJobAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePhotosJobAuthorityTests.swift; sourceTree = "<group>"; };
 		A770AD7C5FCA2FE36067B3A5 /* NativeUploadExecutionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadExecutionMonitor.swift; sourceTree = "<group>"; };
+		A956035307FE1E8193B6EF13 /* fixture_editions_schema.sql */ = {isa = PBXFileReference; path = fixture_editions_schema.sql; sourceTree = "<group>"; };
 		A9D7B0EB7FBB0F36E565B9BA /* FixtureCullingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureCullingView.swift; sourceTree = "<group>"; };
 		AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelpTests.swift; sourceTree = "<group>"; };
 		AC5BEA77F78B6B15A631E14C /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
@@ -461,6 +467,7 @@
 				5D933405E5F7B30618DC7F6B /* LifecycleTableScrollPosition.swift */,
 				FB8631671F3BA6322DB8E112 /* NativeUploadQueueContinuation.swift */,
 				402ECBBE805854840F33033B /* PhotosByElieBackstageApp.swift */,
+				3730AEDC5F4E37B5964C46DE /* ReviewAIBatchState.swift */,
 				EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */,
 				D157FCA2BE1DD356E595878B /* ReviewPreview.swift */,
 				89AFF8771D0832D9829AB0B6 /* ReviewView.swift */,
@@ -498,6 +505,7 @@
 			children = (
 				031D83FD70EDA99A4325EC56 /* action-page.json */,
 				807D384EDDB744D5CA169522 /* backstage-release-update.json */,
+				A956035307FE1E8193B6EF13 /* fixture_editions_schema.sql */,
 				2E049889FFB8A0BF84C78303 /* owner-api-examples.json */,
 				BA0BF55B464CB599D77A070E /* PBE144SyntheticOpenAI */,
 			);
@@ -555,6 +563,7 @@
 				0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */,
 				E74871E8B7478FC401020DCB /* OwnerDatabase.swift */,
 				B71EE1A6BA297EE19B966B0F /* OwnerEquipmentBackfillService.swift */,
+				691D411CDE4EF1AA4A25353A /* OwnerFixtureEditionSQLite.swift */,
 				868995929E0CDCA67A31BF88 /* OwnerFixtureSQLiteStore.swift */,
 				0CB6E2056746C1F076962053 /* OwnerModels.swift */,
 				A04D8A5F239195CDD2271AA9 /* OwnerReviewMutation.swift */,
@@ -702,6 +711,7 @@
 			files = (
 				CD8131A150ABA38768AC91F2 /* action-page.json in Resources */,
 				3723A11CF9498A896F286DDC /* backstage-release-update.json in Resources */,
+				969B53E9E561D045AF90BF81 /* fixture_editions_schema.sql in Resources */,
 				0D6D680C053FFBFB4657F59A /* manifest.json in Resources */,
 				BD070F0D3B328FEFADA4BE55 /* original.png in Resources */,
 				1ED369EC57AD5245AAC08D8F /* owner-api-examples.json in Resources */,
@@ -745,6 +755,7 @@
 				D49A06829BA5CD124AC7BFBE /* LifecycleTableScrollPosition.swift in Sources */,
 				821B554D396CBB45E08A93A1 /* NativeUploadQueueContinuation.swift in Sources */,
 				B3A213B673AB4066AD8E4528 /* PhotosByElieBackstageApp.swift in Sources */,
+				79F0662DB4B0CD72F69872F8 /* ReviewAIBatchState.swift in Sources */,
 				E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */,
 				AF453AA808B073E373B241C6 /* ReviewPreview.swift in Sources */,
 				909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */,
@@ -833,6 +844,7 @@
 				E391650A2878205E0719A648 /* OwnerCurrentImageSizeSQLiteStore.swift in Sources */,
 				16E6283E9B3803D08B399ACD /* OwnerDatabase.swift in Sources */,
 				D917125400F8168FCEB9E520 /* OwnerEquipmentBackfillService.swift in Sources */,
+				FFC6AB479BA5075F232381AA /* OwnerFixtureEditionSQLite.swift in Sources */,
 				3E3EF6EFCCB7D245DC677579 /* OwnerFixtureSQLiteStore.swift in Sources */,
 				52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */,
 				65D2C1B0BC02215FE3546021 /* OwnerReviewMutation.swift in Sources */,
@@ -1082,7 +1094,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 350;
+				CURRENT_PROJECT_VERSION = 363;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1092,7 +1104,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 265.5;
+				MARKETING_VERSION = 268.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -1105,7 +1117,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 350;
+				CURRENT_PROJECT_VERSION = 363;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -1115,7 +1127,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 265.5;
+				MARKETING_VERSION = 268.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

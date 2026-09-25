@@ -109,7 +109,7 @@ def overlay(conn, result):
         'registered': sum(bool(item['registration_json']) for item in items),
         'publicVerified': sum(bool(item['verification_json']) for item in items),
         'live': sum(bool(item['public_access_expires_at']) for item in result['items']),
-        'remaining': (0 if run['status']=='completed' else max(1,sum(not item['verification_json'] for item in items))),
+        'remaining': (0 if run['status']=='completed' else max(1,sum(not item['public_access_expires_at'] for item in result['items']))),
         'completedAt': result['completedAt'] if run['status'] in {'completed','failed','cancelled'} else ''}
 
 
@@ -123,8 +123,11 @@ def recover_dead_workers(conn):
             os.kill(row['worker_pid'], 0)
         except ProcessLookupError:
             message = f"Publication worker stopped during {row['phase']}; resume this same run."
-            conn.execute("UPDATE public_publication_runs SET status='failed',last_error=?,updated_at=? WHERE run_id=?",
-                         (message,now(),row['run_id']))
+            claimed = conn.execute("""UPDATE public_publication_runs SET status='failed',last_error=?,updated_at=?
+                WHERE run_id=? AND status='running' AND worker_pid=? AND updated_at=?""",
+                (message,now(),row['run_id'],row['worker_pid'],row['updated_at'])).rowcount
+            if claimed != 1:
+                continue  # A newer worker owns it; this stale observation has no authority.
             conn.execute("UPDATE asset_upload_runs SET status='failed',last_error=?,updated_at=? WHERE run_id=?",
                          (message,now(),row['run_id']))
             recovered.append(row['run_id'])

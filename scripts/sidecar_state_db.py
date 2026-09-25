@@ -3063,7 +3063,7 @@ def _upload_bridge_execute_r2(
             if selected_backend == "s3":
                 _, ok, output = s3_put(
                     upload_item,
-                    retries,
+                    0 if reconcile_existing else retries,
                     DEFAULT_THROTTLE_FILE,
                     request_min_interval,
                     retry_max_delay,
@@ -3073,11 +3073,12 @@ def _upload_bridge_execute_r2(
                     endpoint,
                 )
             else:
-                _, ok, output = wrangler_put(upload_item, retries, DEFAULT_THROTTLE_FILE, request_min_interval, retry_max_delay)
-            local_checksum = hashlib.sha256(source_path.read_bytes()).hexdigest() if ok and source_path.exists() else ""
+                _, ok, output = wrangler_put(upload_item, 0 if reconcile_existing else retries, DEFAULT_THROTTLE_FILE, request_min_interval, retry_max_delay)
+            ambiguous_put = reconcile_existing and not ok
+            local_checksum = hashlib.sha256(source_path.read_bytes()).hexdigest() if source_path.exists() else ""
             remote_checksum = ""
             verification_output = ""
-            if ok:
+            if ok or reconcile_existing:
                 verification_path = artifact_root / ".r2-verification" / bucket / object_key
                 verification_path.parent.mkdir(parents=True, exist_ok=True)
                 if selected_backend == "s3":
@@ -3105,6 +3106,8 @@ def _upload_bridge_execute_r2(
                 if remote_ok and verification_path.is_file():
                     remote_checksum = hashlib.sha256(verification_path.read_bytes()).hexdigest()
                 verification_path.unlink(missing_ok=True)
+            if ambiguous_put and local_checksum and remote_checksum == local_checksum:
+                ok = True  # The write committed but its reply was lost. Never PUT again blindly.
             remote_verified = bool(ok and local_checksum and remote_checksum == local_checksum)
             return position, {
                 **base_result,

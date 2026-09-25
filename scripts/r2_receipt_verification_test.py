@@ -50,3 +50,21 @@ class R2ReceiptVerificationTests(unittest.TestCase):
                         export_path=source,media_type='photo',artifact_root=root,backend='wrangler',reconcile_existing=True)
                 put.assert_not_called()
                 self.assertEqual(result[0]['status'],'failed')
+
+    def test_ambiguous_put_has_no_internal_write_retries_and_is_reconciled_by_get(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);source=root/'original.jpg';source.write_bytes(b'approved bytes')
+            events=[]
+            def put(item,retries,*_):
+                self.assertEqual(retries,0)
+                events.append('PUT');return item,False,'reply lost after commit'
+            def get(item,path,*_):
+                events.append('GET');path.write_bytes(source.read_bytes());return item,True,'read verified'
+            with patch('sidecar_state_db._prepare_upload_bridge_artifact',return_value=(source,'image/jpeg')), \
+                 patch('r2_receipt_verification.remote_receipt',side_effect=lambda *_a,**_k:events.append('GET')), \
+                 patch('sync_r2_media.wrangler_put',side_effect=put), \
+                 patch('sync_r2_media.wrangler_get',side_effect=get):
+                result=_upload_bridge_execute_r2(planned_keys=[{'bucket':'photosbyelie-public','key':'expo/one_900.jpg','kind':'public-preview'}],
+                    export_path=source,media_type='photo',artifact_root=root,backend='wrangler',reconcile_existing=True)
+            self.assertEqual(events,['GET','PUT','GET'])
+            self.assertTrue(result[0]['remoteVerified'])

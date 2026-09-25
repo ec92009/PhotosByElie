@@ -21,6 +21,8 @@ byte checks. Where a PUT succeeded but its local receipt was lost, the exact
 deterministic object is checked before another PUT. Different bytes, a missing
 expected object, ambiguous network errors and authorization failures stop the
 operation; they are never treated as permission to overwrite.
+The low-level PUT helpers have blind write retries disabled in this mode. An
+ambiguous PUT is followed by a GET and accepted only if its bytes match.
 
 Registration uses the existing connector's PBE-214 preparation/apply API and
 one stable repair ID per run/photo/revision. Current exact cloud identity is
@@ -34,6 +36,11 @@ preview evidence are rechecked before side effects. The guarded catalog
 publisher receives the same callback immediately before push and while waiting
 for deployment. Final verification selects exactly this run's IDs in bounded
 batches of at most 20; it never consumes an unrelated oldest-photo batch.
+Successful partial verification batches are checkpointed. Retry selects only
+unfinished or expired observations and can reuse a catalog deployment only
+while the current Owner projection and exact live HTTPS bytes still match.
+Dead-worker recovery compares the observed PID and claim timestamp atomically;
+an older recovery snapshot cannot overwrite a newer running claim.
 
 PBB-179's `public_access_current` remains the sole Live authority, including
 its five-minute expiry and exact-input match. Historical completion receipts

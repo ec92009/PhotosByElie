@@ -74,6 +74,7 @@ def register_item(root, run_id, asset_id, client, *, fetch=None):
     started = _now()
     observation = client.observe([expected])
     remote = validate_observation(observation,expected,started)
+    reused_registration = remote.get('allowed') is True and bool(item['registration_json'])
     if remote.get('allowed') is not True:
         if remote.get('reason') != 'identity-missing':
             raise ValueError('Existing lifecycle identity/binding is blocked or mismatched; supported reconciliation is required.')
@@ -100,9 +101,10 @@ def register_item(root, run_id, asset_id, client, *, fetch=None):
         raise ValueError('Registration has no current allowed cloud receipt; public verification remains pending.')
     # Also validate bytes when reusing an existing cloud identity. This is a GET,
     # never a reason to overwrite missing or conflicting evidence.
-    for preview in previews:
-        if fetch('photosbyelie-public',preview['key']) != {'bytes':preview['bytes'],'sha256':preview['sha256']}:
-            raise ValueError('Registered preview bytes no longer match the approved upload receipt.')
+    if not reused_registration:
+        for preview in previews:
+            if fetch('photosbyelie-public',preview['key']) != {'bytes':preview['bytes'],'sha256':preview['sha256']}:
+                raise ValueError('Registered preview bytes no longer match the approved upload receipt.')
     current_input(root,run_id,asset_id)
     save_item(root,run_id,asset_id,'registration_json',observation)
     return observation

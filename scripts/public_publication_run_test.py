@@ -186,6 +186,83 @@ class PublicPublicationRunTests(unittest.TestCase):
             self.assertEqual(get(conn,self.run)['status'],'failed')
             conn.commit()
 
+    def test_stale_dead_worker_observation_cannot_fail_a_new_claim(self):
+        with connect(self.root) as conn:
+            conn.execute('UPDATE public_publication_runs SET worker_pid=111')
+            conn.commit()
+            def replaced(*_):
+                with connect(self.root) as newer:
+                    newer.execute("UPDATE public_publication_runs SET worker_pid=222,updated_at='new-claim'")
+                    newer.execute("UPDATE asset_upload_runs SET status='running'")
+                    newer.commit()
+                raise ProcessLookupError
+            with patch('public_publication_state.os.kill',side_effect=replaced):
+                self.assertEqual(recover_dead_workers(conn),[])
+            self.assertEqual(get(conn,self.run)['worker_pid'],222)
+            self.assertEqual(get(conn,self.run)['status'],'running')
+            self.assertEqual(conn.execute('SELECT status FROM asset_upload_runs WHERE run_id=?',(self.run,)).fetchone()[0],'running')
+
+    def extra_run(self):
+        """Build a real two-photo run; the earlier photo is deliberately out of scope."""
+        import fixture_editions as editions
+        from fixture_pipeline import set_fixture_asset_state
+        from sidecar_state_db import upsert_assets
+        ids=['partial-one','partial-two']
+        upsert_assets(self.root,[dict(localIdentifier=asset,filename=asset+'.jpg',mediaType='photo',
+                                     pixelWidth=3000,pixelHeight=2000) for asset in ids])
+        set_fixture_asset_state(self.root,self.fixture,ids,'picked')
+        revisions={}
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET location_label='Spain'")
+            for asset in ids:
+                conn.execute("INSERT INTO asset_source_versions (version_id,asset_id,metadata_fingerprint,rendered_fingerprint,source_exists,state,created_at) VALUES (?,?, '', '',1,'candidate','2026-01-01')",(asset+'-source',asset))
+                e=editions.seed_edition(conn,self.fixture,asset,source_version_id=asset+'-source',title='Spain',keywords=['Spain'],country='Spain')
+                e=editions.approve_edition(conn,self.fixture,asset,expected_revision=editions.revision_hash(e))
+                revisions[asset]=e['approved_revision_hash']
+            conn.commit()
+        self.run=create_upload_run(self.root,ids,fixture_id=self.fixture)['runId']
+        claim_upload_run_start(self.root,self.run)
+        def upload(asset):
+            with connect(self.root) as conn:
+                keys=object_keys(dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?',(asset,)).fetchone()),
+                    self.fixture,revisions[asset],effective_fixture_policy(self.root,self.fixture,conn=conn)['effective'])
+            return [dict(k,status='uploaded',objectKind=k['kind'],checksumSha256=self.sha,
+                         remoteChecksumSha256=self.sha,remoteVerified=True,bytes=len(self.preview)) for k in keys]
+        run_upload_batch(self.root,self.run,upload)
+        return ids
+
+    def test_partial_verification_resumes_only_unfinished_and_reuses_catalog(self):
+        ids=self.extra_run()
+        def partial(*args,**kwargs):
+            kwargs['asset_ids']=kwargs['asset_ids'][:1]
+            return self.verify(*args,**kwargs)
+        first=self.finish(verify=partial)
+        self.assertEqual((first['status'],first['publicVerified']),('failed',1),first)
+        claim_upload_run_start(self.root,self.run,retry_failed=True)
+        checked=[]
+        def rest(*args,**kwargs):
+            checked.extend(kwargs['asset_ids']);return self.verify(*args,**kwargs)
+        second=self.finish(verify=rest,deployment_current=lambda *_:True)
+        self.assertEqual(second['status'],'completed',second)
+        self.assertEqual(checked,[ids[1]])
+        self.assertEqual(self.deploys,1)
+
+    def test_catalog_reuse_requires_current_owner_and_live_exact_bytes(self):
+        from public_publication_run import deployment_is_current
+        self.deploy(self.root)
+        row=current_input(self.root,self.run,'photo')[0]
+        sha=hashlib.sha256(self.catalog).hexdigest()
+        with patch('public_catalog_deployment._current_projection',return_value={'sha256':sha}), \
+             patch('public_access_verification.fetch_catalog',return_value=self.catalog):
+            self.assertTrue(deployment_is_current(self.root,{'projectionSha256':sha},[row]))
+        with patch('public_catalog_deployment._current_projection',return_value={'sha256':'b'*64}), \
+             patch('public_access_verification.fetch_catalog') as fetch:
+            self.assertFalse(deployment_is_current(self.root,{'projectionSha256':sha},[row]))
+            fetch.assert_not_called()
+        with patch('public_catalog_deployment._current_projection',return_value={'sha256':sha}), \
+             patch('public_access_verification.fetch_catalog',side_effect=OSError('offline')):
+            with self.assertRaises(OSError):deployment_is_current(self.root,{'projectionSha256':sha},[row])
+
     def test_exact_verification_never_selects_another_fixture_photo(self):
         self.deploy(self.root)
         self.cloud.allowed=True

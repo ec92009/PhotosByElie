@@ -9,6 +9,7 @@ import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
 import { createPaidOrderFulfillment } from "./paid-order-fulfillment.mjs";
 import { createPaidOrderRefund } from "./paid-order-refund.mjs";
+import { readReconciliationRequest } from "./lifecycle-reconciliation-request.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -2926,9 +2927,12 @@ export const createPhotosByElieWorker = ({
     if (!lifecycleDenyStore?.[command]) {
       return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable.");
     }
-    const payload = await parseJson(request);
+    const payload = command === "reconcileManifest"
+      ? await readReconciliationRequest(request) : await parseJson(request);
     const result = await lifecycleDenyStore[command]({ ...payload, actorId: connector.connectorId });
-    return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
+    return credentialedJson(request, { ok: true, ...result }, 200, {
+      "cache-control": "no-store", "cdn-cache-control": "no-store",
+    });
   };
 
   const verifyPublicPreviews = async (request) => {

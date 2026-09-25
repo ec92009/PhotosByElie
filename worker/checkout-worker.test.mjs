@@ -1518,6 +1518,78 @@ test("public preview verification requires enrolled Owner or connector authority
   assert.equal(calls, 2);
 });
 
+test("registration preparation is connector-only, bounded, no-store and uses the authenticated actor", async () => {
+  const calls = [];
+  const backstage = backstageOwnerFixture();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(), googleOAuthAuth: backstage.googleOAuthAuth,
+    ownerDeviceAuthStore: backstage.ownerDeviceAuthStore,
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    ownerConnectorAuth: { requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector required"), { status: 401 });
+      }
+      return { connectorId: "max" };
+    } },
+    lifecycleDenyStore: { reconcileManifest: async (payload) => {
+      calls.push(payload);
+      return { readOnly: payload.prepareOnly === true, state: "prepared" };
+    } },
+  });
+  const url = "https://worker.test/api/v1/lifecycle/reconcile";
+  const headers = { authorization: "Bearer connector-secret" };
+  const payload = { prepareOnly: true, repairId: "repair-one", actorId: "forged", items: [] };
+  for (const rejected of [{}, backstage.headers]) {
+    const response = await worker.fetch(jsonRequest(url, payload, rejected));
+    assert.equal(response.status, 401);
+    assert.match(response.headers.get("cache-control"), /no-store/);
+  }
+  assert.equal(calls.length, 0);
+  const response = await worker.fetch(jsonRequest(url, payload, headers));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+  assert.equal((await response.json()).readOnly, true);
+  assert.deepEqual(calls[0], { ...payload, actorId: "max" });
+  for (const invalid of [null, [], "string"]) {
+    assert.equal((await worker.fetch(jsonRequest(url, invalid, headers))).status, 400);
+  }
+  for (const large of [
+    { ...payload, padding: "x".repeat(65536) },
+    { ...payload, padding: "é".repeat(33000) },
+    { prepareOnly: false, padding: "x".repeat(1048576) },
+  ]) {
+    const response = await worker.fetch(jsonRequest(url, large, headers));
+    assert.equal(response.status, 413);
+    assert.match(response.headers.get("cache-control"), /no-store/);
+  }
+  // The legacy apply envelope is not accidentally subjected to the smaller
+  // preparation cap; store-level membership checks still apply in production.
+  assert.equal((await worker.fetch(jsonRequest(url, {
+    prepareOnly: false, padding: "x".repeat(65536),
+  }, headers))).status, 200);
+  assert.equal(calls.length, 2);
+});
+
+test("reconciliation cancels oversized streamed bodies even with a false Content-Length", async () => {
+  let cancelled = false, called = false;
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    ownerConnectorAuth: { requireConnector: async () => ({ connectorId: "max" }) },
+    lifecycleDenyStore: { reconcileManifest: async () => { called = true; return {}; } },
+  });
+  const body = new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(600000)); },
+    cancel() { cancelled = true; },
+  });
+  const response = await worker.fetch(new Request("https://worker.test/api/v1/lifecycle/reconcile", {
+    method: "POST", body, duplex: "half", headers: { "content-length": "1" },
+  }));
+  assert.equal(response.status, 413);
+  assert.equal(cancelled, true);
+  assert.equal(called, false);
+});
+
 test("background Owner connectors use scoped credentials and report health", async () => {
   const ownerActionStore = createMemoryOwnerActionStore();
   const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);

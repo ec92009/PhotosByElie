@@ -94,7 +94,7 @@ struct UploadView: View {
                             confirmingVisiblePublication = true
                         }
                         .disabled(!model.canStartCloudWorkflow || plan.items.isEmpty)
-                        .backstageHelp("Review the confirmation for continuously uploading every eligible asset. Failed items remain independently retryable without blocking later windows.")
+                        .backstageHelp("Review the confirmation for every eligible asset. Public batches must finish registration, catalog deployment and access verification before the next batch starts.")
                     }
                 }
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
@@ -395,30 +395,30 @@ struct UploadView: View {
             Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
         .confirmationDialog(
-            "Upload and prepare the selected assets?",
+            "Upload the selected assets and finish their publication?",
             isPresented: $confirmingSelectedPublication
         ) {
             Button("Upload selection") {
                 Task { await model.publishSelectedNatively() }
             }
-            .backstageHelp("Confirm full-resolution upload and local catalog preparation for the selected eligible assets.")
+            .backstageHelp("Confirm upload for the selection and automatic public publication where fixture policy allows it.")
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without uploading or preparing the selection.")
         } message: {
-            Text("This uploads media and prepares catalog entries. Deploy verifies the catalog; a separate fresh public access check is required before photos are called Live.")
+            Text("For public fixtures, Backstage uploads media, registers the exact public previews, deploys the approved catalog and verifies public access. Private fixtures remain private. An interruption keeps receipts for Retry same run; historical photos are not repaired automatically.")
         }
         .confirmationDialog(
-            "Upload and prepare all \(model.nativeUploadPlan?.needsUploadCount ?? 0) eligible assets?",
+            "Upload and finish publication for all \(model.nativeUploadPlan?.needsUploadCount ?? 0) eligible assets?",
             isPresented: $confirmingVisiblePublication
         ) {
             Button("Upload all \(model.nativeUploadPlan?.needsUploadCount ?? 0) assets") {
                 Task { await model.publishVisibleNativeWindow() }
             }
-            .backstageHelp("Confirm continuous upload and catalog preparation across every eligible queue window.")
+            .backstageHelp("Confirm sequential upload and policy-permitted publication across every eligible queue window.")
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without uploading the visible tray.")
         } message: {
-            Text("Backstage will continue through the complete eligible queue in sequential batches of up to 50. A failed item keeps its error and receipt for retry while later photos continue automatically. Website deployment remains a separate verified step.")
+            Text("Backstage continues in sequential batches of up to 50. Public batches include registration, catalog deployment and exact public verification; an unfinished stage stops continuation for Retry same run. Private fixtures remain private. Existing objects and completed receipts are preserved.")
         }
         .confirmationDialog(
             Self.catalogRecoveryConfirmationTitle(

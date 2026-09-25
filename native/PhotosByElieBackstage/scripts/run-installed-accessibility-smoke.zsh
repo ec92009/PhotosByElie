@@ -194,7 +194,7 @@ on run arguments
 end run
 APPLESCRIPT
 )"
-expected_upload_selection_state='backstage.uploads.primary-selection|Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.|false'
+expected_upload_selection_state='backstage.uploads.primary-selection|Review the confirmation for the selected assets. Public fixtures continue through registration, catalog deployment and public verification.|false'
 if [[ "$upload_selection_state" != "$expected_upload_selection_state" ]]; then
   print -u2 "FAIL installed accessibility smoke: Upload selection state was ${upload_selection_state}."
   exit 1

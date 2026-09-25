@@ -193,3 +193,15 @@ class PublicPublicationRunTests(unittest.TestCase):
             self.verify(self.root,self.fixture,asset_ids=['not-in-run'],observer=self.cloud.observe)
         with connect(self.root) as conn:
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM public_access_observations').fetchone()[0],0)
+
+    def test_terminal_receipts_roll_back_together_after_write_failure(self):
+        from public_publication_state import set_phase
+        with connect(self.root) as conn:
+            conn.execute("""CREATE TRIGGER fail_terminal BEFORE UPDATE OF status ON asset_upload_runs
+                WHEN NEW.status='failed' BEGIN SELECT RAISE(ABORT,'simulated interruption'); END""")
+            conn.commit()
+        with self.assertRaisesRegex(Exception,'simulated interruption'):
+            set_phase(self.root,self.run,'catalog',status='failed',error='offline')
+        with connect(self.root) as conn:
+            self.assertEqual(get(conn,self.run)['status'],'running')
+            self.assertEqual(conn.execute('SELECT status FROM asset_upload_runs WHERE run_id=?',(self.run,)).fetchone()[0],'completed')

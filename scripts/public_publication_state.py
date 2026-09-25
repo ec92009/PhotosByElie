@@ -63,7 +63,21 @@ def set_phase(root, run_id, phase, *, status='running', error='', catalog=None):
         conn.execute("""UPDATE public_publication_runs SET phase=?,status=?,last_error=?,
             catalog_receipt_json=COALESCE(?,catalog_receipt_json),updated_at=? WHERE run_id=?""",
             (phase,status,error,json.dumps(catalog,sort_keys=True) if catalog is not None else None,now(),run_id))
+        if status != 'running':
+            finish_in_transaction(conn,run_id,status,error)
         conn.commit()
+
+
+def finish_in_transaction(conn, run_id, status, error=''):
+    """Keep both terminal records atomic, including loss of process at commit."""
+    if status not in {'failed','cancelled','completed'}:
+        raise ValueError('Unsupported terminal publication state.')
+    stamp=now()
+    conn.execute("""UPDATE public_publication_runs SET status=?,last_error=?,updated_at=?,
+        phase=CASE WHEN ?='completed' THEN 'complete' ELSE phase END WHERE run_id=?""",
+        (status,error,stamp,status,run_id))
+    conn.execute('UPDATE asset_upload_runs SET status=?,last_error=?,completed_at=?,updated_at=? WHERE run_id=?',
+                 (status,error,stamp,stamp,run_id))
 
 
 def save_item(root, run_id, asset_id, column, value):

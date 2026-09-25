@@ -45,7 +45,7 @@ struct UploadHeaderView: View {
                     confirmingSelectedPublication = true
                 }
                     .disabled(!model.canStartCloudWorkflow || model.selectedDeliveryIDs.isEmpty)
-                    .backstageHelp("Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.")
+                    .backstageHelp("Review the confirmation for the selected assets. Public fixtures continue through registration, catalog deployment and public verification.")
                     .accessibilityLabel("Upload selection")
                     .accessibilityIdentifier("backstage.uploads.primary-selection")
                 Button(model.isVerifyingPublicAccess ? "Verifying access…" : "Verify public access (20)") {
@@ -71,7 +71,7 @@ struct UploadHeaderView: View {
                     .backstageHelp("Deploy the exact approved Owner catalog projection, then wait until the public website returns the same verified checksum.")
                 }
             }
-            Text("Upload stores media; Deploy verifies the catalog. Only a fresh exact photo-and-preview access check counts as Live. Pending registration does not require re-uploading.")
+            Text("New public uploads continue through registration, catalog deployment and public verification. Retry same run preserves verified objects. Historical photos remain pending until separately reconciled; only fresh exact access counts as Live.")
                 .foregroundStyle(.secondary)
             if model.isRunningDelivery, model.nativeUploadPlan == nil {
                 ProgressView("Loading approved upload eligibility…")

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from public_publication_state import get, now, save_item, set_phase
+from public_publication_state import get, now, save_item, set_phase, finish_in_transaction
 from public_preview_registration import PublicationCancelled, RegistrationClient, current_input, register_item
 
 
@@ -54,23 +54,20 @@ def finish_publication(root, run_id, *, client=None, register=register_item, dep
         guard_all()
         # Live remains PBB-179's fresh exact-input view, never this run ledger.
         with connect(root) as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            if conn.execute('SELECT cancel_requested FROM asset_upload_runs WHERE run_id=?',(run_id,)).fetchone()[0]:
+                raise PublicationCancelled('Publication stopped before its final completion receipt.')
             for item in items:
                 if not conn.execute('SELECT 1 FROM public_access_current WHERE fixture_id=? AND asset_id=? AND approval_revision_hash=?',
                     (run['fixture_id'],item['asset_id'],item['source_version_hash'])).fetchone():
                     raise ValueError('Public verification expired or inputs changed before completion; retry verification.')
-        set_phase(root,run_id,'complete',status='completed')
-        with connect(root) as conn:
-            conn.execute("UPDATE asset_upload_runs SET status='completed',last_error='',completed_at=?,updated_at=? WHERE run_id=?",(now(),now(),run_id))
+            finish_in_transaction(conn,run_id,'completed')
             conn.commit()
     except Exception as error:
         with connect(root) as conn:
             phase = get(conn,run_id)['phase']
         status = 'cancelled' if isinstance(error,PublicationCancelled) else 'failed'
         set_phase(root,run_id,phase,status=status,error=str(error)[:500])
-        with connect(root) as conn:
-            conn.execute('UPDATE asset_upload_runs SET status=?,last_error=?,completed_at=?,updated_at=? WHERE run_id=?',
-                         (status,str(error)[:500],now(),now(),run_id))
-            conn.commit()
     return upload_run_status(root,run_id)
 
 

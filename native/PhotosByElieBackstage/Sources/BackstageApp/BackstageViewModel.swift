@@ -8730,12 +8730,15 @@ final class BackstageViewModel: ObservableObject {
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                         run = try await deliveryService.nativeUploadStatus(runID: run.runID)
                         nativeUploadRun = run
-                        nativeUploadStatus = "Uploading eligible queue • batch \(batchOrdinal) of \(nativePublicationBatchCount) • \(totalProcessed + run.processed) of \(initialEligibleCount) processed • \(totalLive + run.live) website live • \(totalFailed + run.failed) failed."
+                        nativeUploadStatus = "\(run.publicationPhaseLabel) • batch \(batchOrdinal) of \(nativePublicationBatchCount) • \(totalProcessed + run.processed) of \(initialEligibleCount) processed • \(totalLive + run.live) website live • \(totalFailed + run.failed) failed."
                     }
                     continuation.record(run.items)
                     totalProcessed += run.processed
                     totalLive += run.live
                     totalFailed += run.failed
+                    if !run.publicationPhase.isEmpty && run.status == "failed" {
+                        throw OwnerActionRunError.failed("Publication stopped during \(run.publicationPhaseLabel.lowercased()): \(run.lastError) Retry same run preserves uploaded objects.")
+                    }
                     totalCatalogPending += run.items.lazy.filter {
                         $0.status == "verified" && ["pending", "local"].contains($0.catalogState)
                     }.count
@@ -8847,8 +8850,7 @@ final class BackstageViewModel: ObservableObject {
     func resumeFailedNativePublicationRun() async {
         guard canStartCloudWorkflow,
               let current = nativeUploadRun,
-              current.status == "failed",
-              current.remaining > 0 else { return }
+              current.canResume else { return }
         let catalogRecovery = current.runID.hasPrefix("catrec-")
         isRunningDelivery = true
         isRunningNativePublication = true
@@ -8857,7 +8859,7 @@ final class BackstageViewModel: ObservableObject {
         nativePublicationBatchCount = 1
         nativeUploadStatus = catalogRecovery
             ? "Retrying the same failed catalog-only run from existing R2 receipts…"
-            : "Retrying the same failed upload run…"
+            : "Resuming the unfinished publication steps of this same run…"
         defer {
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
@@ -8871,7 +8873,7 @@ final class BackstageViewModel: ObservableObject {
             while !run.isFinished {
                 nativeUploadStatus = catalogRecovery
                     ? "Retrying the same catalog-only run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining • no R2 upload."
-                    : "Retrying the same upload run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
+                    : "\(run.publicationPhaseLabel) • same run • \(run.processed) of \(run.requested) uploaded • \(run.remaining) unfinished."
                 try await Task.sleep(nanoseconds: 1_000_000_000)
                 run = try await deliveryService.nativeUploadStatus(runID: current.runID)
                 nativeUploadRun = run

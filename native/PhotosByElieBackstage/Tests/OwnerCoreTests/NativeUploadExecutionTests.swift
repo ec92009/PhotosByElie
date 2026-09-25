@@ -4,6 +4,23 @@ import Testing
 
 @Suite("App-owned upload execution")
 struct NativeUploadExecutionTests {
+    @Test("An uploaded run remains unfinished during registration and can resume with no uploads left")
+    func publicContinuationStages() async throws {
+        let api = UploadExecutionAPI()
+        await api.setPublicStage("registration", status: "running", remaining: 1)
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(api: api, waker: UploadExecutionWaker()))
+        let registering = try await service.nativeUploadStatus(runID: "run-one")
+        #expect(registering.processed == 1)
+        #expect(!registering.isFinished)
+        #expect(registering.publicationPhaseLabel == "Registering exact public previews")
+        await api.setPublicStage("verification", status: "failed", remaining: 1)
+        let failed = try await service.nativeUploadStatus(runID: "run-one")
+        #expect(failed.canResume)
+        #expect(failed.publicationPhase == "verification")
+        await api.setPublicStage("verification", status: "cancelled", remaining: 1)
+        #expect(try await service.nativeUploadStatus(runID: "run-one").canResume)
+    }
+
     @Test("Start returns a durable run before execution and waits for give-back before completion")
     func durableRunBeforeExecution() async throws {
         let api = UploadExecutionAPI()
@@ -43,7 +60,13 @@ private actor UploadExecutionAPI: OwnerActionServing {
     var manifests: [[String: JSONValue]] = []
     private var actions: [String: OwnerAction] = [:]
     private var executionState: OwnerActionState = .running
+    private var publicStage = ""
+    private var publicStatus = "completed"
+    private var publicRemaining = 0
     func setExecution(_ state: OwnerActionState) { executionState = state }
+    func setPublicStage(_ stage: String, status: String, remaining: Int) {
+        publicStage = stage; publicStatus = status; publicRemaining = remaining
+    }
 
     func createAction(_ request: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
         let manifest = request.payload["manifest"]?.objectValue ?? [:]
@@ -52,8 +75,9 @@ private actor UploadExecutionAPI: OwnerActionServing {
         let id = execution ? "execution" : "action-\(manifests.count)"
         let prepared = manifest["prepareOnly"]?.boolValue == true
         let action = OwnerAction(id: id, actionKind: request.actionKind, target: "max", state: execution ? .queued : .completed,
-            result: ["uploadRun": ["runId": "run-one", "status": .string(prepared ? "queued" : "completed"),
-                "requested": 1, "processed": .number(prepared ? 0 : 1), "remaining": .number(prepared ? 1 : 0)]])
+            result: ["uploadRun": ["runId": "run-one", "status": .string(prepared ? "queued" : publicStatus),
+                "publicationPhase": .string(publicStage), "requested": 1,
+                "processed": .number(prepared ? 0 : 1), "remaining": .number(prepared ? 1 : Double(publicRemaining))]])
         actions[id] = action
         return OwnerActionEnvelope(action: action, idempotencyReplayed: false)
     }

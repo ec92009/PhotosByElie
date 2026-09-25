@@ -58,10 +58,11 @@ def ensure_schema(conn):
     # policy/ancestor change, catalog deployment or upload-receipt replacement.
     conn.execute("DROP VIEW IF EXISTS public_access_current")
     conn.execute("DROP VIEW IF EXISTS public_access_inputs")
-    conn.execute(f"""CREATE VIEW public_access_inputs AS
+    conn.execute("DROP VIEW IF EXISTS public_registration_inputs")
+    conn.execute(f"""CREATE VIEW public_registration_inputs AS
         SELECT p.fixture_id,p.asset_id,p.source_version_hash,c.media_id,
           {revision} AS approval_revision_hash,s.version_id AS source_version_id,
-          c.public_url,c.catalog_sha256,c.verified_at,
+          c.public_url,c.catalog_sha256,c.verified_at,c.state AS catalog_state,
           json_object('fixture',p.fixture_id,'asset',p.asset_id,'version',p.source_version_hash,
             'media',c.media_id,'catalog',json_array(c.public_url,c.catalog_sha256,c.verified_at),
             'editorial',{editorial_json},
@@ -92,11 +93,14 @@ def ensure_schema(conn):
         {editorial_join}
         WHERE p.state='live' AND p.withdrawn_at IS NULL AND e.editorial_state='approved'
           AND d.delivery_state='live' AND p.source_version_hash={receipt_version} AND s.source_exists=1
-          AND c.state='live' AND length(c.catalog_sha256)=64 AND c.verified_at IS NOT NULL
-          AND c.public_url='{CATALOG_URL}'
+          AND c.state IN ('local','live','failed')
           AND NOT EXISTS (SELECT 1 FROM sidecar_tombstones t WHERE t.asset_id=p.asset_id AND t.tombstone_state='active')
           AND NOT EXISTS (SELECT 1 FROM media_lifecycle l WHERE l.media_id IN (p.asset_id,c.media_id) AND l.lifecycle_state<>'active')
     """)
+    conn.execute(f"""CREATE VIEW public_access_inputs AS
+        SELECT * FROM public_registration_inputs
+        WHERE catalog_state='live' AND length(catalog_sha256)=64
+          AND verified_at IS NOT NULL AND public_url='{CATALOG_URL}'""")
     conn.execute("""CREATE VIEW public_access_current AS
         SELECT i.*,o.checked_at,o.expires_at FROM public_access_inputs i
         JOIN public_access_observations o ON o.fixture_id=i.fixture_id AND o.asset_id=i.asset_id AND o.input_json=i.input_json
@@ -120,10 +124,10 @@ def _now():
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 
-def _expected(row):
+def _expected(row, *, require_deployed=True):
     value = json.loads(row['input_json'])
     previews = json.loads(value['previews']) if isinstance(value['previews'], str) else value['previews']
-    if len(previews) != 2 or not re.fullmatch(r'[a-f0-9]{64}', row['catalog_sha256']):
+    if len(previews) != 2 or (require_deployed and not re.fullmatch(r'[a-f0-9]{64}', row['catalog_sha256'])):
         raise ValueError('Exact public preview receipts are missing; retain uploads and reconcile their receipts.')
     for preview in previews:
         proof = json.loads(preview['proof'])
@@ -188,19 +192,26 @@ def validate_observation(response, expected, started):
     return remote
 
 
-def verify_public_access(root: Path, fixture_id: str, *, limit=20, observer=None, fetch=fetch_preview, catalog_fetch=fetch_catalog):
+def verify_public_access(root: Path, fixture_id: str, *, limit=20, asset_ids=(), observer=None, fetch=fetch_preview, catalog_fetch=fetch_catalog):
     """One explicit bounded batch. Local observation writes only; no scheduler."""
     from fixture_pipeline import connect
     from fixture_policy import effective_fixture_policy, policy_allows_catalog
     if not fixture_id or not 1 <= int(limit) <= MAX_BATCH:
         raise ValueError('Choose one fixture and a verification batch of 1 to 20 photos.')
+    selected = tuple(asset_ids)
+    if selected and (len(set(selected)) != len(selected) or len(selected) > int(limit)
+                     or any(not isinstance(asset, str) or not asset for asset in selected)):
+        raise ValueError('Choose unique exact photo IDs within the verification batch limit.')
     with connect(root) as conn:
         ensure_schema(conn)
         if not policy_allows_catalog(effective_fixture_policy(root, fixture_id, conn=conn)['effective']):
             raise ValueError('This fixture does not permit public catalog access.')
-        rows = [dict(row) for row in conn.execute("""SELECT i.* FROM public_access_inputs i
+        selection = f" AND i.asset_id IN ({','.join('?' for _ in selected)})" if selected else ''
+        rows = [dict(row) for row in conn.execute(f"""SELECT i.* FROM public_access_inputs i
             LEFT JOIN public_access_observations o ON o.fixture_id=i.fixture_id AND o.asset_id=i.asset_id
-            WHERE i.fixture_id=? ORDER BY COALESCE(o.checked_at,''),i.asset_id LIMIT ?""", (fixture_id, int(limit)))]
+            WHERE i.fixture_id=? {selection} ORDER BY COALESCE(o.checked_at,''),i.asset_id LIMIT ?""", (fixture_id, *selected, int(limit)))]
+        if selected and {row['asset_id'] for row in rows} != set(selected):
+            raise ValueError('An exact requested photo lacks current approved deployed catalog evidence.')
         conn.commit()
     results = []
     batch_started = _time(_now())

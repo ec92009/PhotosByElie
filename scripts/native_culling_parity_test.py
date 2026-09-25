@@ -58,7 +58,8 @@ class NativeCullingParityTest(unittest.TestCase):
             '? "Retrying the same failed catalog-only run from existing R2 receipts…"',
             retry,
         )
-        self.assertIn(': "Retrying the same failed upload run…"', retry)
+        self.assertIn(': "Resuming the unfinished publication steps of this same run…"', retry)
+        self.assertIn('current.canResume', retry)
         self.assertIn("deliveryService.resumeNativeUpload(runID: current.runID)", retry)
         self.assertNotIn("startNativeUpload", retry)
         self.assertIn('Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run")', upload)

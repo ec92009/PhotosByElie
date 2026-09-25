@@ -66,7 +66,9 @@ def claim_upload_run_start(
         if row is None:
             raise ValueError("upload run does not exist")
         status = str(row["status"] or "")
-        if status == "running":
+        from public_publication_state import begin, get
+        public_run = get(conn, run_id)
+        if status == "running" or (public_run and public_run['status']=='running'):
             conn.commit()
             return {
                 "ok": True,
@@ -75,7 +77,7 @@ def claim_upload_run_start(
                 "attached": True,
                 "status": status,
             }
-        expected = "failed" if retry_failed else "queued"
+        expected = "cancelled" if retry_failed and public_run and public_run['status']=='cancelled' else "failed" if retry_failed else "queued"
         if status != expected:
             conn.rollback()
             raise ValueError(
@@ -84,7 +86,7 @@ def claim_upload_run_start(
         updated = conn.execute(
             """
             UPDATE asset_upload_runs
-            SET status = 'running', last_error = '', completed_at = NULL,
+            SET status = 'running', last_error = '', completed_at = NULL, cancel_requested = 0,
                 updated_at = ?
             WHERE run_id = ? AND status = ?
             """,
@@ -99,6 +101,9 @@ def claim_upload_run_start(
                 "attached": True,
                 "status": status,
             }
+        begin(conn, repo_root, run_id)
+        if public_run:
+            conn.execute("UPDATE public_publication_runs SET status='running',worker_pid=?,last_error='',updated_at=? WHERE run_id=?",(os.getpid(),timestamp,run_id))
         conn.commit()
     return {
         "ok": True,
@@ -122,8 +127,12 @@ def record_upload_run_failure(repo_root: Path, run_id: str, error_text: str) -> 
             if row is None:
                 raise ValueError("upload run does not exist")
             status = str(row["status"] or "")
-            if status in {"completed", "completed-with-errors", "cancelled"}:
+            from public_publication_state import get
+            public_run = get(conn, run_id)
+            if status in {"completed", "completed-with-errors", "cancelled"} and not (public_run and public_run['status']=='running'):
                 return {"ok": True, "runId": run_id, "status": status, "recorded": False}
+            if public_run:
+                conn.execute("UPDATE public_publication_runs SET status='failed',last_error=?,updated_at=? WHERE run_id=?",(error_text,timestamp,run_id))
             conn.execute(
                 """
                 UPDATE asset_upload_runs
@@ -167,6 +176,9 @@ def _terminal_upload_error_from_log(repo_root: Path, run_id: str) -> str:
 def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
     """Reconcile only zero-work runs and exact terminal worker receipts."""
     with connect_owner(repo_root) as conn:
+        from public_publication_state import recover_dead_workers
+        recovered_public = recover_dead_workers(conn)
+        conn.commit()
         rows = conn.execute(
             """
             SELECT run.run_id, run.status, run.requested_count,
@@ -180,7 +192,7 @@ def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
         ).fetchall()
 
     completed_zero: list[str] = []
-    failed_receipts: list[str] = []
+    failed_receipts: list[str] = list(recovered_public)
     needs_review: list[str] = []
     for row in rows:
         run_id = str(row["run_id"])
@@ -217,11 +229,13 @@ def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
 
     latest_failed: dict[str, Any] | None = None
     with connect_owner(repo_root) as conn:
+        has_public = conn.execute("SELECT 1 FROM sqlite_master WHERE name='public_publication_runs'").fetchone()
+        public_pending = " OR run_id IN (SELECT run_id FROM public_publication_runs WHERE status IN ('failed','cancelled'))" if has_public else ''
         latest = conn.execute(
-            """
+            f"""
             SELECT run_id
             FROM asset_upload_runs
-            WHERE status = 'failed' AND remaining_count > 0
+            WHERE (status = 'failed' AND remaining_count > 0) {public_pending}
             ORDER BY updated_at DESC, created_at DESC, run_id DESC
             LIMIT 1
             """
@@ -848,10 +862,13 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
     from fixture_editions import enabled as editions_enabled
     with connect_owner(repo_root) as conn:
         scoped = editions_enabled(conn)
+    from public_publication_run import record_worker, finish_publication
     if scoped:
+        record_worker(repo_root, run_id)
         from fixture_edition_uploads import execute_run
         retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
-        return execute_run(repo_root,run_id)
+        completed = execute_run(repo_root,run_id)
+        return {**completed,**finish_publication(repo_root,run_id)}
     retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
     status = retry_sqlite_lock(lambda: upload_run_status(repo_root, run_id))
     asset_ids = [

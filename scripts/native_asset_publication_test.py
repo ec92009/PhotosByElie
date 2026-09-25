@@ -309,10 +309,10 @@ class NativeAssetPublicationTest(unittest.TestCase):
                     'cancelled', 'failed'
                   )),
                   last_error TEXT,
-                  completed_at TEXT, updated_at TEXT
+                  completed_at TEXT, updated_at TEXT, cancel_requested INTEGER DEFAULT 0
                 );
                 INSERT INTO asset_upload_runs VALUES (
-                  'run-1', 'queued', '', NULL, ''
+                  'run-1', 'queued', '', NULL, '', 0
                 );
                 """
             )
@@ -359,7 +359,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                 CREATE TABLE asset_upload_runs (
                   run_id TEXT PRIMARY KEY, status TEXT, processed_count INTEGER,
                   live_count INTEGER, failed_count INTEGER, remaining_count INTEGER,
-                  last_error TEXT, completed_at TEXT, updated_at TEXT
+                  last_error TEXT, completed_at TEXT, updated_at TEXT, cancel_requested INTEGER DEFAULT 0
                 );
                 CREATE TABLE asset_upload_run_items (
                   run_id TEXT, asset_id TEXT, status TEXT,
@@ -371,7 +371,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                   last_error TEXT, updated_at TEXT
                 );
                 INSERT INTO asset_upload_runs VALUES (
-                  'run-1', 'running', 0, 0, 0, 2, '', NULL, ''
+                  'run-1', 'running', 0, 0, 0, 2, '', NULL, '', 0
                 );
                 INSERT INTO asset_upload_run_items VALUES (
                   'run-1', 'asset-1', 'queued', '', '[]', '', NULL, NULL, ''

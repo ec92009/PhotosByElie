@@ -250,11 +250,11 @@ struct UploadView: View {
                 }
             }
             if let run = model.nativeUploadRun,
-               run.status == "failed" {
+               run.canResume {
                 HStack {
                     Label(
                         run.lastError.isEmpty
-                            ? "Upload stopped before the run became terminal."
+                            ? "Publication stopped; resume the unfinished steps of this run."
                             : run.lastError,
                         systemImage: "exclamationmark.triangle.fill"
                     )
@@ -264,7 +264,7 @@ struct UploadView: View {
                         Task { await model.resumeFailedNativePublicationRun() }
                     }
                     .disabled(!model.canStartCloudWorkflow || run.remaining == 0)
-                    .backstageHelp("Resume the exact failed upload run. Verified items are preserved and no replacement run is created.")
+                    .backstageHelp("Resume this exact run through upload, registration, catalog and public verification. Verified objects are preserved; no replacement run is created.")
                 }
             }
             if let run = model.nativeUploadRun,

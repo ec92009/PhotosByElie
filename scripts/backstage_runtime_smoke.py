@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 
 import backstage_photos_job  # Loads only the fixed sealed dependency directory.
+import public_publication_run  # Verify the complete continuation import chain is packaged.
 from PIL import Image
 from sidecar_state_db import _prepare_upload_bridge_artifact
 

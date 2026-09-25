@@ -1347,7 +1347,9 @@ def request_upload_run_cancel(repo_root: Path, run_id: str) -> dict[str, Any]:
         if not row:
             raise ValueError("upload run does not exist")
         status = str(row["status"])
-        if status in {"queued", "running"}:
+        from public_publication_state import get
+        public_run = get(conn,run_id)
+        if status in {"queued", "running"} or (public_run and public_run['status']=='running'):
             terminal_status = "cancelled" if status == "queued" else status
             conn.execute(
                 """
@@ -1395,7 +1397,8 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
                 (row['fixture_id'] if 'fixture_id' in row.keys() else '',item['asset_id'],item['source_version_hash'])).fetchone() if has_public_observations else None
             value['public_access_expires_at'] = verified['expires_at'] if verified else ''
             observed_items.append(value)
-    return {
+        from public_publication_state import overlay
+        return overlay(conn, {
         "ok": True,
         "runId": run_id,
         "status": str(row["status"]),
@@ -1410,7 +1413,7 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         "completedAt": str(row["completed_at"] or ""),
         "lastError": str(row["last_error"] or ""),
         "items": observed_items,
-    }
+        })
 
 
 def record_sale_reference(

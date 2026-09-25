@@ -2959,6 +2959,7 @@ def _upload_bridge_execute_r2(
     media_type: str,
     artifact_root: Path,
     allow_r2_overwrite: bool = False,
+    reconcile_existing: bool = False,
     backend: str | None = None,
     retries: int = 2,
     request_min_interval: float = 0.75,
@@ -3019,7 +3020,7 @@ def _upload_bridge_execute_r2(
                 "error": "completed-sale object keys are immutable and cannot be uploaded or replaced",
                 **({"existing": key.get("existing")} if key.get("existing") else {}),
             }
-        if exists and not allow_r2_overwrite:
+        if exists and not allow_r2_overwrite and not reconcile_existing:
             return position, {
                 **base_result,
                 "status": "skipped_collision",
@@ -3044,6 +3045,21 @@ def _upload_bridge_execute_r2(
                 content_type=content_type,
                 cache_control=cache_control,
             )
+            if reconcile_existing:
+                from r2_receipt_verification import remote_receipt
+                remote = remote_receipt(bucket,object_key,backend=selected_backend,
+                    credentials=(account_id,access_key_id,secret_access_key,endpoint))
+                local_checksum = hashlib.sha256(source_path.read_bytes()).hexdigest()
+                if remote is not None:
+                    if remote != {'bytes':source_path.stat().st_size,'sha256':local_checksum}:
+                        raise ValueError('Existing R2 bytes conflict with this approved source; no overwrite was attempted.')
+                    return position, {**base_result,'status':'uploaded','existedBeforeUpload':True,
+                        'sourcePath':str(source_path),'bytes':remote['bytes'],
+                        'checksumSha256':local_checksum,'remoteChecksumSha256':remote['sha256'],
+                        'remoteVerified':True,'contentType':content_type,'cacheControl':cache_control,
+                        'verificationMethod':'existing-remote-bytes','output':'Reused exact verified object; no PUT.'}
+                if exists:
+                    raise ValueError('Owner inventory expected an object that is now missing; reconcile before uploading.')
             if selected_backend == "s3":
                 _, ok, output = s3_put(
                     upload_item,

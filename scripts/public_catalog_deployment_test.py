@@ -118,6 +118,15 @@ class PublicCatalogDeploymentTest(unittest.TestCase):
         self.assertTrue(second["ok"])
         self.assertFalse(second["pushed"])
 
+    def test_changed_run_authority_stops_before_push(self):
+        before=self._git('ls-remote','origin','refs/heads/main')
+        def withdrawn():
+            raise ValueError('approval withdrawn or run cancelled')
+        with self.assertRaisesRegex(ValueError,'approval withdrawn'):
+            deploy_public_catalog(self.repo,before_publish=withdrawn,
+                fetch=lambda *_:self.fail('No website read before the guarded push'))
+        self.assertEqual(self._git('ls-remote','origin','refs/heads/main'),before)
+
 
 if __name__ == "__main__":
     unittest.main()

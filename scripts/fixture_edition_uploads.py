@@ -135,6 +135,11 @@ def execute_run(root: Path, run_id: str):
             policy=effective_fixture_policy(root,fixture_id,conn=conn)['effective']
             keys=object_keys(row,fixture_id,revisions[asset_id],policy)
         if not keys: raise ValueError('Fixture policy no longer permits uploading.')
+        with connect(root) as conn:
+            receipts = recovery_receipts(root,conn,fixture_id,asset_id,revisions[asset_id])
+        if receipts:
+            from r2_receipt_verification import verify_receipts
+            return verify_receipts(receipts)
         spool=root/'assets/owner-actions/fixture-edition-uploads'/run_id/hashlib.sha256(asset_id.encode()).hexdigest()[:20]
         spool.mkdir(parents=True,exist_ok=True)
         exported=_run_backstage_photos_materialize_one(root,asset_id=asset_id,destination=spool/uuid.uuid4().hex,
@@ -144,7 +149,7 @@ def execute_run(root: Path, run_id: str):
         if not exported.get('materializedCount') or not path.is_file():
             raise ValueError(item.get('error') or item.get('reason') or 'The approved image could not be exported.')
         with connect(root) as conn: validate_upload(conn,fixture_id,asset_id,revisions[asset_id])
-        return _upload_bridge_execute_r2(planned_keys=keys,export_path=path,media_type=row['media_type'],artifact_root=spool/'renders')
+        return _upload_bridge_execute_r2(planned_keys=keys,export_path=path,media_type=row['media_type'],artifact_root=spool/'renders',reconcile_existing=True)
     completed=run_upload_batch(root,run_id,upload)
     if any(r.get('catalog_state')=='local' for r in completed.get('items',[])):
         completed['publicCatalogArtifacts']=refresh_public_catalog_artifacts(root)
@@ -184,6 +189,8 @@ def recovery_receipts(root, conn, fixture_id, asset_id, revision):
     validate_upload(conn, fixture_id, asset_id, revision)
     delivery = conn.execute('SELECT * FROM fixture_edition_delivery WHERE fixture_id=? AND asset_id=? AND revision_hash=?',
                             (fixture_id, asset_id, revision)).fetchone()
+    if not delivery:
+        return []
     receipt_version = delivery['receipt_version_hash'] or revision
     # Legacy objects have shared names. Keep their evidence intact; recovery
     # requires an explicit new scoped upload rather than reassigning those keys.
@@ -195,7 +202,7 @@ def recovery_receipts(root, conn, fixture_id, asset_id, revision):
     for key in object_keys(asset, fixture_id, revision, policy):
         receipt = conn.execute("""SELECT r.checksum_sha256,r.verification_json,o.bytes
             FROM fixture_delivery_receipts r JOIN r2_objects o
-            ON o.object_key=r.object_key AND o.bucket=? AND o.lifecycle_state='current'
+            ON o.object_key=r.object_key AND o.bucket=? AND o.lifecycle_state='current' AND o.photo_id=r.asset_id
             WHERE r.fixture_id=? AND r.asset_id=? AND r.version_hash=?
               AND r.destination='r2' AND r.status='verified' AND r.object_key=?""",
             (key['bucket'], fixture_id, asset_id, revision, key['key'])).fetchone()

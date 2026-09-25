@@ -315,6 +315,22 @@ public struct NativeUploadRun: Sendable, Equatable {
     public var lastError: String
     public var cancelRequested: Bool
     public var items: [NativeUploadRunItem]
+    public var publicationPhase: String = ""
+
+    public var canResume: Bool {
+        remaining > 0 && (status == "failed" || (status == "cancelled" && !publicationPhase.isEmpty))
+    }
+
+    public var publicationPhaseLabel: String {
+        switch publicationPhase {
+        case "upload": "Uploading and checking stored bytes"
+        case "registration": "Registering exact public previews"
+        case "catalog": "Deploying and verifying the catalog"
+        case "verification": "Verifying public photo access"
+        case "complete": "Public publication verified"
+        default: "Uploading"
+        }
+    }
 
     public var isFinished: Bool {
         ["completed", "completed-with-errors", "failed", "cancelled"].contains(status)
@@ -1060,7 +1076,8 @@ public actor FixtureDeliveryService {
             completedAt: result["completedAt"]?.stringValue ?? "",
             lastError: result["lastError"]?.stringValue ?? "",
             cancelRequested: result["cancelRequested"]?.boolValue ?? false,
-            items: items
+            items: items,
+            publicationPhase: result["publicationPhase"]?.stringValue ?? ""
         )
     }
 

@@ -125,6 +125,7 @@ def deploy_public_catalog(
     poll_interval_seconds: float = 5,
     fetch: Callable[[str, str, int], tuple[int, bytes]] | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    before_publish: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Publish one immutable Owner projection from an isolated git worktree.
 
@@ -193,6 +194,8 @@ def deploy_public_catalog(
                 cwd=worktree,
             )
             commit_sha = _run(["git", "rev-parse", "HEAD"], cwd=worktree)
+            if before_publish:
+                before_publish()
             _run(["git", "push", "origin", "HEAD:main"], cwd=worktree)
             pushed = True
 
@@ -201,6 +204,8 @@ def deploy_public_catalog(
         last_status = 0
         last_payload = b""
         while True:
+            if before_publish:
+                before_publish()
             attempt += 1
             try:
                 if fetch is None:

@@ -1802,7 +1802,7 @@ struct OwnerCoreTests {
 
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
-        #expect(OwnerContract.openAPIVersion == "1.3.0")
+        #expect(OwnerContract.openAPIVersion == "1.4.0")
         #expect(OwnerContract.endpoints[.verifyPublicPreviews]?.path == "/lifecycle/public-previews/verify")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")

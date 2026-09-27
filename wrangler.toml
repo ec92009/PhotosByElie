@@ -25,8 +25,9 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
-# PBE-215: delivery stays disabled until verified current catalog authority enrollment.
-CAMPAIGN_VIDEO_HOST_ENABLED = "false"
+# PBE-215: guarded runtime and generation-1 current catalog authority verified 2026-09-27.
+# Every package still requires exact photo readiness and approved derivative binding.
+CAMPAIGN_VIDEO_HOST_ENABLED = "true"
 # Publisher recovery can be enabled independently while video delivery stays off.
 PUBLIC_CATALOG_AUTHORITY_ENABLED = "true"
 # Secret required to enable buyer delivery emails:

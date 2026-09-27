@@ -25,10 +25,10 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
-# PBE-215: source-only on existing download domain; disabled pending readiness review.
+# PBE-215: delivery stays disabled until verified current catalog authority enrollment.
 CAMPAIGN_VIDEO_HOST_ENABLED = "false"
 # Publisher recovery can be enabled independently while video delivery stays off.
-PUBLIC_CATALOG_AUTHORITY_ENABLED = "false"
+PUBLIC_CATALOG_AUTHORITY_ENABLED = "true"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 # Optional legacy Google-backed Cloudflare Access login:

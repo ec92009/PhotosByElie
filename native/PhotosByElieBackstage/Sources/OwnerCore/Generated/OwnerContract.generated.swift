@@ -2,9 +2,9 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.4.0"
-    public static let specSHA256 = "c3aad07add0897d6ed48566ec067a371b4e6c30fc030b852822b080ab64639c7"
-    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
+    public static let openAPIVersion = "1.5.0"
+    public static let specSHA256 = "db55a2a17645581cf462490c9f626ee25ab3eed461cdbe7c9f8104e960aff9cf"
+    public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress", "PublicCatalogAuthority", "PublicCatalogTransition"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
     public enum Operation: String, CaseIterable, Sendable {
@@ -25,12 +25,14 @@ public enum OwnerContract {
         case getAccessState = "getAccessState"
         case getAction = "getAction"
         case getAuthSession = "getAuthSession"
+        case getCampaignVideo = "getCampaignVideo"
         case getConnectorAction = "getConnectorAction"
         case getDeliverableAsset = "getDeliverableAsset"
         case getGalleryAccess = "getGalleryAccess"
         case getHealth = "getHealth"
         case getOwnerSession = "getOwnerSession"
         case getPBEOwnerSession = "getPBEOwnerSession"
+        case getPublicCatalogAuthority = "getPublicCatalogAuthority"
         case getRenderJob = "getRenderJob"
         case heartbeatConnector = "heartbeatConnector"
         case listActions = "listActions"
@@ -42,6 +44,7 @@ public enum OwnerContract {
         case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
         case reconcileLifecycleManifest = "reconcileLifecycleManifest"
+        case reserveCampaignVideo = "reserveCampaignVideo"
         case revokeOwnerDevice = "revokeOwnerDevice"
         case saveDeliverable = "saveDeliverable"
         case saveGroup = "saveGroup"
@@ -50,6 +53,8 @@ public enum OwnerContract {
         case transitionAction = "transitionAction"
         case transitionConnectorAction = "transitionConnectorAction"
         case transitionDeliverable = "transitionDeliverable"
+        case transitionPublicCatalogAuthority = "transitionPublicCatalogAuthority"
+        case uploadCampaignVideo = "uploadCampaignVideo"
         case verifyPublicPreviews = "verifyPublicPreviews"
     }
 
@@ -81,12 +86,14 @@ public enum OwnerContract {
         .getAccessState: Endpoint(method: "GET", path: "/acs/state"),
         .getAction: Endpoint(method: "GET", path: "/actions/{actionId}"),
         .getAuthSession: Endpoint(method: "GET", path: "/auth/session"),
+        .getCampaignVideo: Endpoint(method: "GET", path: "/campaign-videos/{slug}"),
         .getConnectorAction: Endpoint(method: "GET", path: "/connectors/actions/{actionId}"),
         .getDeliverableAsset: Endpoint(method: "GET", path: "/deliverables/{deliverableId}/{action}"),
         .getGalleryAccess: Endpoint(method: "GET", path: "/acs/gallery-access"),
         .getHealth: Endpoint(method: "GET", path: "/health"),
         .getOwnerSession: Endpoint(method: "GET", path: "/owner/session"),
         .getPBEOwnerSession: Endpoint(method: "GET", path: "/pbe-owner/session"),
+        .getPublicCatalogAuthority: Endpoint(method: "GET", path: "/public-catalog/authority"),
         .getRenderJob: Endpoint(method: "GET", path: "/jobs/{jobId}"),
         .heartbeatConnector: Endpoint(method: "POST", path: "/connectors/heartbeat"),
         .listActions: Endpoint(method: "GET", path: "/actions"),
@@ -98,6 +105,7 @@ public enum OwnerContract {
         .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
         .reconcileLifecycleManifest: Endpoint(method: "POST", path: "/lifecycle/reconcile"),
+        .reserveCampaignVideo: Endpoint(method: "POST", path: "/campaign-videos/{slug}"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),
         .saveDeliverable: Endpoint(method: "POST", path: "/deliverables"),
         .saveGroup: Endpoint(method: "POST", path: "/acs/groups"),
@@ -106,6 +114,8 @@ public enum OwnerContract {
         .transitionAction: Endpoint(method: "POST", path: "/actions/{actionId}/{transition}"),
         .transitionConnectorAction: Endpoint(method: "POST", path: "/connectors/actions/{actionId}/{transition}"),
         .transitionDeliverable: Endpoint(method: "POST", path: "/deliverables/{deliverableId}/{action}"),
+        .transitionPublicCatalogAuthority: Endpoint(method: "POST", path: "/public-catalog/authority"),
+        .uploadCampaignVideo: Endpoint(method: "PUT", path: "/campaign-videos/{slug}/content"),
         .verifyPublicPreviews: Endpoint(method: "POST", path: "/lifecycle/public-previews/verify"),
     ]
 }

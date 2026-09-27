@@ -682,7 +682,8 @@
     };
   };
 
-  const api = { decodeCatalog, toBytes };
+  // The hosting reader reuses scalar decoding with its own strict traversal/schema guards.
+  const api = { decodeCatalog, toBytes, SQLiteCatalogReader };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.photosByElieCatalogSqlite = api;
 })();

@@ -100,6 +100,27 @@ Always use SQLite `.backup`. Do not upload a raw copy of a live database file.
 
 ## Destination Machine: Download And Restore Snapshot
 
+Before any replacement, settle and stop all Owner/catalog writers and confirm
+the intended direction and snapshot provenance. A database restore is not a
+catalog-publication or video-host activation operation.
+
+If campaign-video hosting has been enrolled, the coordinated operator must keep
+hosting disabled **before** restoring Owner or rolling back a writer/runtime.
+A pre-enrollment snapshot can omit the local authority row, and an older enrolled
+snapshot can carry stale revision/generation data. Neither absence nor an old
+verified receipt authorizes continued hosting. See the
+[publisher-authority recovery contract](../api/public-catalog-authority.md).
+
+After restore, use the supported enrollment/verification functions to reconcile
+the exact current Owner projection, remote publisher identity/generation and
+deployed catalog bytes. Authentication/endpoint failure, remote pending/newer
+state, or missing lineage blocks resumption; never clear the remote marker or
+patch enrollment rows manually. Verify all enabled installed/fallback/override
+writers contain the current guards before reenabling hosting. An older unguarded
+runtime must not run while hosting is enabled. Record the disabled and later
+verified states separately. The transfer commands below do not satisfy these
+prerequisites or grant permission to overwrite newer local work.
+
 Run this on the machine that needs the DB.
 
 ```bash

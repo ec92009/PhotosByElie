@@ -25,6 +25,10 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
+# PBE-215: source-only on existing download domain; disabled pending readiness review.
+CAMPAIGN_VIDEO_HOST_ENABLED = "false"
+# Publisher recovery can be enabled independently while video delivery stays off.
+PUBLIC_CATALOG_AUTHORITY_ENABLED = "false"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 # Optional legacy Google-backed Cloudflare Access login:
@@ -75,6 +79,8 @@ custom_domain = true
 [[routes]]
 pattern = "auth.photos-by-elie.com"
 custom_domain = true
+
+# PBE-215 reuses download.photos-by-elie.com above. No apex route, DNS or proxy change.
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"

@@ -242,7 +242,15 @@ versions. Their normal reviewed version update belongs to the eventual player
 release. Independent cross-origin playback and HTTPS HEAD/Range/full-byte checks
 remain release verification, not evidence supplied by a local test or receipt.
 
-## Deployment readiness (main controller only; not executed)
+## Deployment readiness (historical sequence; live checkpoint linked below)
+
+The 27 September 19:40 CEST server activation is recorded in
+[current publisher rollout](public-catalog-authority.md#live-rollout-checkpoint--27-september-2026-1940-cest).
+The staged schema, guarded writer, exact catalog parity/enrollment and server
+flags are live. No native MP4 was uploaded: range/full-hash/playback acceptance
+and daily-client activation remain pending exact eligible-package readiness.
+The steps below are the original runbook, not a request to replay completed
+migrations, enrollment or deployment.
 
 1. Coordinate the existing PBB-191 runtime release and inventory all installed,
    fallback and override writers under the catalog-authority contract. The patch

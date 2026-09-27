@@ -143,7 +143,10 @@ class CatalogAuthorityClient:
         status, payload = self._request("GET")
         if status == 404:
             try:
-                if json.loads(payload).get("error", {}).get("code") == "public_catalog_authority_absent":
+                row = json.loads(payload)
+                if (isinstance(row, dict) and row.get("ok") is False
+                        and isinstance(row.get("error"), dict)
+                        and row["error"].get("code") == "public_catalog_authority_absent"):
                     return None
             except (ValueError, TypeError, AttributeError):
                 pass
@@ -199,8 +202,21 @@ class CatalogAuthorityClient:
         return self._transition("commit", current["generation"], current["projectionRevision"], current["sha256"])
 
 
+def is_canonical_owner(owner_db: Path) -> bool:
+    """Classify by the fixed resolved Owner path, never config, flags or basename.
+
+    Resolve both sides so aliases cannot opt a production database out of the
+    guard. Credential loading separately rejects an unsafe canonical target.
+    """
+    try:
+        canonical = CANONICAL_REPO_ROOT / "assets/owner-actions/Owner.sqlite"
+        return owner_db.resolve() == canonical.resolve()
+    except (OSError, RuntimeError):
+        raise AuthorityError("Catalog authority Owner path cannot be verified") from None
+
+
 def client_for_owner(owner_db: Path) -> CatalogAuthorityClient:
-    """Never point an enrolled production writer at an alternate Owner database."""
+    """Never point a production authority check at an alternate Owner database."""
     credential = load_credentials()
     if owner_db.is_symlink() or owner_db.resolve() != credential.repo_root / "assets/owner-actions/Owner.sqlite":
         raise AuthorityError("Catalog authority Owner database does not match the canonical connector root")

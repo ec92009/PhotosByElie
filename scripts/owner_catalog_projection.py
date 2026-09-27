@@ -98,15 +98,38 @@ def _authority_enrollment(conn: sqlite3.Connection) -> dict | None:
     return dict(zip(("publisherId", "generation", "operationId", "projectionRevision", "sha256", "state"), row))
 
 
+def _owner_database_path(conn: sqlite3.Connection) -> Path | None:
+    filename = next((row[2] for row in conn.execute("PRAGMA database_list") if row[1] == "main"), "")
+    return Path(filename) if filename else None
+
+
 def _authority_client(conn: sqlite3.Connection, supplied=None):
-    """Load credentials lazily, only for an explicitly enrolled writer."""
+    """Load credentials only for an enrolled or canonical production writer."""
     if supplied is not None:
         return supplied
     from catalog_authority_client import client_for_owner
-    filename = next((row[2] for row in conn.execute("PRAGMA database_list") if row[1] == "main"), "")
-    if not filename:
+    owner_db = _owner_database_path(conn)
+    if owner_db is None:
         raise RuntimeError("Catalog authority requires the canonical persistent Owner database")
-    return client_for_owner(Path(filename))
+    return client_for_owner(owner_db)
+
+
+def _require_unenrolled_authority_absent(conn: sqlite3.Connection, supplied=None) -> None:
+    """A restored local database cannot erase production's remote enrollment.
+
+    This fences the next changed projection, not an external restore itself:
+    hosting must be disabled before whole-Owner restore or runtime rollback.
+    Temporary/noncanonical fixture databases retain their offline behavior.
+    """
+    from catalog_authority_client import is_canonical_owner
+    owner_db = _owner_database_path(conn)
+    if owner_db is None or not is_canonical_owner(owner_db):
+        return
+    # Also reserve the write lock when the caller opened a deferred transaction.
+    # No rows are changed; a failed GET cannot change projection bytes/revision.
+    conn.execute("UPDATE owner_public_catalog_projections SET revision=revision WHERE 0")
+    if _authority_client(conn, supplied).get() is not None:
+        raise RuntimeError("Remote catalog authority exists without local enrollment; explicit re-enrollment/recovery required")
 
 
 def _save_authority_enrollment(conn: sqlite3.Connection, receipt: dict) -> None:
@@ -342,17 +365,21 @@ def store_projection(
     if approved_policy != APPROVED_POLICY:
         raise RuntimeError(f"catalog projection changes require approved policy {APPROVED_POLICY}")
     evidence = validate_catalog_bytes(payload)
-    if ensure_schema:
-        ensure_projection_schema(conn)
     if not conn.in_transaction:
         conn.execute("BEGIN IMMEDIATE")
-    current = projection_snapshot(conn, ensure_schema=False)
+    has_projection = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_public_catalog_projections'"
+    ).fetchone() is not None
+    current = projection_snapshot(conn, ensure_schema=False) if has_projection else None
     if expected_sha256 is not None:
         actual = current["sha256"] if current else ""
         if actual != expected_sha256:
             raise RuntimeError("Owner projection changed since the reviewed revision")
     if current and current["sha256"] == evidence["sha256"]:
+        # A restored legacy schema needs no initialization for a true no-op.
         return {**current, "changed": False}
+    if ensure_schema:
+        ensure_projection_schema(conn)
     timestamp = now_iso()
     revision = (current["revision"] if current else 0) + 1
     created_at = current["createdAt"] if current else timestamp
@@ -365,6 +392,9 @@ def store_projection(
         if client.publisher_id != enrollment["publisherId"]:
             raise RuntimeError("Catalog authority publisher identity changed")
         prepared = client.prepare(revision, evidence["sha256"], floor_generation=enrollment["generation"])
+        _projection_fence(conn, current)
+    else:
+        _require_unenrolled_authority_absent(conn, authority_client)
         _projection_fence(conn, current)
     conn.execute(
         """

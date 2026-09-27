@@ -6,6 +6,7 @@ import { createCurrentPublicCatalogReader } from "./campaign-video-catalog.mjs";
 import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
 import { TestD1, hash } from "./campaign-video-test-support.mjs";
 import { catalogBytes, catalogResponse } from "./campaign-video-catalog-test-support.mjs";
+import deployedWorker from "./deployed-worker.mjs";
 
 const bytes = catalogBytes(["media-test"]);
 const sha = hash(bytes);
@@ -144,10 +145,47 @@ test("API requires native existing connector, exact origin/path, enabled flag an
   assert.equal(absent.status, 404); assert.equal((await absent.json()).error.code, "public_catalog_authority_absent");
   const disabled = createPublicCatalogAuthorityApi({ database: f.database,
     connectorAuth: createOwnerConnectorAuth({ credentials: { max: "test-token" } }) });
-  assert.equal((await disabled.fetch(new Request(url, { headers }))).status, 503);
+  assert.equal((await disabled.fetch(new Request(url, { headers }))).status, 404);
+  assert.equal((await disabled.fetch(new Request(url, { method: "POST", headers, body }))).status, 503);
   assert.equal(await f.authority.read(), null); assert.equal(f.origin.calls, 0);
   // Regex must not coerce single-element arrays into apparently valid hashes.
   assert.equal((await f.post({ ...value, sha256: [value.sha256] })).status, 400);
   assert.equal((await f.post({ ...value, operationId: [value.operationId] })).status, 400);
   assert.equal(await f.authority.read(), null); assert.equal(f.origin.calls, 0);
+});
+
+test("disabled hosting retains authenticated read authority for restored production writers", async () => {
+  const f = fixture(); const value = await transition();
+  await f.authority.prepare(value, "max"); await f.post(commit(value));
+  const disabled = createPublicCatalogAuthorityApi({ database: f.database,
+    connectorAuth: createOwnerConnectorAuth({ credentials: { max: "test-token" } }) });
+  const before = await f.authority.read(); const calls = f.origin.calls;
+  assert.equal((await disabled.fetch(new Request(url))).status, 401);
+  const read = await disabled.fetch(new Request(url, { headers }));
+  assert.equal(read.status, 200);
+  assert.equal((await read.json()).operationId, before.operationId);
+  const next = await transition(2, 1);
+  const denied = await disabled.fetch(new Request(url, { method: "POST", headers, body: JSON.stringify(next) }));
+  assert.equal(denied.status, 503);
+  assert.equal((await denied.json()).error.code, "public_catalog_authority_disabled");
+  assert.deepEqual(await f.authority.read(), before); assert.equal(f.origin.calls, calls);
+});
+
+test("production publisher recovery can commit while video serving remains disabled", async (t) => {
+  const f = fixture(); const value = await transition();
+  t.mock.method(globalThis, "fetch", f.origin.fetch.bind(f.origin));
+  const env = { ACCESS_DB: f.database, OWNER_CONNECTOR_TOKENS_JSON: JSON.stringify({ max: "test-token" }),
+    PUBLIC_CATALOG_AUTHORITY_ENABLED: "true", CAMPAIGN_VIDEO_HOST_ENABLED: "false" };
+  const post = (body) => deployedWorker.fetch(new Request(url, { method: "POST", headers, body: JSON.stringify(body) }), env);
+  assert.equal((await post(value)).status, 200);
+  assert.equal((await post(commit(value))).status, 200);
+  assert.equal((await f.authority.read()).state, "verified");
+  const video = await deployedWorker.fetch(new Request(
+    "https://download.photos-by-elie.com/assets/campaign-media/native-recovery.mp4"), env);
+  assert.equal(video.status, 503);
+  assert.equal((await video.json()).error.code, "campaign_video_host_disabled");
+  env.PUBLIC_CATALOG_AUTHORITY_ENABLED = "false";
+  assert.equal((await post(commit(value))).status, 503);
+  const read = await deployedWorker.fetch(new Request(url, { headers }), env);
+  assert.equal(read.status, 200); assert.equal((await read.json()).state, "verified");
 });

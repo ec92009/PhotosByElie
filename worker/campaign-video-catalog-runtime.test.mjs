@@ -27,7 +27,8 @@ test("workerd production route sees current SQLite additions/removals and revisi
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: "pbe-catalog-test", modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: "2026-07-10", compatibilityFlags: ["nodejs_compat"],
-    bindings: { OWNER_CONNECTOR_TOKENS_JSON: JSON.stringify({ max: "test-connector-only" }), CAMPAIGN_VIDEO_HOST_ENABLED: "true" },
+    bindings: { OWNER_CONNECTOR_TOKENS_JSON: JSON.stringify({ max: "test-connector-only" }), CAMPAIGN_VIDEO_HOST_ENABLED: "true",
+      PUBLIC_CATALOG_AUTHORITY_ENABLED: "true" },
     d1Databases: ["ACCESS_DB"], r2Buckets: ["PRIVATE_MEDIA"],
     outboundService: async (request) => {
       assert.equal(request.url, PUBLIC_CATALOG_URL);

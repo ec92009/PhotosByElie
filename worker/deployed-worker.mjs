@@ -452,7 +452,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === CATALOG_AUTHORITY_PATH || url.pathname.startsWith(`${CATALOG_AUTHORITY_PATH}/`)) {
       return createPublicCatalogAuthorityApi({ database: env.ACCESS_DB, connectorAuth: ownerConnectorAuthFor(env),
-        enabled: env.CAMPAIGN_VIDEO_HOST_ENABLED === "true" }).fetch(request);
+        enabled: env.PUBLIC_CATALOG_AUTHORITY_ENABLED === "true" }).fetch(request);
     }
     if (isCampaignVideoRequest(url.pathname)) {
       return campaignVideoResponse(request, env, { connectorAuth: ownerConnectorAuthFor(env) });

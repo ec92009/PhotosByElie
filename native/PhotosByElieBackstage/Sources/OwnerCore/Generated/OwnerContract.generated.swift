@@ -3,7 +3,7 @@ import Foundation
 
 public enum OwnerContract {
     public static let openAPIVersion = "1.5.0"
-    public static let specSHA256 = "91161d301454acedd5a05730c9600c0e6ca3c431a886e2a61949dca3f3f41055"
+    public static let specSHA256 = "db55a2a17645581cf462490c9f626ee25ab3eed461cdbe7c9f8104e960aff9cf"
     public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress", "PublicCatalogAuthority", "PublicCatalogTransition"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 

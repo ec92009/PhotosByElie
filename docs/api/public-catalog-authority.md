@@ -21,7 +21,11 @@ public-preview lifecycle/denial checks remain independently required.
 
 Fixed endpoint: `https://auth.photos-by-elie.com/api/v1/public-catalog/authority`.
 Existing connector bearer only; no redirects, query, cookies or browser context.
-The endpoint shares the fail-closed campaign-video feature flag. GET returns the
+POST requires `PUBLIC_CATALOG_AUTHORITY_ENABLED = "true"`, independent of
+`CAMPAIGN_VIDEO_HOST_ENABLED`. Both default false. This permits publisher
+reconciliation while video delivery stays off. Authenticated GET stays
+available after migration even when hosting is disabled: a restored writer must
+not mistake a disabled host for absent publisher authority. GET returns the
 current primary-backed marker or exact `404 public_catalog_authority_absent`.
 Other failures must never be interpreted as absence.
 
@@ -72,12 +76,27 @@ repository binding, safe permissions, no symlinks, no redirect and bounded
 responses. The supported Owner projection functions own enrollment state and
 prepare/commit hooks. Un-enrolled temporary fixtures remain offline.
 
+An actual production Owner without a local enrollment row must check current
+authenticated remote authority under its local write lock before changing the
+projection. Only exact typed absence permits pre-enrollment writes. Existing
+pending/verified authority requires supported re-enrollment/recovery first;
+auth/storage/network failure or a different 404 is never absence. This closes
+whole-database restores of pre-enrollment backups without adding a service or
+another local state store. An older enrolled snapshot must still satisfy the
+existing remote revision/generation fences; there is no forced reset.
+
 Before activation, prove every actual writer uses those hooks, including the
 installed/sealed Backstage runtime rather than merely this source checkout.
 Quiesce writers for initial supported enrollment; compare the exact current
 Owner projection and deployed bytes. A stale writer could bypass the pending
 fence, so source-only coverage is not enough. Deployment sequence must preserve
 the old Worker version and keep hosting unavailable until these checks pass.
+The staged rollout must provide the reviewed additive schema and authenticated
+GET in the disabled Worker before installing the guarded production writer;
+old/missing endpoints intentionally block, rather than bypassing the guard.
+Before restoring Owner or rolling back any runtime, keep hosting unavailable;
+afterward recheck current Owner/enrollment/remote authority and public parity
+before reenabling. Never run an older unguarded writer while hosting is enabled.
 
 Only the reviewed additive migration may be applied; preserve existing bindings,
 secrets, domains and catalog hosting. No main-site DNS/proxy changes, public

@@ -206,6 +206,10 @@ shape alongside the unchanged legacy relative-film contract. Matching player
 and hosting tests, OpenAPI and generated Swift contract accompany this change.
 The commented apex route proposal is removed from `wrangler.toml`; existing
 custom domains and `CAMPAIGN_VIDEO_HOST_ENABLED = "false"` remain unchanged.
+The later publisher integration adds independent
+`PUBLIC_CATALOG_AUTHORITY_ENABLED = "false"`. Neither flag was enabled live.
+Authenticated authority GET remains available after schema deployment while
+both flags are false; authority POST and public video serving have separate gates.
 
 No DNS/proxy changes, new services, account changes or new credentials are needed
 for this selected host. Whole-apex proxying remains outside the grant. Marketing
@@ -219,33 +223,46 @@ remain release verification, not evidence supplied by a local test or receipt.
 
 ## Deployment readiness (main controller only; not executed)
 
-1. Verify installed writer-hook coverage, supported publisher enrollment and
-   current projection/deployed parity under the catalog-authority contract.
-   The patch must not be activated on source tests alone. Fresh-read the
+1. Coordinate the existing PBB-191 runtime release and inventory all installed,
+   fallback and override writers under the catalog-authority contract. The patch
+   must not be activated on source tests alone. Fresh-read the
    deployment/version, bindings/vars/secrets **names** and existing custom domains;
    preserve the version ID as rollback. No apex route or proxy change is in scope.
 2. Review the isolated source and its tests. Run `npm ci --ignore-scripts`,
    `npm run test:campaign-video`, `npm run test:campaign-video-hosting`,
+   `npm run test:catalog-authority`,
    `python3 scripts/generate_owner_swift_contract.py --check`, then
    `./node_modules/.bin/wrangler deploy --dry-run --keep-vars`.
 3. Run `./node_modules/.bin/wrangler d1 migrations list photosbyelie-access --remote`.
    Apply with `./node_modules/.bin/wrangler d1 migrations apply photosbyelie-access --remote`
    **only if** the reviewed pending set is exactly `0016_campaign_videos.sql`.
    Unexpected pending migrations need reconciliation, not a blanket apply.
-4. Only after the preceding gates and deployment authority: set the feature true
-   in reviewed config, preserving existing custom domains/bindings. Do not
-   add an apex route or change DNS under the present grant.
-5. Deploy the reviewed commit using
+4. With deployment authority, stage the reviewed Worker with both feature flags
+   false. Verify authenticated authority GET (typed absence or exact existing
+   marker), rejected mutations and unavailable video delivery. Preserve all
+   existing custom domains/bindings; no apex route or DNS change.
+5. Deploy each reviewed configuration using
    `./node_modules/.bin/wrangler deploy --keep-vars --message "PBE-215 approved derivative hosting <commit>"`.
    Keep the existing two custom domains, all bindings, and current production
    vars/secrets. Capture the returned new version/deployment IDs.
-6. Recheck auth rejection, 404 exact absent slug, public-site and commerce health,
+6. Install/verify the guarded current writer and retire/update enabled legacy
+   paths through the coordinated native release. While video serving stays
+   false, enable only `PUBLIC_CATALOG_AUTHORITY_ENABLED`; quiesce writers and
+   complete supported enrollment/recovery with exact current projection and
+   deployed full-byte parity. Never enable video temporarily just to perform
+   a catalog transition. Missing/older restored state must reconcile or block.
+7. Only after installed-writer and current authority proof, enable
+   `CAMPAIGN_VIDEO_HOST_ENABLED` in a separately verified configuration. Recheck
+   auth rejection, 404 exact absent slug, public-site and commerce health,
    and existing static film URLs. Only after exact photo readiness/approval is
    available may main reserve/upload a package. Independently verify anonymous
    HTTPS HEAD, Range, MIME, length, full SHA-256 and encoded playback. A local
    test or R2 receipt does not complete PBE publication/campaign integration.
 
-Rollback: set the feature false or deploy the saved prior Worker version with
+Rollback: disable `CAMPAIGN_VIDEO_HOST_ENABLED` first. Prefer retaining current
+guarded publisher APIs so supported catalog recovery can run while serving is
+off. Do not roll back a writer or restore Owner while serving is enabled. If a
+full Worker rollback is required, deploy the saved prior Worker version with
 `./node_modules/.bin/wrangler rollback 22ca2c66-a88f-4ad9-83fe-d849a89b4046 --message "PBE-215 rollback"`
 after fresh confirmation that it is still the correct previous version. The
 selected contract adds no route or DNS record, so no DNS rollback is needed.

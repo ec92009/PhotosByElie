@@ -33,7 +33,7 @@ class FakeAuthority:
         self.calls.append((method, body))
         if method == "GET":
             if self.row is None:
-                return 404, b'{"error":{"code":"public_catalog_authority_absent"}}'
+                return 404, b'{"ok":false,"error":{"code":"public_catalog_authority_absent"}}'
             return 200, json.dumps({**self.row, "checkedAt": timestamp()}).encode()
         assert set(body) == {"schema", "phase", "operationId", "expectedGeneration", "projectionRevision", "sha256"}
         assert body["schema"] == "photosbyelie.publicCatalogTransition.v1"
@@ -203,6 +203,22 @@ class CatalogAuthorityClientTest(unittest.TestCase):
         response.read.assert_called_once_with(authority.MAX_RESPONSE_BYTES + 1)
         connection.close.assert_called_once()
 
+    def test_only_typed_404_is_absent_not_denial_disabled_or_old_endpoint(self):
+        absent = b'{"ok":false,"error":{"code":"public_catalog_authority_absent"}}'
+        for status, payload in ((403, absent), (503, absent), (200, absent),
+                                (404, b'{}'), (404, b'{"error":{"code":"not_found"}}'),
+                                (404, b'{"error":null}'), (404, b'not JSON'),
+                                (404, b'{"error":{"code":"public_catalog_authority_absent"}}'),
+                                (404, b'{"ok":true,"error":{"code":"public_catalog_authority_absent"}}'),
+                                (404, b'{"ok":0,"error":{"code":"public_catalog_authority_absent"}}'),
+                                (404, b'{"ok":false,"error":[]}')):
+            with self.subTest(status=status, payload=payload):
+                self.client._transport = lambda *_args: (status, payload)
+                with self.assertRaises(authority.AuthorityError):
+                    self.client.get()
+        self.client._transport = lambda *_args: (404, absent)
+        self.assertIsNone(self.client.get())
+
 
 class CatalogCredentialTest(unittest.TestCase):
     def setUp(self):
@@ -225,6 +241,22 @@ class CatalogCredentialTest(unittest.TestCase):
         row = authority.load_credentials(self.config)
         self.assertEqual(row.connector_id, "max")
         self.assertNotIn(self.record["token"], repr(row))
+
+    def test_owner_classification_is_exact_resolved_root_not_name_or_config(self):
+        owner = self.root / "assets/owner-actions/Owner.sqlite"
+        owner.parent.mkdir(parents=True)
+        owner.touch()
+        alias = self.root / "alias.sqlite"
+        alias.symlink_to(owner)
+        with patch.object(authority, "load_credentials", side_effect=AssertionError("classification must not read config")):
+            self.assertTrue(authority.is_canonical_owner(owner))
+            self.assertTrue(authority.is_canonical_owner(alias))
+            for other in (self.root / "Owner.sqlite", self.root / "other/assets/owner-actions/Owner.sqlite"):
+                self.assertFalse(authority.is_canonical_owner(other))
+        with patch.object(authority, "CONFIG_PATH", self.config):
+            self.assertEqual(authority.client_for_owner(owner).publisher_id, "max")
+            with self.assertRaises(authority.AuthorityError):
+                authority.client_for_owner(alias)
 
     def test_permissions_symlink_root_origin_and_header_injection_fail_closed(self):
         self.config.chmod(0o644)

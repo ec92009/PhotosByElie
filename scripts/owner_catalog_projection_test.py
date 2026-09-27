@@ -63,6 +63,150 @@ class OwnerCatalogProjectionTest(unittest.TestCase):
         with closing(sqlite3.connect(self.owner)) as conn, conn:
             return projection.store_projection(conn, payload, source_kind="offline-test", authority_client=self.client)
 
+    def pin_temporary_owner_as_canonical(self):
+        """Exercise the real path policy without touching production/config/HTTP."""
+        root = (self.root / "canonical").resolve()
+        owner = root / "assets/owner-actions/Owner.sqlite"
+        owner.parent.mkdir(parents=True)
+        self.owner.rename(owner)
+        self.owner = owner
+        pin = patch.object(authority, "CANONICAL_REPO_ROOT", root)
+        pin.start()
+        self.addCleanup(pin.stop)
+
+    def backup_owner(self, destination):
+        with closing(sqlite3.connect(self.owner)) as source, closing(sqlite3.connect(destination)) as backup:
+            source.backup(backup)
+
+    def restore_owner(self, source):
+        with closing(sqlite3.connect(source)) as backup, closing(sqlite3.connect(self.owner)) as restored:
+            backup.backup(restored)
+
+    def test_unenrolled_canonical_absence_is_checked_under_write_lock_before_change(self):
+        old = self.initialize_authority(enroll=False)
+        candidate = self.changed_bytes()
+        self.pin_temporary_owner_as_canonical()
+        remote = self.remote
+
+        def inspect_get(method, headers, body):
+            self.assertEqual(method, "GET")
+            self.assertIsNone(body)
+            self.assertEqual(self.snapshot()["payload"], old["payload"])
+            with closing(sqlite3.connect(self.owner, timeout=0)) as other:
+                with self.assertRaisesRegex(sqlite3.OperationalError, "locked"):
+                    other.execute("BEGIN IMMEDIATE")
+            return remote(method, headers, body)
+
+        self.client._transport = inspect_get
+        with closing(sqlite3.connect(self.owner)) as conn, conn:
+            # Even a caller-supplied deferred transaction must hold a write lock
+            # during the fresh GET. No intermediate projection row is changed.
+            conn.execute("BEGIN DEFERRED")
+            result = projection.store_projection(conn, candidate, source_kind="offline-test", authority_client=self.client)
+        self.assertTrue(result["changed"])
+        self.assertEqual(self.snapshot()["revision"], old["revision"] + 1)
+        self.assertEqual(self.snapshot()["payload"], candidate)
+        self.assertIsNone(self.enrollment())
+        self.assertEqual(self.remote.calls, [("GET", None)])
+
+    def test_unenrolled_canonical_denied_unavailable_unknown_absence_leave_bytes_unchanged(self):
+        old = self.initialize_authority(enroll=False)
+        candidate = self.changed_bytes()
+        self.pin_temporary_owner_as_canonical()
+        for response in ((403, b'{}'), (503, b'{}'), (404, b'{}'),
+                         (404, b'{"error":{"code":"not_found"}}'), (404, b'not JSON'),
+                         ConnectionError("synthetic transport failure")):
+            with self.subTest(response=response):
+                transport = Mock(side_effect=response if isinstance(response, Exception) else None,
+                                 return_value=response)
+                self.client._transport = transport
+                with self.assertRaises(authority.AuthorityError):
+                    self.store(candidate)
+                self.assertEqual(transport.call_args.args[0], "GET")
+                self.assertEqual(transport.call_count, 1)
+                self.assertEqual(self.snapshot(), old)
+                self.assertIsNone(self.enrollment())
+
+    def test_canonical_missing_config_blocks_but_identical_projection_stays_offline(self):
+        old = self.initialize_authority(enroll=False)
+        candidate = self.changed_bytes()
+        self.pin_temporary_owner_as_canonical()
+        with patch.object(authority, "CONFIG_PATH", self.root / "missing-connector.json"), \
+                patch.object(authority, "_http_request", side_effect=AssertionError("no HTTP allowed")) as transport:
+            with closing(sqlite3.connect(self.owner)) as conn, conn:
+                before = conn.total_changes
+                result = projection.store_projection(conn, old["payload"], source_kind="offline-test")
+                self.assertFalse(result["changed"])
+                self.assertEqual(conn.total_changes, before)
+            with closing(sqlite3.connect(self.owner)) as conn, conn:
+                with self.assertRaises(authority.AuthorityError):
+                    projection.store_projection(conn, candidate, source_kind="offline-test")
+            transport.assert_not_called()
+        self.assertEqual(self.snapshot(), old)
+
+    def test_canonical_legacy_noop_does_not_recreate_missing_enrollment_schema(self):
+        old = self.initialize_authority(enroll=False)
+        self.pin_temporary_owner_as_canonical()
+        with closing(sqlite3.connect(self.owner)) as conn, conn:
+            conn.execute("DROP TABLE owner_public_catalog_authority_enrollment")
+        with patch.object(authority, "client_for_owner", side_effect=AssertionError("no credentials for no-op")):
+            with closing(sqlite3.connect(self.owner)) as conn, conn:
+                schema = conn.execute("SELECT sql FROM sqlite_master ORDER BY name").fetchall()
+                changes = conn.total_changes
+                result = projection.store_projection(conn, old["payload"], source_kind="offline-test")
+                self.assertFalse(result["changed"])
+                self.assertEqual(conn.total_changes, changes)
+                self.assertEqual(conn.execute("SELECT sql FROM sqlite_master ORDER BY name").fetchall(), schema)
+        self.assertEqual(self.snapshot(), old)
+
+    def test_whole_owner_pre_enrollment_restore_cannot_bypass_remote_pending_or_verified(self):
+        old = self.initialize_authority(enroll=False)
+        candidate = self.changed_bytes()
+        self.pin_temporary_owner_as_canonical()
+        backup = self.root / "before-enrollment.sqlite"
+        self.backup_owner(backup)
+        # Also cover a real legacy backup made before the guard table existed.
+        with closing(sqlite3.connect(self.owner)) as conn, conn:
+            conn.execute("DROP TABLE owner_public_catalog_authority_enrollment")
+        legacy_backup = self.root / "before-schema.sqlite"
+        self.backup_owner(legacy_backup)
+        projection.enroll_catalog_authority(self.owner, authority_client=self.client)
+        self.assertEqual(self.enrollment()["state"], "verified")
+        remote_verified = dict(self.remote.row)
+        for restored_backup in (backup, legacy_backup):
+            for state in ("pending", "verified"):
+                with self.subTest(backup=restored_backup.name, remote_state=state):
+                    self.restore_owner(restored_backup)
+                    self.assertIsNone(self.enrollment())
+                    self.remote.row = {**remote_verified, "state": state}
+                    self.remote.calls.clear()
+                    with self.assertRaisesRegex(RuntimeError, "explicit re-enrollment/recovery"):
+                        self.store(candidate)
+                    self.assertEqual(self.snapshot(), old)
+                    self.assertIsNone(self.enrollment())
+                    self.assertEqual(self.remote.calls, [("GET", None)])
+                    self.assertEqual(self.remote.row, {**remote_verified, "state": state})
+
+    def test_whole_owner_older_enrolled_restore_still_rejects_remote_newer_revision(self):
+        old = self.initialize_authority()
+        self.pin_temporary_owner_as_canonical()
+        backup = self.root / "older-enrolled.sqlite"
+        self.backup_owner(backup)
+        candidate = self.changed_bytes()
+        self.store(candidate)
+        self.remote.public_sha = projection.sha256_bytes(candidate)
+        receipt = verify_deployed_projection(self.owner, fetch=lambda _url: (200, candidate), authority_client=self.client)
+        self.assertEqual(receipt["state"], "verified")
+        divergent_candidate = self.changed_bytes()
+        self.restore_owner(backup)
+        self.assertEqual(self.snapshot(), old)
+        self.remote.calls.clear()
+        # Same next revision, but different bytes than the remotely verified one.
+        with self.assertRaises(authority.AuthorityError):
+            self.store(divergent_candidate)
+        self.assertEqual(self.snapshot(), old)
+        self.assertEqual(self.remote.calls, [("GET", None)])
+
     def test_explicit_enrollment_is_exact_and_stores_no_secret(self):
         current = self.initialize_authority()
         row = self.enrollment()

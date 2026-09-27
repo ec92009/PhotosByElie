@@ -928,7 +928,8 @@ paths:
       operationId: getPublicCatalogAuthority
       description: >
         Native-only, no-store primary D1 read of the current publisher fence.
-        The shared campaign-video feature flag gates this source-only endpoint.
+        Available after migration even when campaign-video hosting is disabled,
+        so restored writers cannot mistake existing authority for absence.
         Exact 404 public_catalog_authority_absent means not enrolled; all other
         failures remain unavailable, never an empty/default authority.
       responses:
@@ -953,6 +954,8 @@ paths:
         is supported; different pending operations and stale generations conflict.
         No catalog bytes, paths, URLs, credentials or arbitrary metadata accepted.
         Browser Origin, Cookie and Sec-Fetch-Site are rejected. Body cap 4096 bytes.
+        POST requires PUBLIC_CATALOG_AUTHORITY_ENABLED, independently of the
+        video-serving flag so recovery can finish while hosting remains off.
         See public-catalog-authority.md for writer enrollment and activation gates.
       requestBody:
         required: true

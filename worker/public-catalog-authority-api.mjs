@@ -52,12 +52,15 @@ export function createPublicCatalogAuthorityApi({ database, connectorAuth, enabl
         }
         if (!connectorAuth?.requireConnector) throw authorityError(503, "public_catalog_auth_unavailable");
         const connector = await connectorAuth.requireConnector(request);
-        if (!enabled) throw authorityError(503, "public_catalog_authority_disabled");
+        // A restored local Owner may have lost enrollment. Its writer must still
+        // see existing authority while hosting is disabled, never infer absence
+        // from that flag and silently change the projection underneath it.
         if (request.method === "GET") {
           const record = await authority.read();
           if (!record) throw authorityError(404, "public_catalog_authority_absent");
           return json(authority.receipt(record));
         }
+        if (!enabled) throw authorityError(503, "public_catalog_authority_disabled");
         if (request.method !== "POST") throw authorityError(405, "public_catalog_method_not_allowed");
         const value = await readTransition(request);
         const record = value.phase === "prepare"

@@ -153,6 +153,27 @@ reader retains the strict Date/Age checks above; production never falls back to 
 
 ## Configuration / activation boundary
 
+### Backend-only staging release, 27 September
+
+The staging branch `codex/pbe-guarded-backend-release-20260927` retains the
+reviewed backend/publisher guards but restores `campaign-video.js` and its tests
+to the existing `origin/main` player. The native-download player allowlist remains
+on `codex/pbe-native-video-hosting-20260927` for the later reviewed player release.
+The shared SQLite decoder export remains because the Worker uses it; existing
+browser decoding behavior is unchanged. Do not infer live player support from
+the complete target contract described above.
+
+The fresh migration inventory also contains unrelated
+`0015_google_oauth_transactions.sql`. Stage only unchanged
+`0016_campaign_videos.sql` through a temporary migration-only Wrangler config
+with the same database ID and default migration ledger, and a directory
+containing only that file. Its SHA-256 is
+`f6eccc2dd1bc9afda687e5827832f3c2242a9ecdb71ab3e9ba43da838483c865`.
+Require a one-file pending plan, then verify the full config still lists 0015
+pending and no 0016. Never deploy the Worker with that migration-only config.
+Both feature flags stay false during this staging release. This paragraph is
+release procedure, not evidence that live staging succeeded.
+
 Reuse the existing Worker, `PRIVATE_MEDIA` (`photosbyelie-private`), `ACCESS_DB`,
 and connector authentication. One additive D1 migration stores immutable
 declarations and a singleton publication fence separately from Owner state.

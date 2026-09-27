@@ -1,14 +1,6 @@
 /* Public campaign films: approved portrait MP4s with YouTube fallbacks. */
 (() => {
   const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
-  const LEGACY_PORTRAIT_MP4 = /^\.\/assets\/campaign-media\/[a-z0-9-]+\.mp4$/;
-  const HOSTED_PORTRAIT_MP4 = /^https:\/\/download\.photos-by-elie\.com\/assets\/campaign-media\/(native-[a-z0-9]+(?:-[a-z0-9]+)*)\.mp4$/;
-
-  /** Match the original URL text: URL normalization can hide ports or traversal. */
-  const isHostedPortraitMp4 = (value) => {
-    const match = HOSTED_PORTRAIT_MP4.exec(value);
-    return Boolean(match && match[0] === value && match[1].length <= 120);
-  };
 
   const normalize = (value) => {
     if (!value || String(value.provider || "").toLowerCase() !== "youtube") return null;
@@ -16,10 +8,9 @@
     const shortId = String(value.shortId || "").trim();
     if (!YOUTUBE_ID.test(videoId) || (shortId && !YOUTUBE_ID.test(shortId))) return null;
     if (String(value.visibility || "").toLowerCase() !== "public") return null;
-    const portraitInput = String(value.portraitMp4 || "");
-    const portraitMp4 = portraitInput.trim();
+    const portraitMp4 = String(value.portraitMp4 || "").trim();
     // Only deployed promotional derivatives, never arbitrary URLs or private media.
-    if (portraitMp4 && !LEGACY_PORTRAIT_MP4.test(portraitMp4) && !isHostedPortraitMp4(portraitInput)) return null;
+    if (portraitMp4 && !/^\.\/assets\/campaign-media\/[a-z0-9-]+\.mp4$/.test(portraitMp4)) return null;
     const durationSeconds = Number(value.durationSeconds);
     return {
       provider: "youtube",

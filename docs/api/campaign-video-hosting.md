@@ -84,34 +84,45 @@ unavailable authority/storage/config 503. All replies are no-store.
 Catalog revision change within an operation is 409 `campaign_video_catalog_changed`;
 stale/unavailable catalog is 503, never fallback to the bundled catalog.
 
-Public `GET`/`HEAD` accepts only `/assets/campaign-media/<slug>.mp4`, with
-single byte-range support. The returned `portraitMp4` remains
-`./assets/campaign-media/<slug>.mp4`, compatible with the existing player.
+Public `GET`/`HEAD` accepts only the existing download-domain endpoint
+`https://download.photos-by-elie.com/assets/campaign-media/<slug>.mp4`, with
+single byte-range support. Both `publicUrl` and `portraitMp4` contain that same
+absolute URL; `<slug>` includes the required `native-` prefix. The API remains
+on `https://auth.photos-by-elie.com` with its existing native connector auth.
+The player accepts exactly this HTTPS hostname/path and a valid native slug
+of at most 120 characters, rejecting ports (including explicit 443), credentials,
+query, fragment, encoded characters and traversal before URL normalization.
+Existing `./assets/campaign-media/<legacy-slug>.mp4` films remain unchanged.
 All approved stills must remain current public catalog photos and pass the existing
 exact public-preview lifecycle verifier. No cached successful response, fallback
 to an original, alias endpoint or stale receipt may bypass this decision.
 
-## Current catalog reader / known live freshness dependency
+## Current catalog reader / publisher authority
 
 The earlier `deployed-worker.mjs` catalog parameter was a generated deploy-time
 snapshot. That hosting dependency is removed; checkout's existing catalog is
 unchanged. Hosting fetches only the fixed HTTPS
 `https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite` on every check.
-No query, redirect, caller-provided URL, alternate origin, positive cache, new
-database or catalog mutation is used. `cache: no-store`, request no-cache and
+No query, redirect, caller-provided URL, alternate origin, positive cache or
+catalog-copy database is used. `cache: no-store`, request no-cache and
 identity encoding are enforced; only HTTP 200 and SQLite/octet-stream MIME pass.
 
-Actual bytes are capped at 16 MiB with a 10-second fetch timeout. A fresh Date
-header (at most 30 seconds old, five seconds future tolerance), absent/zero Age,
-exact declared length when supplied, UTF-8 rollback-journal SQLite header and
-the required table/column layout are required. The existing pure-JS browser
+Actual bytes are capped at 16 MiB with a 10-second fetch timeout. Exact declared
+length when supplied, UTF-8 rollback-journal SQLite header and the required
+table/column layout are required. The existing pure-JS browser
 reader's scalar primitives are exported and reused with hosting-only guards:
 bounded pages/rows/records, cycle/overflow validation and exact public camera
 still membership with both JPEG preview rows. Unneeded metadata is not decoded.
 No sql.js/WASM is vendored in either checkout; no new package/runtime was added.
 
-The complete catalog-byte SHA-256 is the request's revision fence. Fresh reads
-and D1 denial checks bracket serving/reservation/reconciliation, precede upload,
+The complete catalog-byte SHA-256 and publisher-authority generation are the
+request's revision fence. Each check reads the current primary D1 publisher
+marker before and after fetching the fixed public bytes. Missing, pending,
+malformed or changing authority fails closed; the complete byte hash must match
+the current verified marker. An older HTTP cache entry is acceptable only if its
+bytes exactly match that independently current authority, never based on Age or
+a successful historical receipt. Every primary read starts a new first-primary
+session. Fresh authority reads and D1 denial checks bracket serving/reservation/reconciliation, precede upload,
 and run at actual input EOF before releasing the final MP4 byte to R2. Changed
 catalog bytes are 409 even if that particular component remains present.
 Unknown or removed members fail closed; no new registration is performed.
@@ -133,17 +144,20 @@ the strict SQLite parser. The first attempt stopped at the failed Age check.
 This experiment did **not** establish freshness; nonce requests were not added
 to production code and the freshness gate was not weakened.
 
-Thus **reliable origin freshness remains a deployment dependency**, separate
-from local runtime support. Main needs a supported fresh read of that same
-artifact or a verified current existing R2 publication artifact and writer
-contract. No such R2 artifact has been established here; never invent its key,
-use aged bytes as fallback, or change the publisher/catalog authority silently.
+The owner subsequently authorized the small supported catalog-publisher change.
+The new [publisher-authority contract](public-catalog-authority.md) closes that
+HTTP-age dependency only after all actual writers have the prepare-before-write
+hooks installed and supported enrollment is verified. Source implementation and
+local tests are not deployment evidence. The standalone HTTP-only diagnostic
+reader retains the strict Date/Age checks above; production never falls back to it.
 
 ## Configuration / activation boundary
 
 Reuse the existing Worker, `PRIVATE_MEDIA` (`photosbyelie-private`), `ACCESS_DB`,
 and connector authentication. One additive D1 migration stores immutable
-declarations separately from Owner state. No catalog/Owner.sqlite writes.
+declarations and a singleton publication fence separately from Owner state.
+The hosting handler never writes catalog/Owner.sqlite state. Supported publisher
+hooks manage the local enrollment receipt; no raw Owner edits are permitted.
 
 No new credential or encryption secret. Only
 `campaign-videos/v1/<bindingSha256>.mp4` objects in that private bucket are
@@ -152,9 +166,10 @@ original path is returned. Existing public-bucket r2.dev access cannot bypass
 the lifecycle gate. The initially considered SSE-C API is documented and typed
 but unnecessary with the approved existing private binding.
 
-The feature is fail-closed unless explicitly enabled. Catalog freshness, public
-host choice and deployed configuration reconciliation need separate review;
-no deployment, migration, credential installation or object upload has run.
+The feature is fail-closed unless explicitly enabled. The owner selected the
+existing download domain; catalog authority and deployed configuration readiness
+remain main's work. This source slice performs no deployment, migration,
+credential installation or object upload.
 
 ## Live inventory, 27 September 2026 (read-only)
 
@@ -175,49 +190,42 @@ no deployment, migration, credential installation or object upload has run.
   uses only `PRIVATE_MEDIA`; `PUBLIC_MEDIA` remains untouched.
 - `photos-by-elie.com` DNS resolves directly to GitHub Pages
   `185.199.108.153` through `185.199.111.153`, not Cloudflare proxy addresses.
-  Thus the proposed path route cannot work until the existing apex web record
-  is proxied. Existing token received HTTP 403 from both zone routes and apex
-  DNS-record list; exact live zone route inventory remains a deployment gate.
+  The discarded apex path-route proposal would have required proxying that
+  record. Existing token received HTTP 403 from both zone routes and apex
+  DNS-record list; this slice does not request or change those permissions.
   **Whole-apex proxying is outside the owner-approved narrow route grant.**
 - Account `26aa9df8b20960f20cf0e8dba5cb2f88`; zone
   `cd07f8b01da5305a0dd47bac2a7bd549`. No DNS, route, policy or bucket changes made.
 
-## Public-host options (read-only advice; contract not switched)
+## Owner-selected public host (27 September; source only)
 
-1. **Prefer existing download domain, subject to main's explicit contract review.**
-   `https://download.photos-by-elie.com/assets/campaign-media/native-<slug>.mp4`
-   can use the verified existing Worker custom domain, with no DNS/proxy change.
-   Required source changes: `worker/campaign-video-hosting.mjs` public origin and
-   receipt URLs; `campaign-video.js` tightly allowlisting only that HTTPS host,
-   exact native prefix/slug and MP4 path, excluding ports, credentials, queries,
-   fragments and encoded/path traversal, while retaining legacy relative films;
-   `scripts/campaign_video.test.mjs` and hosting tests; this contract/OpenAPI and
-   generated Swift contract. `campaign.html` and `social.html` need the normal
-   reviewed cache-version update when the player is released. Marketing must
-   align its exact public URL verifier/client separately. The new wrangler apex
-   route proposal would be removed, not activated. Still requires reviewed
-   Worker/player release and independent cross-origin playback/Range checks.
-2. **Keep the existing proposed same-apex contract.** The player stays unchanged,
-   but the DNS-only apex cannot use that Worker path route as-is. It requires
-   separately explicit whole-apex proxy authority, sufficient zone permissions,
-   fresh DNS/route inventory and full site/commerce/HTTPS regression and rollback.
-   This is broader than the current grant; do not enable it by implication.
-3. **Defer activation.** Keep the feature disabled and retain this source for
-   review. No hosting upload, cloud migration, route or DNS change is needed.
+The existing `download.photos-by-elie.com` Worker custom domain is selected.
+`worker/campaign-video-hosting.mjs` now returns identical absolute download URLs
+in both receipt fields. `campaign-video.js` allows only their exact native-video
+shape alongside the unchanged legacy relative-film contract. Matching player
+and hosting tests, OpenAPI and generated Swift contract accompany this change.
+The commented apex route proposal is removed from `wrangler.toml`; existing
+custom domains and `CAMPAIGN_VIDEO_HOST_ENABLED = "false"` remain unchanged.
 
-The owner's route decision is pending; no option was selected or implemented.
-Existing public URL and portraitMp4 wire contract are unchanged. No player,
-campaign, DNS or route was changed. No whole-apex proxy authority is implied by
-the narrow hosting grant or the future deployment checklist below.
+No DNS/proxy changes, new services, account changes or new credentials are needed
+for this selected host. Whole-apex proxying remains outside the grant. Marketing
+must accept both absolute receipt fields; main owns that client seam, current
+catalog authority, activation readiness and later live verification.
 
-## Deployment gates (main controller only; not executed or currently authorized)
+This local slice does not change `campaign.html`, `social.html` or release/cache
+versions. Their normal reviewed version update belongs to the eventual player
+release. Independent cross-origin playback and HTTPS HEAD/Range/full-byte checks
+remain release verification, not evidence supplied by a local test or receipt.
 
-1. Resolve the catalog freshness dependency and select/review one host option
-   above first. The current patch must not be activated as-is. Fresh-read the
-   deployment/version, bindings/vars/secrets **names** and chosen route state;
-   preserve the version ID as rollback. Any apex proxy change needs new approval.
+## Deployment readiness (main controller only; not executed)
+
+1. Verify installed writer-hook coverage, supported publisher enrollment and
+   current projection/deployed parity under the catalog-authority contract.
+   The patch must not be activated on source tests alone. Fresh-read the
+   deployment/version, bindings/vars/secrets **names** and existing custom domains;
+   preserve the version ID as rollback. No apex route or proxy change is in scope.
 2. Review the isolated source and its tests. Run `npm ci --ignore-scripts`,
-   `npm run test:campaign-video-hosting`,
+   `npm run test:campaign-video`, `npm run test:campaign-video-hosting`,
    `python3 scripts/generate_owner_swift_contract.py --check`, then
    `./node_modules/.bin/wrangler deploy --dry-run --keep-vars`.
 3. Run `./node_modules/.bin/wrangler d1 migrations list photosbyelie-access --remote`.
@@ -226,7 +234,7 @@ the narrow hosting grant or the future deployment checklist below.
    Unexpected pending migrations need reconciliation, not a blanket apply.
 4. Only after the preceding gates and deployment authority: set the feature true
    in reviewed config, preserving existing custom domains/bindings. Do not
-   uncomment the apex route or change DNS under the present grant.
+   add an apex route or change DNS under the present grant.
 5. Deploy the reviewed commit using
    `./node_modules/.bin/wrangler deploy --keep-vars --message "PBE-215 approved derivative hosting <commit>"`.
    Keep the existing two custom domains, all bindings, and current production
@@ -239,9 +247,9 @@ the narrow hosting grant or the future deployment checklist below.
 
 Rollback: set the feature false or deploy the saved prior Worker version with
 `./node_modules/.bin/wrangler rollback 22ca2c66-a88f-4ad9-83fe-d849a89b4046 --message "PBE-215 rollback"`
-after fresh confirmation that it is still the correct previous version. Remove
-only a separately authorized added route; any separately approved proxy change
-requires its own recorded rollback. Do not drop the additive declaration table or delete
+after fresh confirmation that it is still the correct previous version. The
+selected contract adds no route or DNS record, so no DNS rollback is needed.
+Do not drop the additive declaration table or delete
 objects: retained declarations plus private objects allow safe reconciliation.
 Rollback must not disable/rewrite existing Owner, media, commerce or DNS data.
 
@@ -274,6 +282,27 @@ native app build or release was made. The HTTP API major remains v1.
   Live HTTPS routing, migrations and independent public byte/playback proof are
   still pending. Source evidence is not a live hosting receipt.
 
+### Integrated publisher/host verification — 14:44 CEST
+
+The preceding counts describe the earlier pre-publisher-authority snapshot.
+After the owner-selected download host, publisher protocol and independent review
+fixes, main reran **156 Worker release tests**, **8 player tests**, and **48
+Python client/projection/publication/policy tests**, all passing. The generated
+OpenAPI/Swift check now covers **48 operations and 19 schemas**; Swift typecheck
+and diff whitespace checks pass. A fresh Wrangler dry-run rebuilt the same
+156-test release suite and compiled successfully without uploading.
+
+Independent review reproduced a stale lifecycle-session replica serving after
+primary denial. The new hosting-only fresh-primary query wrapper now rejects
+that case. Initial catalog enrollment also commits its local pending guard
+before remote verification; failure/race/lost-response tests cover both sides.
+Malformed array-valued hashes return 400 without a database write.
+
+Installed Backstage and the configured legacy connector still lack these hooks;
+see [publisher rollout requirements](public-catalog-authority.md). Source tests
+do not clear that installed-runtime dependency or the separate exact-photo
+provenance blocker. The feature remains disabled.
+
 ## Source handoff
 
 Worker handoff was uncommitted in `/tmp/pbe-native-video.3Cj4B8`, branch
@@ -300,6 +329,7 @@ nonce-read attempts also retained nonzero Age, so no nonce workaround was added.
 - Documentation/types: this document, `docs/api/owner-v1.openapi.yaml`, generated
   `native/PhotosByElieBackstage/Sources/OwnerCore/Generated/OwnerContract.generated.swift`.
 
-The worker changed no canonical checkout, Marketing client/runner, FIFO, manifest, campaign JSON,
-real catalog, Owner.sqlite, credentials, DNS, bucket policy or provider receipt
-was changed. Córdoba remains held. Main owns deployment and live verification.
+No canonical PBE checkout, FIFO, manifest, campaign JSON, real catalog,
+Owner.sqlite, credentials, DNS, bucket policy or provider receipt was changed.
+The companion Marketing client accepts the exact same download URL in both
+receipt fields. Córdoba remains held. Main owns deployment and live verification.

@@ -4,6 +4,8 @@ import test from "node:test";
 import { build } from "esbuild";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { PUBLIC_CATALOG_URL } from "./campaign-video-catalog.mjs";
+import { catalogOperationId } from "./public-catalog-authority.mjs";
+import { CATALOG_AUTHORITY_PATH } from "./public-catalog-authority-api.mjs";
 import { previewMembers } from "./campaign-video-contract.mjs";
 import { createD1LifecycleDenyStore, summarizeLifecycleManifest } from "./lifecycle-deny-store.mjs";
 import { catalogBytes, catalogResponse } from "./campaign-video-catalog-test-support.mjs";
@@ -34,7 +36,7 @@ test("workerd production route sees current SQLite additions/removals and revisi
       assert.equal(request.headers.get("cookie"), null);
       assert.match(request.headers.get("cache-control"), /no-store/);
       requests++; await beforeCatalogFetch?.(requests);
-      return catalogResponse(current);
+      return catalogResponse(current, { age: "600" });
     },
   }] }));
   const reserve = (url = apiUrl, value = binding) => mf.dispatchFetch(url, {
@@ -45,6 +47,21 @@ test("workerd production route sees current SQLite additions/removals and revisi
       "content-length": String(videoBytes.length), "x-pbe-binding-sha256": receipt.bindingSha256,
       "x-pbe-video-sha256": hash(videoBytes) },
   });
+  let generation = 0;
+  const publishCatalog = async () => {
+    const sha256 = hash(current);
+    const projectionRevision = generation + 1;
+    const operationId = await catalogOperationId(projectionRevision, sha256);
+    const body = { schema: "photosbyelie.publicCatalogTransition.v1", phase: "prepare", operationId,
+      expectedGeneration: generation, projectionRevision, sha256 };
+    const address = `https://auth.photos-by-elie.com${CATALOG_AUTHORITY_PATH}`;
+    const prepared = await reserve(address, body);
+    assert.equal(prepared.status, 200, await prepared.clone().text());
+    generation = (await prepared.json()).generation;
+    const committed = await reserve(address, { ...body, phase: "commit", expectedGeneration: generation });
+    assert.equal(committed.status, 200, await committed.clone().text());
+    assert.equal((await committed.json()).state, "verified");
+  };
   try {
     const db = await mf.getD1Database("ACCESS_DB");
     for (const name of ["0012_lifecycle_deny_plane.sql", "0013_lifecycle_manifest_reconciliation.sql", "0016_campaign_videos.sql"]) {
@@ -56,15 +73,21 @@ test("workerd production route sees current SQLite additions/removals and revisi
     const items = previewMembers(binding);
     await lifecycle.seedVisibleBatch({ seedId: "runtime-catalog", items });
     await lifecycle.activate({ activationId: "runtime-catalog-active", ...await summarizeLifecycleManifest(items) });
+    const uninitialized = await reserve();
+    assert.equal(uninitialized.status, 503); await uninitialized.text();
+    assert.equal(requests, 0); // No HTTP-cache fallback without publisher authority.
     // Also parse the real-sized checked-in artifact inside workerd, read-only.
     current = readFileSync(new URL("../assets/catalog/photosbyelie.sqlite", import.meta.url));
+    await publishCatalog();
     const snapshotCheck = await reserve();
     const snapshotError = await snapshotCheck.json();
     assert.equal(snapshotCheck.status, 410, JSON.stringify(snapshotError));
     assert.equal(snapshotError.error.code, "campaign_video_component_ineligible");
     current = removed;
+    await publishCatalog();
     const missing = await reserve(); assert.equal(missing.status, 410, await missing.text());
     current = complete;
+    await publishCatalog();
     const reservedResponse = await reserve();
     const reserved = await reservedResponse.json();
     assert.equal(reservedResponse.status, 200, JSON.stringify(reserved));
@@ -74,10 +97,12 @@ test("workerd production route sees current SQLite additions/removals and revisi
     const range = await mf.dispatchFetch(publicUrl, { headers: { range: "bytes=0-11" } });
     assert.equal(range.status, 206); assert.equal((await range.arrayBuffer()).byteLength, 12);
     current = removed;
+    await publishCatalog();
     for (const method of ["GET", "HEAD"]) {
       const hidden = await mf.dispatchFetch(publicUrl, { method }); assert.equal(hidden.status, 410); await hidden.text();
     }
     current = complete;
+    await publishCatalog();
     const changeAt = requests + 2;
     beforeCatalogFetch = (count) => { if (count === changeAt) current = removed; };
     const drifted = await mf.dispatchFetch(publicUrl);

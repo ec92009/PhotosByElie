@@ -35,8 +35,9 @@ def sha256_bytes(payload: bytes) -> str:
 
 
 def ensure_projection_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
+    # executescript implicitly commits an existing caller transaction. These
+    # static DDL statements must preserve its write lock and rollback boundary.
+    schema = """
         CREATE TABLE IF NOT EXISTS owner_public_catalog_projections (
           projection_id TEXT PRIMARY KEY CHECK (trim(projection_id) <> ''),
           revision INTEGER NOT NULL CHECK (revision > 0),
@@ -65,8 +66,118 @@ def ensure_projection_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_owner_public_catalog_deployments_projection
           ON owner_public_catalog_deployments(projection_sha256, state, verified_at);
+
+        CREATE TABLE IF NOT EXISTS owner_public_catalog_authority_enrollment (
+          projection_id TEXT PRIMARY KEY,
+          publisher_id TEXT NOT NULL,
+          generation INTEGER NOT NULL CHECK (generation > 0),
+          operation_id TEXT NOT NULL CHECK (length(operation_id) = 64),
+          projection_revision INTEGER NOT NULL CHECK (projection_revision > 0),
+          catalog_sha256 TEXT NOT NULL CHECK (length(catalog_sha256) = 64),
+          state TEXT NOT NULL CHECK (state IN ('pending', 'verified')),
+          enrolled_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) WITHOUT ROWID;
         """
+    for statement in schema.split(";"):
+        if statement.strip():
+            conn.execute(statement)
+
+
+def _authority_enrollment(conn: sqlite3.Connection) -> dict | None:
+    """Missing legacy table means unenrolled; this read never creates schema."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                    ("owner_public_catalog_authority_enrollment",)).fetchone() is None:
+        return None
+    row = conn.execute(
+        "SELECT publisher_id, generation, operation_id, projection_revision, catalog_sha256, state "
+        "FROM owner_public_catalog_authority_enrollment WHERE projection_id=?", (CURRENT_PROJECTION_ID,),
+    ).fetchone()
+    if row is None:
+        return None
+    return dict(zip(("publisherId", "generation", "operationId", "projectionRevision", "sha256", "state"), row))
+
+
+def _authority_client(conn: sqlite3.Connection, supplied=None):
+    """Load credentials lazily, only for an explicitly enrolled writer."""
+    if supplied is not None:
+        return supplied
+    from catalog_authority_client import client_for_owner
+    filename = next((row[2] for row in conn.execute("PRAGMA database_list") if row[1] == "main"), "")
+    if not filename:
+        raise RuntimeError("Catalog authority requires the canonical persistent Owner database")
+    return client_for_owner(Path(filename))
+
+
+def _save_authority_enrollment(conn: sqlite3.Connection, receipt: dict) -> None:
+    """Persist only the remote identity/fence, never connector credentials."""
+    conn.execute(
+        """INSERT INTO owner_public_catalog_authority_enrollment
+        (projection_id, publisher_id, generation, operation_id, projection_revision,
+         catalog_sha256, state, enrolled_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(projection_id) DO UPDATE SET publisher_id=excluded.publisher_id,
+          generation=excluded.generation, operation_id=excluded.operation_id,
+          projection_revision=excluded.projection_revision, catalog_sha256=excluded.catalog_sha256,
+          state=excluded.state, updated_at=excluded.updated_at""",
+        (CURRENT_PROJECTION_ID, receipt["publisherId"], receipt["generation"], receipt["operationId"],
+         receipt["projectionRevision"], receipt["sha256"], receipt["state"], now_iso(), receipt["checkedAt"]),
     )
+
+
+def _projection_fence(conn: sqlite3.Connection, expected: dict | None) -> None:
+    """Re-read the current revision and checksum before completing an operation."""
+    current = projection_snapshot(conn, ensure_schema=False)
+    if ((current is None) != (expected is None) or current is not None and
+            (current["revision"], current["sha256"]) != (expected["revision"], expected["sha256"])):
+        raise RuntimeError("Owner projection changed during catalog authority operation")
+
+
+def enroll_catalog_authority(owner_db: Path, *, authority_client=None) -> dict:
+    """Explicit enrollment of the exact current projection after installed-writer proof.
+
+    Installation/activation is a separate operational dependency; this function
+    is not called by ordinary projection reads or unenrolled writes.
+    """
+    from catalog_authority_client import client_for_owner
+    client = authority_client or client_for_owner(owner_db)
+    conn = sqlite3.connect(owner_db.resolve().as_uri() + "?mode=rw", uri=True)
+    try:
+        ensure_projection_schema(conn)
+        conn.execute("BEGIN IMMEDIATE")
+        current = projection_snapshot(conn, ensure_schema=False)
+        if current is None:
+            raise RuntimeError("Owner public catalog projection has not been initialized")
+        validate_catalog_bytes(current["payload"])
+        enrollment = _authority_enrollment(conn)
+        if enrollment and enrollment["publisherId"] != client.publisher_id:
+            raise RuntimeError("Catalog authority publisher identity changed")
+        prepared = client.prepare(current["revision"], current["sha256"],
+                                  floor_generation=enrollment["generation"] if enrollment else 0)
+        _projection_fence(conn, current)
+        pending = {**prepared, "state": "pending"}
+        _save_authority_enrollment(conn, pending)
+        # No remote verified transition may precede this durable local guard.
+        # A failed/uncertain later commit retains the guard for exact recovery.
+        conn.commit()
+        conn.execute("BEGIN IMMEDIATE")
+
+        def fence():
+            _projection_fence(conn, current)
+            actual = _authority_enrollment(conn)
+            if actual is None or any(actual[key] != pending[key] for key in actual):
+                raise RuntimeError("Catalog authority enrollment changed before commit")
+
+        fence()
+        verified = client.commit(prepared, before_commit=fence)
+        fence()
+        _save_authority_enrollment(conn, verified)
+        conn.commit()
+        return {"ok": True, "enrolled": True, "authority": verified}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _catalog_evidence(path: Path) -> dict[str, Any]:
@@ -226,12 +337,15 @@ def store_projection(
     approved_policy: str = APPROVED_POLICY,
     expected_sha256: str | None = None,
     ensure_schema: bool = True,
+    authority_client=None,
 ) -> dict[str, Any]:
     if approved_policy != APPROVED_POLICY:
         raise RuntimeError(f"catalog projection changes require approved policy {APPROVED_POLICY}")
     evidence = validate_catalog_bytes(payload)
     if ensure_schema:
         ensure_projection_schema(conn)
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
     current = projection_snapshot(conn, ensure_schema=False)
     if expected_sha256 is not None:
         actual = current["sha256"] if current else ""
@@ -242,6 +356,16 @@ def store_projection(
     timestamp = now_iso()
     revision = (current["revision"] if current else 0) + 1
     created_at = current["createdAt"] if current else timestamp
+    enrollment = _authority_enrollment(conn)
+    prepared = None
+    if enrollment is not None:
+        if enrollment["state"] == "pending":
+            raise RuntimeError("Catalog authority pending projection requires verification before another write")
+        client = _authority_client(conn, authority_client)
+        if client.publisher_id != enrollment["publisherId"]:
+            raise RuntimeError("Catalog authority publisher identity changed")
+        prepared = client.prepare(revision, evidence["sha256"], floor_generation=enrollment["generation"])
+        _projection_fence(conn, current)
     conn.execute(
         """
         INSERT INTO owner_public_catalog_projections (
@@ -271,6 +395,8 @@ def store_projection(
             timestamp,
         ),
     )
+    if prepared is not None:
+        _save_authority_enrollment(conn, prepared)
     return {
         "projectionId": CURRENT_PROJECTION_ID,
         "revision": revision,
@@ -362,6 +488,7 @@ def verify_deployed_projection(
     *,
     public_url: str = PUBLIC_CATALOG_URL,
     fetch: Callable[[str], tuple[int, bytes]] | None = None,
+    authority_client=None,
 ) -> dict[str, Any]:
     conn = sqlite3.connect(owner_db)
     conn.row_factory = sqlite3.Row
@@ -370,8 +497,22 @@ def verify_deployed_projection(
         if snapshot is None:
             raise RuntimeError("Owner public catalog projection has not been initialized")
         timestamp = now_iso()
+        enrollment = _authority_enrollment(conn)
         try:
-            if fetch is None:
+            if enrollment is not None and public_url != PUBLIC_CATALOG_URL:
+                raise RuntimeError("Enrolled catalog verification requires the fixed public SQLite URL")
+            if fetch is None and enrollment is not None:
+                # Public bytes never carry connector authorization or follow a
+                # redirect. The expected projection size bounds the response.
+                from http.client import HTTPSConnection
+                transport = HTTPSConnection("photos-by-elie.com", timeout=30)
+                try:
+                    transport.request("GET", "/assets/catalog/photosbyelie.sqlite")
+                    response = transport.getresponse()
+                    status, payload = int(response.status), response.read(len(snapshot["payload"]) + 1)
+                finally:
+                    transport.close()
+            elif fetch is None:
                 response = urlopen(
                     Request(public_url, headers={"User-Agent": "PhotosByElie projection verifier"}),
                     timeout=30,
@@ -394,10 +535,31 @@ def verify_deployed_projection(
                 "bytes": len(payload),
             }
             state, error_text = "failed", str(error)
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            _projection_fence(conn, snapshot)
+            # Read enrollment again under the write lock; it may have changed
+            # while the public bytes were being fetched.
+            enrollment = _authority_enrollment(conn)
+            if state == "verified" and enrollment is not None:
+                if public_url != PUBLIC_CATALOG_URL:
+                    raise RuntimeError("Enrolled catalog verification requires the fixed public SQLite URL")
+                from catalog_authority_client import operation_id
+                if (enrollment["projectionRevision"] != snapshot["revision"]
+                        or enrollment["sha256"] != snapshot["sha256"]
+                        or enrollment["operationId"] != operation_id(snapshot["revision"], snapshot["sha256"])):
+                    raise RuntimeError("Catalog authority enrollment does not match the current projection")
+                client = _authority_client(conn, authority_client)
+                if client.publisher_id != enrollment["publisherId"]:
+                    raise RuntimeError("Catalog authority publisher identity changed")
+                verified = client.commit(enrollment, before_commit=lambda: _projection_fence(conn, snapshot))
+                _projection_fence(conn, snapshot)
+                _save_authority_enrollment(conn, verified)
+        except Exception:
+            state, error_text = "failed", "Catalog authority/current projection verification failed; reconcile before retrying"
         deployment_id = "catalog-deploy-" + hashlib.sha256(
             f"{snapshot['revision']}\n{snapshot['sha256']}\n{timestamp}\n{state}".encode("utf-8")
         ).hexdigest()[:24]
-        conn.execute("BEGIN IMMEDIATE")
         conn.execute(
             """
             INSERT INTO owner_public_catalog_deployments (

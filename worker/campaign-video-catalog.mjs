@@ -1,53 +1,35 @@
-import { bytesHex, videoError } from "./campaign-video-contract.mjs";
-import { MAX_CATALOG_BYTES, readPublicCatalogStills } from "./campaign-video-sqlite.mjs";
-
-export const PUBLIC_CATALOG_URL = "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite";
+import { videoError } from "./campaign-video-contract.mjs";
+import { fetchPublicCatalog } from "./public-catalog-fetch.mjs";
+export { PUBLIC_CATALOG_URL } from "./public-catalog-fetch.mjs";
 const unavailable = () => videoError(503, "campaign_video_catalog_unavailable");
 
-/** Fresh bounded HTTPS bytes on every check. No positive cache, redirect or fallback. */
-export function createCurrentPublicCatalogReader({ fetchImpl = fetch, now = () => Date.now() } = {}) {
+/** Fresh publisher authority brackets exact public bytes. No bundled or positive-cache fallback. */
+export function createCurrentPublicCatalogReader({ fetchImpl = fetch, now = () => Date.now(), authority } = {}) {
   return {
-    async read(mediaIds, expectedSha256) {
-      let response;
-      let reader;
+    async read(mediaIds, expectedSha256, expectedRevision) {
       try {
-        response = await fetchImpl(PUBLIC_CATALOG_URL, { method: "GET", redirect: "manual", cache: "no-store",
-          headers: { "accept": "application/octet-stream, application/vnd.sqlite3, application/x-sqlite3",
-            "accept-encoding": "identity", "cache-control": "no-cache, no-store, max-age=0" },
-          signal: AbortSignal.timeout(10000) });
-        const type = response.headers.get("content-type")?.split(";")[0].trim();
-        const date = Date.parse(response.headers.get("date"));
-        const age = response.headers.get("age");
-        const length = response.headers.get("content-length");
-        if (response.status !== 200 || response.redirected || (response.url && response.url !== PUBLIC_CATALOG_URL)
-            || !["application/octet-stream", "application/vnd.sqlite3", "application/x-sqlite3"].includes(type)
-            || (response.headers.get("content-encoding") || "identity") !== "identity"
-            || response.headers.has("content-range") || !Number.isFinite(date)
-            || now() - date > 30000 || date - now() > 5000 || (age !== null && age !== "0")
-            || (length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_CATALOG_BYTES || Number(length) < 512))) {
-          throw unavailable();
+        // Production always supplies the primary-backed authority. The strict HTTP
+        // mode remains for isolated diagnostics/tests, not an automatic fallback.
+        if (!authority) return await fetchPublicCatalog({ fetchImpl, now, mediaIds, expectedSha256, requireFresh: true });
+        const current = await authority.read();
+        if (!current || current.state !== "verified") throw unavailable();
+        if ((expectedSha256 && current.sha256 !== expectedSha256)
+            || (expectedRevision !== undefined && current.generation !== expectedRevision)) {
+          throw videoError(409, "campaign_video_catalog_changed");
         }
-        reader = response.body?.getReader();
-        if (!reader) throw unavailable();
-        const buffer = new Uint8Array(length === null ? MAX_CATALOG_BYTES : Number(length));
-        let count = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (!(value instanceof Uint8Array) || count + value.byteLength > buffer.length) throw unavailable();
-          buffer.set(value, count); count += value.byteLength;
+        const catalog = await fetchPublicCatalog({ fetchImpl, now, mediaIds, expectedSha256: current.sha256 });
+        const after = await authority.read();
+        if (!after || after.state !== "verified") throw unavailable();
+        if (after.generation !== current.generation || after.sha256 !== current.sha256
+            || after.operationId !== current.operationId || after.publisherId !== current.publisherId) {
+          throw videoError(409, "campaign_video_catalog_changed");
         }
-        if (count < 512 || (length !== null && count !== Number(length)) || now() - date > 30000) throw unavailable();
-        const bytes = buffer.subarray(0, count);
-        const sha256 = bytesHex(await crypto.subtle.digest("SHA-256", bytes));
-        if (expectedSha256 && sha256 !== expectedSha256) throw videoError(409, "campaign_video_catalog_changed");
-        return { ...readPublicCatalogStills(bytes, mediaIds), sha256, expiresAt: date + 30000 };
+        if (now() > catalog.expiresAt) throw unavailable();
+        return { ...catalog, revision: current.generation };
       } catch (error) {
-        if (reader) await reader.cancel().catch(() => {});
-        else if (response?.body) await response.body.cancel().catch(() => {});
         if (["campaign_video_catalog_changed", "campaign_video_catalog_invalid"].includes(error?.code)) throw error;
         throw unavailable();
-      } finally { reader?.releaseLock(); }
+      }
     },
   };
 }

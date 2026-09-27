@@ -2,6 +2,7 @@ import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.
 import { createD1AccessUserRegistry, createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { campaignVideoResponse, isCampaignVideoRequest } from "./campaign-video-hosting.mjs";
+import { CATALOG_AUTHORITY_PATH, createPublicCatalogAuthorityApi } from "./public-catalog-authority-api.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import { createKvStore } from "./kv-store.mjs";
@@ -449,6 +450,10 @@ const publicMediaResponse = async (request, env) => {
 export default {
   fetch(request, env = {}) {
     const url = new URL(request.url);
+    if (url.pathname === CATALOG_AUTHORITY_PATH || url.pathname.startsWith(`${CATALOG_AUTHORITY_PATH}/`)) {
+      return createPublicCatalogAuthorityApi({ database: env.ACCESS_DB, connectorAuth: ownerConnectorAuthFor(env),
+        enabled: env.CAMPAIGN_VIDEO_HOST_ENABLED === "true" }).fetch(request);
+    }
     if (isCampaignVideoRequest(url.pathname)) {
       return campaignVideoResponse(request, env, { connectorAuth: ownerConnectorAuthFor(env) });
     }

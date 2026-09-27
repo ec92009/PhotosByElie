@@ -844,9 +844,11 @@ paths:
         cookies are rejected. Same declaration replays; changed slug/queue
         bindings conflict. No original paths or arbitrary R2 keys accepted.
         Current public SQLite bytes are bounded and fetched per check; no
-        bundled catalog or positive eligibility cache. Stale origin is 503;
-        a changed catalog digest within the request is 409. Hosting remains
-        disabled pending freshness and public-host review.
+        bundled catalog or positive eligibility cache. Missing/pending publisher
+        authority or a digest mismatch is 503; a changed catalog digest or
+        authority generation within the request is 409. Hosting remains
+        disabled pending readiness review. Public video URLs use only the
+        existing download.photos-by-elie.com domain; the API stays on auth.
         See campaign-video-hosting.md for the canonical digest definition.
       requestBody:
         required: true
@@ -919,6 +921,52 @@ paths:
               schema: { $ref: "#/components/schemas/CampaignVideoReceipt" }
         default:
           $ref: "#/components/responses/Error"
+  /public-catalog/authority:
+    get:
+      tags: [Campaign Videos]
+      security: [{ connectorCredential: [] }]
+      operationId: getPublicCatalogAuthority
+      description: >
+        Native-only, no-store primary D1 read of the current publisher fence.
+        The shared campaign-video feature flag gates this source-only endpoint.
+        Exact 404 public_catalog_authority_absent means not enrolled; all other
+        failures remain unavailable, never an empty/default authority.
+      responses:
+        "200":
+          description: Current pending or verified publisher fence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicCatalogAuthority" }
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      tags: [Campaign Videos]
+      security: [{ connectorCredential: [] }]
+      operationId: transitionPublicCatalogAuthority
+      description: >
+        Existing connector only; first enrollment pins the publisher identity.
+        Prepare installs a pending fence before a supported Owner projection
+        change. Commit independently hashes and parses the fixed public SQLite
+        artifact, then compare-and-swaps that exact pending generation. The
+        operation ID is SHA256 of UTF8 public-catalog, newline, decimal revision,
+        newline, lowercase SHA256, with no final newline. Exact operation replay
+        is supported; different pending operations and stale generations conflict.
+        No catalog bytes, paths, URLs, credentials or arbitrary metadata accepted.
+        Browser Origin, Cookie and Sec-Fetch-Site are rejected. Body cap 4096 bytes.
+        See public-catalog-authority.md for writer enrollment and activation gates.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PublicCatalogTransition" }
+      responses:
+        "200":
+          description: Recorded exact transition, not proof of installed writer coverage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicCatalogAuthority" }
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     ownerSession:
@@ -984,6 +1032,36 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
   schemas:
+    PublicCatalogTransition:
+      type: object
+      additionalProperties: false
+      required: [schema, phase, operationId, expectedGeneration, projectionRevision, sha256]
+      properties:
+        schema: { type: string, const: photosbyelie.publicCatalogTransition.v1 }
+        phase: { type: string, enum: [prepare, commit] }
+        operationId: { $ref: "#/components/schemas/CampaignVideoHash" }
+        expectedGeneration:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: Zero only for initial prepare; commit requires at least one.
+        projectionRevision: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        sha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+    PublicCatalogAuthority:
+      type: object
+      additionalProperties: false
+      required: [schema, ok, generation, state, operationId, projectionRevision, sha256, publisherId, updatedAt, checkedAt]
+      properties:
+        schema: { type: string, const: photosbyelie.publicCatalogAuthority.v1 }
+        ok: { type: boolean, const: true }
+        generation: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        state: { type: string, enum: [pending, verified] }
+        operationId: { $ref: "#/components/schemas/CampaignVideoHash" }
+        projectionRevision: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        sha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        publisherId: { type: string, minLength: 1 }
+        updatedAt: { type: string, format: date-time }
+        checkedAt: { type: string, format: date-time }
     CampaignVideoHash:
       type: string
       pattern: '^[a-f0-9]{64}$'
@@ -1043,7 +1121,12 @@ components:
       type: object
       additionalProperties: false
       required: [schema, ok, slug, queueId, bindingSha256, videoSha256, size, contentType, publicUrl, portraitMp4, state, objectState, createdAt, checkedAt]
-      description: Reconciliation evidence, not independent public playback verification; ready iff objectState is verified.
+      description: >
+        Reconciliation evidence, not independent public playback verification;
+        ready iff objectState is verified. publicUrl and portraitMp4 are the same
+        exact absolute HTTPS URL on download.photos-by-elie.com, with a native-
+        prefixed slug of at most 120 characters. No port, credentials, query,
+        fragment, encoded characters or path traversal.
       properties:
         schema: { type: string, const: photosbyelie.campaignVideoReceipt.v1 }
         ok: { type: boolean, const: true }
@@ -1053,8 +1136,8 @@ components:
         videoSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
         size: { type: integer }
         contentType: { type: string, const: video/mp4 }
-        publicUrl: { type: string, pattern: '^https://photos-by-elie\.com/assets/campaign-media/native-[a-z0-9-]+\.mp4$' }
-        portraitMp4: { type: string, pattern: '^\./assets/campaign-media/native-[a-z0-9-]+\.mp4$' }
+        publicUrl: { type: string, pattern: '^https://download\.photos-by-elie\.com/assets/campaign-media/(?=[a-z0-9-]{8,120}\.mp4(?![\s\S]))native-[a-z0-9]+(?:-[a-z0-9]+)*\.mp4(?![\s\S])' }
+        portraitMp4: { type: string, pattern: '^https://download\.photos-by-elie\.com/assets/campaign-media/(?=[a-z0-9-]{8,120}\.mp4(?![\s\S]))native-[a-z0-9]+(?:-[a-z0-9]+)*\.mp4(?![\s\S])' }
         state: { type: string, enum: [reserved, ready] }
         objectState: { type: string, enum: [absent, verified] }
         createdAt: { type: string, format: date-time }

@@ -7,7 +7,7 @@ import { createCampaignVideoHost } from "./campaign-video-hosting.mjs";
 export const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 export const videoBytes = Buffer.from("000000186674797069736f6d0000000069736f6d61766331000000086d646174", "hex");
 export const apiUrl = "https://auth.photos-by-elie.com/api/v1/campaign-videos/native-test";
-export const publicUrl = "https://photos-by-elie.com/assets/campaign-media/native-test.mp4";
+export const publicUrl = "https://download.photos-by-elie.com/assets/campaign-media/native-test.mp4";
 export const authHeaders = { authorization: "Bearer test-connector-only" };
 
 export function declaration(count = 12) {

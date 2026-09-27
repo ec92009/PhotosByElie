@@ -115,11 +115,12 @@ export async function assertVideoEligible(binding, catalogReader, lifecycle, exp
     throw videoError(503, "campaign_video_eligibility_unavailable");
   }
   const ids = binding.components.map((item) => item.canonicalMediaId);
-  const catalog = await catalogReader.read(ids, expectedFence?.catalogSha256);
+  const catalog = await catalogReader.read(ids, expectedFence?.catalogSha256, expectedFence?.catalogRevision);
   if (!catalog?.photos || !HASH_PATTERN.test(catalog.sha256 || "") || !Number.isFinite(catalog.expiresAt)) {
     throw videoError(503, "campaign_video_eligibility_unavailable");
   }
-  if (expectedFence && catalog.sha256 !== expectedFence.catalogSha256) {
+  if (expectedFence && (catalog.sha256 !== expectedFence.catalogSha256
+      || (expectedFence.catalogRevision !== undefined && catalog.revision !== expectedFence.catalogRevision))) {
     throw videoError(409, "campaign_video_catalog_changed");
   }
   for (const item of binding.components) {
@@ -143,5 +144,6 @@ export async function assertVideoEligible(binding, catalogReader, lifecycle, exp
   }
   const lifecycleFence = await lifecycle.assertAllowed(ids, "campaign-video", expectedFence?.lifecycle);
   if (Date.now() > catalog.expiresAt) throw videoError(503, "campaign_video_catalog_unavailable");
-  return { catalogSha256: catalog.sha256, lifecycle: lifecycleFence };
+  return { catalogSha256: catalog.sha256, lifecycle: lifecycleFence,
+    ...(catalog.revision === undefined ? {} : { catalogRevision: catalog.revision }) };
 }

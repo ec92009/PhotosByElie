@@ -3,8 +3,8 @@ import Foundation
 
 public enum OwnerContract {
     public static let openAPIVersion = "1.5.0"
-    public static let specSHA256 = "6f29dc77e6b58f66f31b32aa5f66ffb48dae52219facbd3f8578b924aead2450"
-    public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
+    public static let specSHA256 = "91161d301454acedd5a05730c9600c0e6ca3c431a886e2a61949dca3f3f41055"
+    public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress", "PublicCatalogAuthority", "PublicCatalogTransition"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
     public enum Operation: String, CaseIterable, Sendable {
@@ -32,6 +32,7 @@ public enum OwnerContract {
         case getHealth = "getHealth"
         case getOwnerSession = "getOwnerSession"
         case getPBEOwnerSession = "getPBEOwnerSession"
+        case getPublicCatalogAuthority = "getPublicCatalogAuthority"
         case getRenderJob = "getRenderJob"
         case heartbeatConnector = "heartbeatConnector"
         case listActions = "listActions"
@@ -52,6 +53,7 @@ public enum OwnerContract {
         case transitionAction = "transitionAction"
         case transitionConnectorAction = "transitionConnectorAction"
         case transitionDeliverable = "transitionDeliverable"
+        case transitionPublicCatalogAuthority = "transitionPublicCatalogAuthority"
         case uploadCampaignVideo = "uploadCampaignVideo"
         case verifyPublicPreviews = "verifyPublicPreviews"
     }
@@ -91,6 +93,7 @@ public enum OwnerContract {
         .getHealth: Endpoint(method: "GET", path: "/health"),
         .getOwnerSession: Endpoint(method: "GET", path: "/owner/session"),
         .getPBEOwnerSession: Endpoint(method: "GET", path: "/pbe-owner/session"),
+        .getPublicCatalogAuthority: Endpoint(method: "GET", path: "/public-catalog/authority"),
         .getRenderJob: Endpoint(method: "GET", path: "/jobs/{jobId}"),
         .heartbeatConnector: Endpoint(method: "POST", path: "/connectors/heartbeat"),
         .listActions: Endpoint(method: "GET", path: "/actions"),
@@ -111,6 +114,7 @@ public enum OwnerContract {
         .transitionAction: Endpoint(method: "POST", path: "/actions/{actionId}/{transition}"),
         .transitionConnectorAction: Endpoint(method: "POST", path: "/connectors/actions/{actionId}/{transition}"),
         .transitionDeliverable: Endpoint(method: "POST", path: "/deliverables/{deliverableId}/{action}"),
+        .transitionPublicCatalogAuthority: Endpoint(method: "POST", path: "/public-catalog/authority"),
         .uploadCampaignVideo: Endpoint(method: "PUT", path: "/campaign-videos/{slug}/content"),
         .verifyPublicPreviews: Endpoint(method: "POST", path: "/lifecycle/public-previews/verify"),
     ]

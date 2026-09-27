@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bindingDigest, canonicalJson, validateVideoBinding, previewMembers } from "./campaign-video-contract.mjs";
-import { isCampaignVideoRequest } from "./campaign-video-hosting.mjs";
+import { campaignVideoResponse, isCampaignVideoRequest } from "./campaign-video-hosting.mjs";
+import { catalogOperationId, createPublicCatalogAuthority } from "./public-catalog-authority.mjs";
+import { catalogBytes, catalogResponse } from "./campaign-video-catalog-test-support.mjs";
 import deployedWorker from "./deployed-worker.mjs";
 import { createD1LifecycleDenyStore, summarizeLifecycleManifest } from "./lifecycle-deny-store.mjs";
 import { apiUrl, publicUrl, authHeaders, declaration, fixture, hash, videoBytes, TestD1 } from "./campaign-video-test-support.mjs";
@@ -87,7 +89,7 @@ test("reservation is immutable/idempotent; queue cannot be re-slugged and GET ne
   const first = await code(await f.reserve(), 200);
   assert.equal(first.state, "reserved"); assert.equal(first.objectState, "absent");
   assert.equal(first.publicUrl, publicUrl);
-  assert.equal(first.portraitMp4, "./assets/campaign-media/native-test.mp4");
+  assert.equal(first.portraitMp4, publicUrl);
   assert.deepEqual(await code(await f.reserve(), 200), first);
   const before = f.database.sqlite.prepare("SELECT total_changes() n").get().n;
   await code(await f.fetch(apiUrl, { headers: authHeaders }), 200);
@@ -113,6 +115,7 @@ test("exact conditional upload reconciles and publicly streams full/HEAD/ranged 
   const reserved = await code(await f.reserve(), 200);
   const uploaded = await code(await f.upload(reserved), 200);
   assert.equal(uploaded.objectState, "verified"); assert.equal(uploaded.state, "ready");
+  assert.equal(uploaded.publicUrl, publicUrl); assert.equal(uploaded.portraitMp4, publicUrl);
   assert.match([...f.bucket.objects.keys()][0], /^campaign-videos\/v1\/[a-f0-9]{64}\.mp4$/);
   assert.doesNotMatch(JSON.stringify(uploaded), /masters|private|sourceSha|objectKey|token|test-connector/);
   assert.deepEqual(await code(await f.fetch(apiUrl, { headers: authHeaders }), 200), uploaded);
@@ -136,6 +139,23 @@ test("exact conditional upload reconciles and publicly streams full/HEAD/ranged 
     const bad = await f.fetch(publicUrl, { headers: { range } });
     assert.equal(bad.status, 416); assert.equal(bad.headers.get("content-range"), `bytes */${videoBytes.length}`);
   }
+});
+
+test("public video delivery is scoped to download while the API stays on auth", async () => {
+  const f = fixture();
+  const reserved = await code(await f.reserve(), 200);
+  await code(await f.upload(reserved), 200);
+  for (const origin of ["https://photos-by-elie.com", "https://auth.photos-by-elie.com",
+    "https://photosbyelie-checkout-mock.ec92009.workers.dev", "https://example.com"]) {
+    const url = `${origin}/assets/campaign-media/native-test.mp4`;
+    for (const method of ["GET", "HEAD"]) await code(await f.fetch(url, { method }), 404, "campaign_video_not_found");
+  }
+  assert.equal(f.bucket.gets, 0);
+  assert.equal((await f.fetch(publicUrl, { method: "HEAD" })).status, 200);
+  await code(await f.fetch(publicUrl, { method: "POST" }), 405, "campaign_video_method_not_allowed");
+  await code(await f.fetch(apiUrl.replace("auth.", "download."), { headers: authHeaders }), 404, "campaign_video_not_found");
+  const reconciled = await code(await f.fetch(apiUrl, { headers: authHeaders }), 200);
+  assert.equal(reconciled.publicUrl, publicUrl); assert.equal(reconciled.portraitMp4, publicUrl);
 });
 
 test("length, hash, MIME, signature and approval mismatch never leave servable objects", async () => {
@@ -230,4 +250,66 @@ test("existing real lifecycle store denies later armed photo without registratio
   await code(await f.fetch(publicUrl), 410);
   await code(await f.fetch(apiUrl, { headers: authHeaders }), 410);
   assert.equal(database.sqlite.prepare("SELECT total_changes() n FROM pbe_lifecycle_control").get().n, before);
+});
+
+test("fresh primary lifecycle reads reject an R2-time denial despite a stale request-session replica", async (t) => {
+  const binding = declaration(8), primary = new TestD1();
+  const lifecycle = createD1LifecycleDenyStore({ database: primary });
+  const items = previewMembers(binding);
+  await lifecycle.seedVisibleBatch({ seedId: "primary-review", items });
+  await lifecycle.activate({ activationId: "primary-review-active", ...await summarizeLifecycleManifest(items) });
+  const f = fixture(binding, { database: primary, lifecycle });
+  const reserved = await code(await f.reserve(), 200);
+  await code(await f.upload(reserved), 200);
+  const bytes = catalogBytes(binding.components.map((c) => c.canonicalMediaId));
+  const sha256 = hash(bytes), authority = createPublicCatalogAuthority(primary);
+  const transition = { schema: "photosbyelie.publicCatalogTransition.v1", phase: "prepare",
+    expectedGeneration: 0, projectionRevision: 1, sha256, operationId: await catalogOperationId(1, sha256) };
+  await authority.prepare(transition, "max");
+  await authority.commit({ ...transition, phase: "commit", expectedGeneration: 1 }, "max", async () => {});
+
+  // Synthetic in-memory snapshot only. D1 first-primary permits subsequent
+  // session reads to use a replica consistent with the first query's bookmark.
+  const replica = new TestD1();
+  for (const { name } of primary.sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) {
+    assert.match(name, /^[a-z0-9_]+$/);
+    for (const row of primary.sqlite.prepare(`SELECT * FROM ${name}`).all()) {
+      const columns = Object.keys(row);
+      replica.sqlite.prepare(`INSERT OR REPLACE INTO ${name} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`)
+        .run(...Object.values(row));
+    }
+  }
+  const sessions = [];
+  const raw = {
+    prepare: (sql) => primary.prepare(sql), batch: (statements) => primary.batch(statements),
+    withSession(constraint) {
+      assert.equal(constraint, "first-primary");
+      const queries = []; sessions.push(queries);
+      return {
+        prepare(sql) {
+          const target = queries.length === 0 ? primary : replica;
+          queries.push(sql); return target.prepare(sql);
+        },
+        batch: (statements) => primary.batch(statements),
+      };
+    },
+  };
+  t.mock.method(globalThis, "fetch", async () => catalogResponse(bytes, { age: "600" }));
+  const env = { ACCESS_DB: raw, PRIVATE_MEDIA: f.bucket, CAMPAIGN_VIDEO_HOST_ENABLED: "true" };
+  const allowed = await campaignVideoResponse(new Request(publicUrl), env);
+  assert.equal(allowed.status, 200);
+  assert.equal(hash(new Uint8Array(await allowed.arrayBuffer())), binding.video.sha256);
+
+  f.bucket.onGet = () => lifecycle.armBatch({ operationId: "deny-during-r2", operation: "x", denied: true, items: [items[0]] });
+  const denied = await campaignVideoResponse(new Request(publicUrl), env);
+  await code(denied, 410, "campaign_video_component_ineligible");
+  await assert.rejects(() => lifecycle.assertAllowed([items[0].canonicalMediaId]), { code: "asset_lifecycle_denied" });
+  // The old snapshot still grants access: the result depends on fresh reads,
+  // not a changed catalog, incidental replica progress or unconditional denial.
+  const staleLifecycle = createD1LifecycleDenyStore({ database: replica });
+  assert.ok((await staleLifecycle.assertAllowed([items[0].canonicalMediaId])).digest);
+  assert.equal((await authority.read()).state, "verified");
+  assert.equal(f.bucket.gets, 2);
+  assert.ok(sessions.length > 2);
+  assert.ok(sessions.every((queries) => queries.length === 1));
 });

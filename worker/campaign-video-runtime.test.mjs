@@ -40,12 +40,14 @@ test("workerd streams through real FixedLengthStream, D1 and R2 checksum/conditi
       headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify(binding) });
     assert.equal(reservedResponse.status, 200);
     const reserved = await reservedResponse.json();
+    assert.equal(reserved.publicUrl, publicUrl); assert.equal(reserved.portraitMp4, publicUrl);
     const headers = { ...authHeaders, "content-type": "video/mp4", "content-length": String(videoBytes.length),
       "x-pbe-video-sha256": binding.video.sha256, "x-pbe-binding-sha256": reserved.bindingSha256 };
     const uploaded = await mf.dispatchFetch(`${apiUrl}/content`, { method: "PUT", headers, body: videoBytes });
     const receipt = await uploaded.json();
     assert.equal(uploaded.status, 200, JSON.stringify(receipt));
     assert.equal(receipt.objectState, "verified");
+    assert.equal(receipt.publicUrl, publicUrl); assert.equal(receipt.portraitMp4, publicUrl);
     const publicResponse = await mf.dispatchFetch(publicUrl);
     assert.equal(publicResponse.status, 200);
     assert.equal(hash(Buffer.from(await publicResponse.arrayBuffer())), binding.video.sha256);

@@ -6,9 +6,10 @@ import { createCampaignVideoStore } from "./campaign-video-store.mjs";
 import { putVideoStream, videoRange } from "./campaign-video-stream.mjs";
 import { createD1LifecycleDenyStore } from "./lifecycle-deny-store.mjs";
 import { createCurrentPublicCatalogReader } from "./campaign-video-catalog.mjs";
+import { createPublicCatalogAuthority } from "./public-catalog-authority.mjs";
 
 const AUTH_ORIGIN = "https://auth.photos-by-elie.com";
-const SITE_ORIGIN = "https://photos-by-elie.com";
+const VIDEO_ORIGIN = "https://download.photos-by-elie.com";
 const CACHE_HEADERS = {
   "cache-control": "private, no-store, max-age=0", "cdn-cache-control": "no-store",
   "cloudflare-cdn-cache-control": "no-store", "x-content-type-options": "nosniff",
@@ -17,6 +18,15 @@ const json = (value, status = 200) => Response.json(value, { status, headers: {
   ...CACHE_HEADERS, "x-pbe-api-version": "1", "x-pbe-request-id": crypto.randomUUID(),
 } });
 const objectKey = (record) => `campaign-videos/v1/${record.bindingSha256}.mp4`;
+
+/** Each lifecycle query starts at primary; request-session bookmarks may be stale. */
+function freshPrimaryDatabase(database) {
+  if (!database?.withSession) return database;
+  return {
+    prepare: (sql) => database.withSession("first-primary").prepare(sql),
+    batch: (statements) => database.withSession("first-primary").batch(statements),
+  };
+}
 
 /** Only new native-prefixed assets are intercepted; historical static MP4s stay at origin. */
 export const isCampaignVideoRequest = (pathname) => pathname.startsWith(API_PREFIX.slice(0, -1))
@@ -40,12 +50,12 @@ function verifiedObject(object, record) {
 
 /** A current receipt is reconciliation, not an assertion of independent public playback. */
 function receipt(record, object, now) {
-  const path = `${PUBLIC_PREFIX}${record.slug}.mp4`;
+  const publicUrl = `${VIDEO_ORIGIN}${PUBLIC_PREFIX}${record.slug}.mp4`;
   return {
     schema: VIDEO_RECEIPT_SCHEMA, ok: true, slug: record.slug, queueId: record.binding.queueId,
     bindingSha256: record.bindingSha256, videoSha256: record.binding.video.sha256,
     size: record.binding.video.size, contentType: "video/mp4",
-    publicUrl: `${SITE_ORIGIN}${path}`, portraitMp4: `.${path}`,
+    publicUrl, portraitMp4: publicUrl,
     state: object ? "ready" : "reserved", objectState: object ? "verified" : "absent",
     createdAt: record.createdAt, checkedAt: now().toISOString(),
     ...(object ? { uploadedAt: new Date(object.uploaded).toISOString(), etag: object.httpEtag } : {}),
@@ -98,7 +108,7 @@ export function createCampaignVideoHost({ database, bucket, catalogReader, lifec
         const apiMatch = /^\/api\/v1\/campaign-videos\/(native-[a-z0-9-]+)(\/content)?$/.exec(url.pathname);
         const slug = publicMatch?.[1] || apiMatch?.[1];
         if (!slug || slug.length > 120 || !SLUG_PATTERN.test(slug)) throw videoError(404, "campaign_video_not_found");
-        if (url.origin !== (publicMatch ? SITE_ORIGIN : AUTH_ORIGIN)) throw videoError(404, "campaign_video_not_found");
+        if (url.origin !== (publicMatch ? VIDEO_ORIGIN : AUTH_ORIGIN)) throw videoError(404, "campaign_video_not_found");
         let connector;
         if (apiMatch) {
           // Native only. A customer cookie or a browser Origin cannot upgrade authority.
@@ -163,9 +173,10 @@ export async function campaignVideoResponse(request, env, { connectorAuth } = {}
   try {
     const database = env.ACCESS_DB?.withSession ? env.ACCESS_DB.withSession("first-primary") : env.ACCESS_DB;
     return await createCampaignVideoHost({ database, bucket: env.PRIVATE_MEDIA, connectorAuth,
-      catalogReader: createCurrentPublicCatalogReader(),
+      // Raw binding: each authority read opens its own fresh first-primary session.
+      catalogReader: createCurrentPublicCatalogReader({ authority: createPublicCatalogAuthority(env.ACCESS_DB) }),
       enabled: env.CAMPAIGN_VIDEO_HOST_ENABLED === "true",
-      lifecycle: createD1LifecycleDenyStore({ database }),
+      lifecycle: createD1LifecycleDenyStore({ database: freshPrimaryDatabase(env.ACCESS_DB) }),
     }).fetch(request);
   } catch {
     return json({ ok: false, error: { code: "campaign_video_dependency_unavailable",

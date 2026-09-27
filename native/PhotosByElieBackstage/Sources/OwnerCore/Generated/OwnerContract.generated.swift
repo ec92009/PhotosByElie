@@ -2,9 +2,9 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.4.0"
-    public static let specSHA256 = "c3aad07add0897d6ed48566ec067a371b4e6c30fc030b852822b080ab64639c7"
-    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
+    public static let openAPIVersion = "1.5.0"
+    public static let specSHA256 = "6f29dc77e6b58f66f31b32aa5f66ffb48dae52219facbd3f8578b924aead2450"
+    public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
     public enum Operation: String, CaseIterable, Sendable {
@@ -25,6 +25,7 @@ public enum OwnerContract {
         case getAccessState = "getAccessState"
         case getAction = "getAction"
         case getAuthSession = "getAuthSession"
+        case getCampaignVideo = "getCampaignVideo"
         case getConnectorAction = "getConnectorAction"
         case getDeliverableAsset = "getDeliverableAsset"
         case getGalleryAccess = "getGalleryAccess"
@@ -42,6 +43,7 @@ public enum OwnerContract {
         case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
         case reconcileLifecycleManifest = "reconcileLifecycleManifest"
+        case reserveCampaignVideo = "reserveCampaignVideo"
         case revokeOwnerDevice = "revokeOwnerDevice"
         case saveDeliverable = "saveDeliverable"
         case saveGroup = "saveGroup"
@@ -50,6 +52,7 @@ public enum OwnerContract {
         case transitionAction = "transitionAction"
         case transitionConnectorAction = "transitionConnectorAction"
         case transitionDeliverable = "transitionDeliverable"
+        case uploadCampaignVideo = "uploadCampaignVideo"
         case verifyPublicPreviews = "verifyPublicPreviews"
     }
 
@@ -81,6 +84,7 @@ public enum OwnerContract {
         .getAccessState: Endpoint(method: "GET", path: "/acs/state"),
         .getAction: Endpoint(method: "GET", path: "/actions/{actionId}"),
         .getAuthSession: Endpoint(method: "GET", path: "/auth/session"),
+        .getCampaignVideo: Endpoint(method: "GET", path: "/campaign-videos/{slug}"),
         .getConnectorAction: Endpoint(method: "GET", path: "/connectors/actions/{actionId}"),
         .getDeliverableAsset: Endpoint(method: "GET", path: "/deliverables/{deliverableId}/{action}"),
         .getGalleryAccess: Endpoint(method: "GET", path: "/acs/gallery-access"),
@@ -98,6 +102,7 @@ public enum OwnerContract {
         .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
         .reconcileLifecycleManifest: Endpoint(method: "POST", path: "/lifecycle/reconcile"),
+        .reserveCampaignVideo: Endpoint(method: "POST", path: "/campaign-videos/{slug}"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),
         .saveDeliverable: Endpoint(method: "POST", path: "/deliverables"),
         .saveGroup: Endpoint(method: "POST", path: "/acs/groups"),
@@ -106,6 +111,7 @@ public enum OwnerContract {
         .transitionAction: Endpoint(method: "POST", path: "/actions/{actionId}/{transition}"),
         .transitionConnectorAction: Endpoint(method: "POST", path: "/connectors/actions/{actionId}/{transition}"),
         .transitionDeliverable: Endpoint(method: "POST", path: "/deliverables/{deliverableId}/{action}"),
+        .uploadCampaignVideo: Endpoint(method: "PUT", path: "/campaign-videos/{slug}/content"),
         .verifyPublicPreviews: Endpoint(method: "POST", path: "/lifecycle/public-previews/verify"),
     ]
 }

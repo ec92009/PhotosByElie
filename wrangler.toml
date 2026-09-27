@@ -25,6 +25,8 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
+# PBE-215: source-only until catalog freshness, host choice, migration and bytes are reviewed.
+CAMPAIGN_VIDEO_HOST_ENABLED = "false"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 # Optional legacy Google-backed Cloudflare Access login:
@@ -75,6 +77,13 @@ custom_domain = true
 [[routes]]
 pattern = "auth.photos-by-elie.com"
 custom_domain = true
+
+# Proposal only: apex is DNS-only; changing its proxy state is NOT authorized.
+# Main must review the existing download-domain alternative before choosing a host.
+# If apex is separately authorized later, reconcile all current zone routes first.
+# [[routes]]
+# pattern = "photos-by-elie.com/assets/campaign-media/native-*"
+# zone_name = "photos-by-elie.com"
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"

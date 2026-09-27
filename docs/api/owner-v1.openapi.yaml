@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PhotosByElie Owner API
-  version: 1.4.0
+  version: 1.5.0
   description: >
     Versioned cloud boundary used by PhotosByElie Backstage on an enrolled Mac.
     Google browser login is provisioning-only. Owner.sqlite and Apple Photos
@@ -19,6 +19,7 @@ tags:
   - name: Access
   - name: Sidecar
   - name: Delivery
+  - name: Campaign Videos
 paths:
   /health:
     get:
@@ -829,6 +830,95 @@ paths:
                 type: object
                 properties:
                   job: { $ref: "#/components/schemas/Job" }
+  /campaign-videos/{slug}:
+    parameters:
+      - $ref: "#/components/parameters/CampaignVideoSlug"
+    post:
+      tags: [Campaign Videos]
+      security: [{ connectorCredential: [] }]
+      operationId: reserveCampaignVideo
+      description: >
+        Source-only PBE-215 route, disabled until explicitly activated. Reserves
+        an immutable approved derivative declaration (16 KiB actual UTF-8 cap).
+        Only enrolled native connectors; browser Origin, fetch metadata and
+        cookies are rejected. Same declaration replays; changed slug/queue
+        bindings conflict. No original paths or arbitrary R2 keys accepted.
+        Current public SQLite bytes are bounded and fetched per check; no
+        bundled catalog or positive eligibility cache. Stale origin is 503;
+        a changed catalog digest within the request is 409. Hosting remains
+        disabled pending freshness and public-host review.
+        See campaign-video-hosting.md for the canonical digest definition.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignVideoBinding" }
+      responses:
+        "200":
+          description: Reserved or already stored, with current eligibility checked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignVideoReceipt" }
+        default:
+          $ref: "#/components/responses/Error"
+    get:
+      tags: [Campaign Videos]
+      security: [{ connectorCredential: [] }]
+      operationId: getCampaignVideo
+      description: >
+        Read-only exact declaration/R2/current eligibility reconciliation.
+        404 means no declaration. 200 reserved/absent means no object at fresh
+        R2 HEAD. Conflicting object metadata is 409, never absent. A later denied
+        component is 410; unknown/unavailable authority is 503. No listing API.
+        Catalog SHA-256 and live D1 denial fences are checked across the request.
+      responses:
+        "200":
+          description: Current immutable binding and object state, no-store
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignVideoReceipt" }
+        default:
+          $ref: "#/components/responses/Error"
+  /campaign-videos/{slug}/content:
+    parameters:
+      - $ref: "#/components/parameters/CampaignVideoSlug"
+    put:
+      tags: [Campaign Videos]
+      security: [{ connectorCredential: [] }]
+      operationId: uploadCampaignVideo
+      description: >
+        Conditional immutable creation only, up to 64 MiB. Streams and checks
+        MP4 signature, exact length and SHA-256 before R2 commit. Stores only a
+        derivative under a server-chosen private-bucket prefix. Reconcile GET
+        before retrying an unconfirmed transport result; never overwrite.
+        Fresh catalog and D1 checks run before upload and again after source EOF,
+        before releasing the final byte that permits R2 commit.
+      parameters:
+        - in: header
+          name: Content-Length
+          required: true
+          schema: { type: integer, minimum: 12, maximum: 67108864 }
+        - in: header
+          name: X-PBE-Binding-SHA256
+          required: true
+          schema: { $ref: "#/components/schemas/CampaignVideoHash" }
+        - in: header
+          name: X-PBE-Video-SHA256
+          required: true
+          schema: { $ref: "#/components/schemas/CampaignVideoHash" }
+      requestBody:
+        required: true
+        content:
+          video/mp4:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Exact R2 object verified and component eligibility rechecked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignVideoReceipt" }
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     ownerSession:
@@ -853,6 +943,14 @@ components:
       in: cookie
       name: pbe_re_session
   parameters:
+    CampaignVideoSlug:
+      in: path
+      name: slug
+      required: true
+      schema:
+        type: string
+        pattern: '^native-[a-z0-9]+(?:-[a-z0-9]+)*$'
+        maxLength: 120
     ActionId:
       in: path
       name: actionId
@@ -886,6 +984,83 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
   schemas:
+    CampaignVideoHash:
+      type: string
+      pattern: '^[a-f0-9]{64}$'
+    CampaignVideoBinding:
+      type: object
+      additionalProperties: false
+      required: [schema, queueId, selectionSha256, approvalReceipt, sourceManifestSha256, validationSha256, approvedPhotoCount, video, components]
+      description: >
+        Connector attestation of existing weekly approval/source/encoded validation,
+        not a server-created approval. The ordered component count must equal
+        approvedPhotoCount. Below 12 requires approvedPhotoCountException with
+        exact count and approvalReceipt; whenever supplied both must match.
+      properties:
+        schema: { type: string, const: photosbyelie.campaignVideoBinding.v1 }
+        queueId: { type: string, pattern: '^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,255}$' }
+        selectionSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        approvalReceipt:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Existing relative evidence path or user-message reference; preserved exactly; no leading/trailing whitespace, controls or URLs.
+        sourceManifestSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        validationSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        approvedPhotoCount: { type: integer, minimum: 1, maximum: 12 }
+        approvedPhotoCountException:
+          type: object
+          additionalProperties: false
+          required: [count, receipt]
+          properties:
+            count: { type: integer, minimum: 1, maximum: 12 }
+            receipt: { type: string, minLength: 1, maxLength: 512 }
+        video:
+          type: object
+          additionalProperties: false
+          required: [sha256, size, contentType, width, height, durationMilliseconds]
+          properties:
+            sha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+            size: { type: integer, minimum: 12, maximum: 67108864 }
+            contentType: { type: string, const: video/mp4 }
+            width: { type: integer, const: 1080 }
+            height: { type: integer, const: 1920 }
+            durationMilliseconds: { type: integer, minimum: 25000, maximum: 35000 }
+        components:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            type: object
+            additionalProperties: false
+            required: [assetId, canonicalAssetId, canonicalMediaId, sourceSha256]
+            properties:
+              assetId: { type: string, pattern: '^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,255}$' }
+              canonicalAssetId: { type: string, pattern: '^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,255}$' }
+              canonicalMediaId: { type: string, pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$' }
+              sourceSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+    CampaignVideoReceipt:
+      type: object
+      additionalProperties: false
+      required: [schema, ok, slug, queueId, bindingSha256, videoSha256, size, contentType, publicUrl, portraitMp4, state, objectState, createdAt, checkedAt]
+      description: Reconciliation evidence, not independent public playback verification; ready iff objectState is verified.
+      properties:
+        schema: { type: string, const: photosbyelie.campaignVideoReceipt.v1 }
+        ok: { type: boolean, const: true }
+        slug: { type: string }
+        queueId: { type: string }
+        bindingSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        videoSha256: { $ref: "#/components/schemas/CampaignVideoHash" }
+        size: { type: integer }
+        contentType: { type: string, const: video/mp4 }
+        publicUrl: { type: string, pattern: '^https://photos-by-elie\.com/assets/campaign-media/native-[a-z0-9-]+\.mp4$' }
+        portraitMp4: { type: string, pattern: '^\./assets/campaign-media/native-[a-z0-9-]+\.mp4$' }
+        state: { type: string, enum: [reserved, ready] }
+        objectState: { type: string, enum: [absent, verified] }
+        createdAt: { type: string, format: date-time }
+        checkedAt: { type: string, format: date-time }
+        uploadedAt: { type: string, format: date-time }
+        etag: { type: string }
     Health:
       type: object
       required: [ok, service]

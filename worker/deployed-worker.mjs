@@ -1,6 +1,7 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createD1AccessUserRegistry, createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
+import { campaignVideoResponse, isCampaignVideoRequest } from "./campaign-video-hosting.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import { createKvStore } from "./kv-store.mjs";
@@ -448,6 +449,9 @@ const publicMediaResponse = async (request, env) => {
 export default {
   fetch(request, env = {}) {
     const url = new URL(request.url);
+    if (isCampaignVideoRequest(url.pathname)) {
+      return campaignVideoResponse(request, env, { connectorAuth: ownerConnectorAuthFor(env) });
+    }
     if (url.pathname.startsWith(BACKSTAGE_ROOT_PREFIX)) {
       return backstageReleaseResponse(request, env);
     }

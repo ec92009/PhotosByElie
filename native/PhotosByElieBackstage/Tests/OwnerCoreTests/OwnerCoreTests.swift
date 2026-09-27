@@ -1802,7 +1802,17 @@ struct OwnerCoreTests {
 
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
-        #expect(OwnerContract.openAPIVersion == "1.4.0")
+        #expect(OwnerContract.openAPIVersion == "1.5.0")
+        #expect(OwnerContract.endpoints[.getPublicCatalogAuthority]
+            == .init(method: "GET", path: "/public-catalog/authority"))
+        #expect(OwnerContract.endpoints[.transitionPublicCatalogAuthority]
+            == .init(method: "POST", path: "/public-catalog/authority"))
+        #expect(OwnerContract.endpoints[.reserveCampaignVideo]
+            == .init(method: "POST", path: "/campaign-videos/{slug}"))
+        #expect(OwnerContract.endpoints[.getCampaignVideo]
+            == .init(method: "GET", path: "/campaign-videos/{slug}"))
+        #expect(OwnerContract.endpoints[.uploadCampaignVideo]
+            == .init(method: "PUT", path: "/campaign-videos/{slug}/content"))
         #expect(OwnerContract.endpoints[.verifyPublicPreviews]?.path == "/lifecycle/public-previews/verify")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")

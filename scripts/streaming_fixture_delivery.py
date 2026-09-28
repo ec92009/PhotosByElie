@@ -39,6 +39,8 @@ def finalize_streamed_upload_batch(
             "photosBlockedCount": 0,
             "items": [],
         }
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(repo_root, selected_ids)
     adoption = adopt_upload_run(
         repo_root,
         run_id,

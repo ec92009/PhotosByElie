@@ -212,6 +212,8 @@ class BackstagePhotosMetadataAdapter:
         self.repo_root = repo_root.resolve()
 
     def _run(self, command: str, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        from legacy_r2_source import reject_legacy_photos_at_root
+        reject_legacy_photos_at_root(self.repo_root, [str(item.get("assetId") or "") for item in requests])
         from backstage_photos_client import (
             BackstagePhotosClientError,
             request_metadata_apply_many,
@@ -311,7 +313,7 @@ def writeback_plan(
     with connect(repo_root) as conn:
         rows = conn.execute(
             f"""
-            SELECT a.asset_id,
+            SELECT a.asset_id, a.source_anchor,
                    COALESCE(editorial.editorial_state, 'unreviewed') editorial_state,
                    CASE WHEN EXISTS (
                      SELECT 1 FROM sidecar_tombstones AS tombstone
@@ -334,6 +336,10 @@ def writeback_plan(
         grouped: dict[str, dict[str, Any]] = {}
         blocked: list[dict[str, Any]] = []
         for row in rows:
+            from legacy_r2_source import is_legacy_source
+            if is_legacy_source(row["source_anchor"], json.loads(row["raw_json"] or "{}")):
+                blocked.append({"assetId": row["asset_id"], "reason": "legacy_r2_source_has_no_photos_capability"})
+                continue
             current_version = editorial_version_hash(conn, row["asset_id"])
             fixture_rows = conn.execute(
                 """

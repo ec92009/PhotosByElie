@@ -1,5 +1,26 @@
 # Current public-catalog publisher fence
 
+## Live rollout checkpoint — 27 September 2026, 19:40 CEST
+
+The guarded sealed runtime is installed as Backstage 270.0/build 364; the selected
+connector fallback points to that installed runtime. After the owner's explicit
+approval of 869 additions, website v270.0 serves exactly 6,359 items from Owner
+revision 3907, SHA256 `6b54c7e51e747edfabd13f2b24fc675bd2dc12736146695bf172a3149a4a181e`.
+Supported enrollment has matching verified local/remote generation 1 for publisher
+`max`, operation `0ee1ae100747f9bf2a7d34f31302b6e7d0965d9a75795bd13d6196da5c36eaec`.
+Both server flags are enabled. Live Worker version is
+`fd084bc0-5148-4a8d-bc41-e0eb1b79b4f8`; authority-only recovery version is
+`ced5fd4f-c526-4c0c-8d20-7b853e06860e`. Existing bindings/runtime/domains are preserved.
+
+No native MP4 was uploaded. Exact-photo readiness, hosted range/full-hash/playback
+proof and daily-client/scheduler activation remain separate. Córdoba position 10
+still lacks its current approval/publication identity bridge (PBE-213); do not
+substitute a photo or bypass readiness. Disable video serving before any Owner
+restore/runtime rollback; retain the guarded authority API for recovery. The
+earlier source-only and unguarded 266.5 observations below are historical.
+
+## Source contract and historical implementation evidence
+
 PBE-215 / PBMSOC-9, 27 September 2026. Source and local tests only; no live
 migration, enrollment, installation, deployment or catalog mutation is implied.
 Owner authorization permits this narrow publisher change using existing

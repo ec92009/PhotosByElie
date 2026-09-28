@@ -2663,7 +2663,7 @@ def _incremental_photos_sync(
     with fixture_connect(repo_root) as connection:
         rows = connection.execute(
             """
-            SELECT asset.asset_id, asset.raw_json,
+            SELECT asset.asset_id, asset.source_anchor, asset.raw_json,
                    COALESCE(sync.last_scanned_at, '') last_scanned_at
             FROM sidecar_assets AS asset
             LEFT JOIN asset_sync_state AS sync
@@ -2680,6 +2680,9 @@ def _incremental_photos_sync(
     targets: list[dict] = []
     for row in rows:
         raw = json.loads(str(row["raw_json"] or "{}"))
+        from legacy_r2_source import is_legacy_source
+        if is_legacy_source(row["source_anchor"], raw):
+            continue
         targets.append({
             "assetId": str(row["asset_id"]),
             "photosAssetId": str(raw.get("localIdentifier") or row["asset_id"]),
@@ -8758,6 +8761,10 @@ def _owner_source_preview_cache_path(repo_root: Path, media_id: str) -> Path:
 
 
 def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict:
+    from legacy_r2_source import is_legacy_source, reject_legacy_photos_at_root
+    if is_legacy_source(photo.get("sourceAnchor"), photo):
+        raise ValueError("legacy_r2_source_has_no_photos_capability")
+    reject_legacy_photos_at_root(repo_root, [media_id])
     if media_type == "video":
         return _source_preview_error(
             HTTPStatus.UNSUPPORTED_MEDIA_TYPE,

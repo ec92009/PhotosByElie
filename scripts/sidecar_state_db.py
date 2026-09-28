@@ -1262,6 +1262,8 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
             asset_id = _asset_id(row)
             if not asset_id:
                 continue
+            from legacy_r2_source import reject_legacy_photos
+            reject_legacy_photos(conn, asset_id)
             metadata_seed = _metadata_seed_from_row(row, keyword_blacklist)
             conn.execute(
                 """
@@ -1334,8 +1336,13 @@ def mark_missing_assets(repo_root: Path, present_asset_ids: Iterable[str]) -> in
         return 0
     now = now_iso()
     with connect(repo_root) as conn:
-        existing = conn.execute("SELECT asset_id FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''").fetchall()
-        missing = [str(row["asset_id"]) for row in existing if str(row["asset_id"]) not in present]
+        # R2-only recovered originals have no PhotoKit resource. A Photos scan
+        # cannot establish their absence; their exact source has its own reader.
+        from legacy_r2_source import verified_legacy_source
+        existing = conn.execute("""SELECT asset_id FROM sidecar_assets
+            WHERE missing_at IS NULL OR missing_at = ''""").fetchall()
+        missing = [str(row["asset_id"]) for row in existing if str(row["asset_id"]) not in present
+                   and not verified_legacy_source(conn, str(row["asset_id"]))]
         for start in range(0, len(missing), 500):
             batch = missing[start:start + 500]
             placeholders = ",".join("?" for _ in batch)
@@ -1351,9 +1358,14 @@ def _indexed_asset_row(row: sqlite3.Row) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raw = {}
     asset_id = str(row["asset_id"] or "")
+    from legacy_r2_source import is_legacy_source
+    legacy_r2 = is_legacy_source(row["source_anchor"], raw)
+    if legacy_r2:
+        for key in ("localIdentifier", "cloudIdentifier", "photosAssetId", "photoLibraryIdentifier"):
+            raw.pop(key, None)
     merged = {
         **raw,
-        "localIdentifier": str(raw.get("localIdentifier") or asset_id),
+        **({} if legacy_r2 else {"localIdentifier": str(raw.get("localIdentifier") or asset_id)}),
         "sourceAnchor": str(row["source_anchor"] or raw.get("sourceAnchor") or f"apple-photos://{asset_id}"),
         "filename": str(row["filename"] or raw.get("filename") or ""),
         "mediaType": str(row["media_type"] or raw.get("mediaType") or ""),
@@ -1794,6 +1806,10 @@ def _queue_pending_sync(
     new_value: Any,
     now: str,
 ) -> None:
+    from legacy_r2_source import is_legacy_source
+    source = conn.execute("SELECT source_anchor,raw_json FROM sidecar_assets WHERE asset_id=?", (asset_id,)).fetchone()
+    if source and is_legacy_source(source["source_anchor"], _read_json_text(source["raw_json"], {})):
+        return
     conn.execute(
         "DELETE FROM sidecar_pending_sync WHERE asset_id = ? AND field_family = ? AND status = 'pending'",
         (asset_id, field_family),
@@ -2430,6 +2446,8 @@ def _upload_bridge_rows(
           JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
           {delivery_join_sql}
           WHERE m.mock_state = 'active'
+            AND lower(a.source_anchor) NOT LIKE 'legacy-r2:%'
+            AND lower(COALESCE(json_extract(a.raw_json, '$.sourceKind'), '')) <> 'legacy_r2'
             AND (
               (d.pick_state = 'picked' AND d.metadata_state = 'approved')
               OR EXISTS (
@@ -2783,6 +2801,8 @@ def _run_backstage_photos_materialize_one(
     timeout: int = 1800,
     source_version_id: str | None = None,
 ) -> dict[str, Any]:
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(repo_root, [asset_id])
     external = _materialize_external_edit_return(
         repo_root,
         asset_id=asset_id,
@@ -3162,6 +3182,9 @@ def prepare_upload_bridge_execute_batch(
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
+    from legacy_r2_source import reject_legacy_photos_at_root
+    asset_ids = None if asset_ids is None else list(asset_ids)
+    reject_legacy_photos_at_root(repo_root, asset_ids or [])
     recovery = reconcile_stale_upload_bridge_runs(repo_root)
     requested_limit = max(1, min(int(limit or 1), 5000))
     scan_limit = 5000 if not allow_r2_overwrite else requested_limit
@@ -3427,6 +3450,8 @@ def execute_upload_bridge_batch_item(
     r2_s3_endpoint: str | None = None,
 ) -> dict[str, Any]:
     """Materialize and upload one already-planned batch item."""
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(repo_root, [item["assetId"]])
     item_started = time.perf_counter()
     now = now_iso()
     with connect(repo_root) as conn:
@@ -5100,6 +5125,10 @@ def _planned_r2_keys(
     media_id: str = "",
 ) -> tuple[str, list[dict[str, str]]]:
     row_keys = set(row.keys())
+    from legacy_r2_source import is_legacy_source
+    raw = _read_json_text(row["raw_json"], {}) if "raw_json" in row_keys else {}
+    if is_legacy_source(row["source_anchor"], raw):
+        raise ValueError("legacy_r2_source_has_no_photos_capability")
     canonical_anchor = row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
     source_anchor = str(canonical_anchor or row["source_anchor"] or f"apple-photos://{row['asset_id']}")
     photo_id = str(media_id or photo_id_for_source_path(source_anchor))
@@ -5285,6 +5314,9 @@ def mock_upload(
     *,
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
+    from legacy_r2_source import reject_legacy_photos_at_root
+    asset_ids = None if asset_ids is None else list(asset_ids)
+    reject_legacy_photos_at_root(repo_root, asset_ids or [])
     safe_limit = max(1, min(int(limit or 500), 5000))
     requested_ids = [str(asset_id or "").strip() for asset_id in (asset_ids or []) if str(asset_id or "").strip()]
     now = now_iso()
@@ -5317,6 +5349,8 @@ def mock_upload(
                 )
               )
               {asset_filter}
+              AND lower(a.source_anchor) NOT LIKE 'legacy-r2:%'
+              AND lower(COALESCE(json_extract(a.raw_json, '$.sourceKind'), '')) <> 'legacy_r2'
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
                 WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
@@ -5465,6 +5499,9 @@ def queue_upload_bridge(
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Queue upload-ready Sidecar items for the bridge using the legacy mock table."""
+    from legacy_r2_source import reject_legacy_photos_at_root
+    asset_ids = None if asset_ids is None else list(asset_ids)
+    reject_legacy_photos_at_root(repo_root, asset_ids or [])
     result = mock_upload(
         repo_root,
         asset_ids=asset_ids,

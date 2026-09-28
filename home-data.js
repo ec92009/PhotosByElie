@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 1230,
+    "count": 1539,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 577,
+    "count": 901,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 2723,
+    "count": 3078,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -214,7 +214,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 92,
+    "count": 114,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
@@ -284,7 +284,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 70,
+    "count": 79,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -354,7 +354,7 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 605,
+    "count": 638,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
@@ -424,7 +424,7 @@ window.photosByElieHomeData = {
     "title": "Slovakia",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",
-    "count": 6,
+    "count": 10,
     "href": "./gallery.html?gallery=slovakia",
     "photos": [
       {

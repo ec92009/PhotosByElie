@@ -656,6 +656,8 @@ def _write_contact_sheet(previews: list[dict], target: Path) -> str:
 def picked_ai_preview_export(args: argparse.Namespace) -> int:
     repo_root = args.repo_root.resolve()
     plan = ai_metadata_plan(repo_root, limit=args.limit, rework_only=True)
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(repo_root, [str(item.get("assetId") or "") for item in plan.get("items") or []])
     preview_root = args.preview_root if args.preview_root.is_absolute() else repo_root / args.preview_root
     preview_root.mkdir(parents=True, exist_ok=True)
 

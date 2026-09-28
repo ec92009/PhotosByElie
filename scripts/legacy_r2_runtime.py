@@ -9,6 +9,16 @@ from legacy_r2_evidence import RecoveryError
 CANONICAL_ROOT = (Path.home() / "Dev/PhotosByElie").resolve()
 APP = Path("/Applications/PhotosByElie Backstage.app")
 RUNTIME = APP / "Contents/Resources/OwnerRuntime"
+CODE_SIGNATURE_REQUIREMENT = (
+    'anchor apple generic and identifier "com.photosbyelie.backstage" '
+    'and certificate leaf[subject.OU] = "CB7FE399AL"'
+)
+
+
+def code_signature_verification_command() -> list[str]:
+    """Build codesign's inline custom-requirement argument (not a file path)."""
+    return ["/usr/bin/codesign", "--verify", "--deep", "--strict", "-R",
+            "=" + CODE_SIGNATURE_REQUIREMENT, str(APP)]
 
 
 def require_installed_runtime(root: Path) -> None:
@@ -27,8 +37,7 @@ def require_installed_runtime(root: Path) -> None:
         config = json.loads(CONFIG_PATH.read_text())
         if Path(config.get("runtimeRoot", "")).resolve() != RUNTIME:
             raise ValueError()
-        requirement = 'anchor apple generic and identifier "com.photosbyelie.backstage" and certificate leaf[subject.OU] = "CB7FE399AL"'
-        subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", "-R", requirement, str(APP)],
-                       check=True, capture_output=True, timeout=30)
+        subprocess.run(code_signature_verification_command(), check=True,
+                       capture_output=True, timeout=30)
     except Exception:
         raise RecoveryError("installed_backstage_runtime_unverified") from None

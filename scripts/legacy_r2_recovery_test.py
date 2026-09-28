@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import legacy_r2_recovery as recovery
+import legacy_r2_runtime as recovery_runtime
 from fixture_pipeline import connect, create_fixture
 from fixture_policy import ensure_policy_schema
 from owner_catalog_projection import import_projection
@@ -75,6 +76,12 @@ class LegacyRecoveryTest(unittest.TestCase):
     def snapshot(self):
         with closing(sqlite3.connect(self.owner)) as conn:
             return '\n'.join(conn.iterdump())
+
+    def test_installed_signature_check_uses_inline_requirement(self):
+        command = recovery_runtime.code_signature_verification_command()
+        self.assertEqual(command[4], "-R")
+        self.assertTrue(command[5].startswith("="))
+        self.assertEqual(command[-1], str(recovery_runtime.APP))
 
     def test_plan_is_read_only_and_stable(self):
         before = self.snapshot()

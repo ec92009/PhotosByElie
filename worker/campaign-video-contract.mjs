@@ -8,6 +8,9 @@ export const PUBLIC_PREFIX = "/assets/campaign-media/";
 export const SLUG_PATTERN = /^native-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,255}$/;
+// Apple Photos' opaque cloud identifier is UUID:ordinal:base64. It is an
+// identity, never an object key or URL; preserve '+' and '/' exactly.
+const NATIVE_ASSET_ID_PATTERN = /^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}:[0-9]{3}:[A-Za-z0-9+/_=-]{1,128}$/;
 
 export const videoError = (status, code) => Object.assign(new Error(code), { status, code });
 
@@ -51,7 +54,8 @@ export function validateVideoBinding(value) {
   }
   for (const component of value.components) {
     exactKeys(component, ["assetId", "canonicalAssetId", "canonicalMediaId", "sourceSha256"]);
-    if (!validString(component.assetId) || !validString(component.canonicalAssetId)
+    if (!validString(component.assetId)
+        || !(validString(component.canonicalAssetId) || validString(component.canonicalAssetId, NATIVE_ASSET_ID_PATTERN))
         || !validString(component.canonicalMediaId, /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/)
         || !validString(component.sourceSha256, HASH_PATTERN)) {
       throw videoError(400, "campaign_video_binding_invalid");

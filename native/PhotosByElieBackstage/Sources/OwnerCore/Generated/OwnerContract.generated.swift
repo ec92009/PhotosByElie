@@ -2,8 +2,8 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.5.0"
-    public static let specSHA256 = "db55a2a17645581cf462490c9f626ee25ab3eed461cdbe7c9f8104e960aff9cf"
+    public static let openAPIVersion = "1.6.0"
+    public static let specSHA256 = "eb7cba61aaac546d928f7b7a1174538ccb98e86d6f4cea86f12609da77e67c50"
     public static let schemaNames = ["ActionCreate", "ActionState", "CampaignVideoBinding", "CampaignVideoHash", "CampaignVideoReceipt", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress", "PublicCatalogAuthority", "PublicCatalogTransition"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
@@ -43,6 +43,7 @@ public enum OwnerContract {
         case logout = "logout"
         case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
+        case reconcileLegacyLifecycleIdentity = "reconcileLegacyLifecycleIdentity"
         case reconcileLifecycleManifest = "reconcileLifecycleManifest"
         case reserveCampaignVideo = "reserveCampaignVideo"
         case revokeOwnerDevice = "revokeOwnerDevice"
@@ -104,6 +105,7 @@ public enum OwnerContract {
         .logout: Endpoint(method: "POST", path: "/auth/logout"),
         .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
+        .reconcileLegacyLifecycleIdentity: Endpoint(method: "POST", path: "/lifecycle/reconcile-legacy-identity"),
         .reconcileLifecycleManifest: Endpoint(method: "POST", path: "/lifecycle/reconcile"),
         .reserveCampaignVideo: Endpoint(method: "POST", path: "/campaign-videos/{slug}"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),

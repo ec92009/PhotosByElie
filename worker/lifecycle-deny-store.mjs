@@ -1,4 +1,5 @@
 import { preparePublicPreviewRegistration } from "./public-preview-registration-plan.mjs";
+import { reconcileLegacyIdentity } from "./legacy-identity-reconciliation.mjs";
 
 const SCHEMA_VERSION = 4;
 const CONTROL_ID = "global";
@@ -1372,6 +1373,10 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     seedVisibleBatch,
     activate,
     reconcileManifest,
+    reconcileLegacyIdentity: (input) => reconcileLegacyIdentity(input, {
+      database, manifestRows: durableManifestRows, summarizeRows: manifestSummaryForRows,
+      digest: canonicalDigestFor, now,
+    }),
     commitFulfillmentReady,
     fulfillmentFor,
     authorizeDownloadCapability,

@@ -2927,8 +2927,9 @@ export const createPhotosByElieWorker = ({
     if (!lifecycleDenyStore?.[command]) {
       return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable.");
     }
-    const payload = command === "reconcileManifest"
-      ? await readReconciliationRequest(request) : await parseJson(request);
+    const payload = command === "reconcileLegacyIdentity"
+      ? await readReconciliationRequest(request, { maxBytes: 65536 })
+      : command === "reconcileManifest" ? await readReconciliationRequest(request) : await parseJson(request);
     const result = await lifecycleDenyStore[command]({ ...payload, actorId: connector.connectorId });
     return credentialedJson(request, { ok: true, ...result }, 200, {
       "cache-control": "no-store", "cdn-cache-control": "no-store",
@@ -4167,6 +4168,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
       if (request.method === "POST" && path === "/owner/lifecycle/reconcile") return await lifecycleOwnerCommand(request, "reconcileManifest");
+      if (request.method === "POST" && path === "/owner/lifecycle/reconcile-legacy-identity") return await lifecycleOwnerCommand(request, "reconcileLegacyIdentity");
       if (request.method === "POST" && path === "/owner/lifecycle/public-previews/verify") return await verifyPublicPreviews(request);
       if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");

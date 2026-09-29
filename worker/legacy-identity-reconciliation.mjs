@@ -61,12 +61,15 @@ export async function reconcileLegacyIdentity(input, deps) {
         || projection.revision !== 0 || projection.denied !== 0 || projection.lifecycle_state !== "visible") {
       fail("Only an untouched, visible legacy self-ID may be corrected; denials and history remain protected.");
     }
-    if (await database.prepare(`SELECT 1 FROM pbe_lifecycle_media_identity WHERE canonical_asset_id=?
-        UNION ALL SELECT 1 FROM pbe_lifecycle_projection WHERE canonical_asset_id=? AND canonical_media_id<>?
-        UNION ALL SELECT 1 FROM pbe_lifecycle_barriers WHERE canonical_media_id=? OR canonical_asset_id IN (?,?)
-        UNION ALL SELECT 1 FROM pbe_lifecycle_receipts WHERE canonical_media_id=?
-        UNION ALL SELECT 1 FROM pbe_lifecycle_fulfillment_intent_media WHERE canonical_media_id=?
-        UNION ALL SELECT 1 FROM pbe_lifecycle_fulfillment_media WHERE canonical_media_id=? LIMIT 1`)
+    // D1 limits compound SELECT terms more tightly than desktop SQLite.
+    // Independent EXISTS predicates retain every refusal without a UNION chain.
+    if (await database.prepare(`SELECT 1 WHERE
+        EXISTS (SELECT 1 FROM pbe_lifecycle_media_identity WHERE canonical_asset_id=?)
+        OR EXISTS (SELECT 1 FROM pbe_lifecycle_projection WHERE canonical_asset_id=? AND canonical_media_id<>?)
+        OR EXISTS (SELECT 1 FROM pbe_lifecycle_barriers WHERE canonical_media_id=? OR canonical_asset_id IN (?,?))
+        OR EXISTS (SELECT 1 FROM pbe_lifecycle_receipts WHERE canonical_media_id=?)
+        OR EXISTS (SELECT 1 FROM pbe_lifecycle_fulfillment_intent_media WHERE canonical_media_id=?)
+        OR EXISTS (SELECT 1 FROM pbe_lifecycle_fulfillment_media WHERE canonical_media_id=?)`)
       .bind(item.canonicalAssetId, item.canonicalAssetId, item.canonicalMediaId, item.canonicalMediaId,
         item.previousAssetId, item.canonicalAssetId, item.canonicalMediaId, item.canonicalMediaId, item.canonicalMediaId).first()) {
       fail("Identity ownership, lifecycle work/history or paid fulfillment prevents this repair.");

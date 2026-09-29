@@ -80,3 +80,12 @@ use and retain the additive receipt table. Deployment alone changes no identity.
 
 Actual deployment, exact per-photo apply and readback belong in the dated
 Córdoba operational receipt. This source verification is not a live receipt.
+
+### D1 runtime correction
+
+The first live read-only plan exposed D1's compound-SELECT limit in the combined
+refusal query. No identity was changed. A new real local D1 regression reproduced
+that exact failure; replacing the UNION chain with independent EXISTS predicates
+preserves all six refusals. The real D1 test now prepares, applies and replays six
+synthetic identities and confirms all private bindings remain unchanged. It is
+included in both the normal test suite and mandatory Worker release gate.

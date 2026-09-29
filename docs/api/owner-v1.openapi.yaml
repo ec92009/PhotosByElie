@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PhotosByElie Owner API
-  version: 1.6.0
+  version: 1.6.1
   description: >
     Versioned cloud boundary used by PhotosByElie Backstage on an enrolled Mac.
     Google browser login is provisioning-only. Owner.sqlite and Apple Photos

@@ -1,9 +1,67 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-19T18:47:55.695Z",
-  "campaign_count": 181,
+  "generated_at": "2026-09-29T12:22:14.176Z",
+  "campaign_count": 182,
   "campaigns": [
+    {
+      "id": "youtube-cordoba-mezquita-arches-sacred-detail-2026-09-24",
+      "source": "YouTube",
+      "title": "Córdoba: Mezquita Arches and Sacred Detail",
+      "description": "Córdoba’s Mezquita-Catedral is a place of layered history, where red-and-white arches lead into quiet chapels, carved ceilings and glowing altars. This photo film moves from the landmark’s exterior into the prayer hall and ornate interior details, giving each approved view time to breathe. The sequence highlights stone, colour, geometry and changing light inside one of Andalusia’s most distinctive landmarks. Explore the original photographs behind the film and discover more place-based imagery from Photos By Elie. Music: \"Passionate Flamenco Instrumental\" by nickpanekAIassets via Pixabay.",
+      "date": "2026-09-24",
+      "href": "./campaign.html?c=youtube-cordoba-mezquita-arches-sacred-detail-2026-09-24",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-cordoba-mezquita-arches-sacred-detail-2026-09-24",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/4bbaa87d-9330-4c4c-a11a-332166c281f4-001-afjabhpa-czgepxlt2bkgel6wmzw-6aa043aa8a_900.jpg",
+      "imageAlt": "Mezquita-Catedral, Cordoba",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/4bbaa87d-9330-4c4c-a11a-332166c281f4-001-afjabhpa-czgepxlt2bkgel6wmzw-6aa043aa8a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/96928f2c-f335-461e-a620-0030b8844dff-001-ad4hidxlf7cqomze-1zpbrm7cane-3d4aba9360_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d5f44573-817e-4a61-996b-0688c5e78559-001-afux2eusvdjjuk9fv8ltcsgguqv5-f139404e7f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-e590e72f7c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-d0a7545d29_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/535e9047-511c-4972-afce-ca24f9c91f3b-001-af4p76yuk9zae9dkhzymtwcupcx8-66c5262b7e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/saqh-o2b-d85c92a800_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-bc3725a05a_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "RkzQdeQQ67Q",
+        "shortId": "G_oZ7jXQhwA",
+        "title": "Córdoba: Mezquita Arches and Sacred Detail | Photo Film",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/RkzQdeQQ67Q?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/G_oZ7jXQhwA?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=RkzQdeQQ67Q",
+        "shortUrl": "https://youtube.com/shorts/G_oZ7jXQhwA",
+        "visibility": "public",
+        "portraitMp4": "https://download.photos-by-elie.com/assets/campaign-media/native-c1a2a46aae459695a69a0b34cadcb4b1.mp4",
+        "musicCredit": "Music: \"Passionate Flamenco Instrumental\" by nickpanekAIassets via Pixabay"
+      },
+      "photoIds": [
+        "4bbaa87d-9330-4c4c-a11a-332166c281f4-001-afjabhpa-czgepxlt2bkgel6wmzw-6aa043aa8a",
+        "96928f2c-f335-461e-a620-0030b8844dff-001-ad4hidxlf7cqomze-1zpbrm7cane-3d4aba9360",
+        "d5f44573-817e-4a61-996b-0688c5e78559-001-afux2eusvdjjuk9fv8ltcsgguqv5-f139404e7f",
+        "001-e590e72f7c",
+        "001-d0a7545d29",
+        "535e9047-511c-4972-afce-ca24f9c91f3b-001-af4p76yuk9zae9dkhzymtwcupcx8-66c5262b7e",
+        "saqh-o2b-d85c92a800",
+        "001-bc3725a05a",
+        "001-d05238d267",
+        "img-1404-b704ed7a17",
+        "001-ec21e66fbd",
+        "001-4c17c77fb4"
+      ],
+      "compositePhotoIds": [
+        "4bbaa87d-9330-4c4c-a11a-332166c281f4-001-afjabhpa-czgepxlt2bkgel6wmzw-6aa043aa8a",
+        "96928f2c-f335-461e-a620-0030b8844dff-001-ad4hidxlf7cqomze-1zpbrm7cane-3d4aba9360",
+        "d5f44573-817e-4a61-996b-0688c5e78559-001-afux2eusvdjjuk9fv8ltcsgguqv5-f139404e7f",
+        "001-e590e72f7c"
+      ],
+      "primaryPhotoCount": 12,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1790684533847
+    },
     {
       "id": "youtube-madrid-royal-palace-rooms-craftsmanship-2026-09-19",
       "source": "YouTube",

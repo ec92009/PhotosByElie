@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PhotosByElie Owner API
-  version: 1.5.0
+  version: 1.6.0
   description: >
     Versioned cloud boundary used by PhotosByElie Backstage on an enrolled Mac.
     Google browser login is provisioning-only. Owner.sqlite and Apple Photos
@@ -589,6 +589,74 @@ paths:
       responses:
         "200":
           description: Preparation returns schema photosbyelie.publicPreviewRegistrationPlan.v1, readOnly true, state prepared or applied and an exact envelope; apply returns a durable reconciliation receipt. Cache-Control and CDN-Cache-Control no-store.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /lifecycle/reconcile-legacy-identity:
+    post:
+      tags: [Sidecar]
+      operationId: reconcileLegacyLifecycleIdentity
+      security: [{ connectorCredential: [] }]
+      description: >
+        Explicit connector-only repair of 1-20 untouched legacy self-ID mappings.
+        Each previousAssetId must equal its unchanged canonicalMediaId. Only
+        visible revision-zero mappings with both exact public preview bindings
+        qualify; denied/restored/history-bearing identities, barriers, owned
+        target IDs and paid fulfillment references are rejected. Object keys,
+        media IDs and denials are never rewritten. The connector independently
+        verifies current Owner approval/source authority and exact source/preview
+        bytes and supplies their sourceSha256 and authoritySha256 evidence hashes.
+        prepareOnly true is read-only and returns a plan/envelope. Persist it;
+        apply with prepareOnly false and the same items,repairId,envelope.
+        The transaction fences all current inputs, updates the manifest digest
+        and writes an immutable correction receipt. Replay returns the original
+        receipt and never reverses later denials. An applied receipt is not a
+        current public-visibility grant. Request size is bounded to64KiB including
+        streamed bodies. actorId is injected from the authenticated connector.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repairId, prepareOnly, items]
+              properties:
+                repairId: { type: string, minLength: 1, maxLength: 128 }
+                prepareOnly: { type: boolean }
+                envelope: { type: object }
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [canonicalMediaId, previousAssetId, canonicalAssetId, sourceSha256, authoritySha256, bindings]
+                    properties:
+                      canonicalMediaId: { type: string, minLength: 1, maxLength: 128 }
+                      previousAssetId: { type: string, minLength: 1, maxLength: 128 }
+                      canonicalAssetId: { type: string, minLength: 1, maxLength: 256 }
+                      sourceSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                      authoritySha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                      bindings:
+                        type: array
+                        minItems: 2
+                        maxItems: 2
+                        items:
+                          type: object
+                          required: [bucket, objectKey]
+                          properties:
+                            bucket: { type: string, enum: [public] }
+                            objectKey: { type: string }
+      responses:
+        "200":
+          description: Read-only legacyIdentityRepairPlan.v1 or durable legacyIdentityRepairReceipt.v1; no-store.
         "400":
           $ref: "#/components/responses/Error"
         "401":

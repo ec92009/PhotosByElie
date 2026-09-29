@@ -1590,6 +1590,57 @@ test("reconciliation cancels oversized streamed bodies even with a false Content
   assert.equal(called, false);
 });
 
+test("legacy identity repair is connector-only, actor-bound and 64KiB bounded for both phases", async () => {
+  const calls = [];
+  const backstage = backstageOwnerFixture();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(), googleOAuthAuth: backstage.googleOAuthAuth,
+    ownerDeviceAuthStore: backstage.ownerDeviceAuthStore,
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    ownerConnectorAuth: { requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector required"), { status: 401 });
+      }
+      return { connectorId: "max" };
+    } },
+    lifecycleDenyStore: { reconcileLegacyIdentity: async (payload) => {
+      calls.push(payload); return { readOnly: payload.prepareOnly, state: payload.prepareOnly ? "prepared" : "applied" };
+    } },
+  });
+  const url = "https://worker.test/api/v1/lifecycle/reconcile-legacy-identity";
+  const headers = { authorization: "Bearer connector-secret" };
+  for (const phase of [true, false]) {
+    const body = { prepareOnly: phase, repairId: "legacy-one", actorId: "forged", items: [] };
+    for (const rejected of [{}, backstage.headers]) {
+      assert.equal((await worker.fetch(jsonRequest(url, body, rejected))).status, 401);
+    }
+    const before = calls.length;
+    const response = await worker.fetch(jsonRequest(url, body, headers));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+    assert.deepEqual(calls[before], { ...body, actorId: "max" });
+    for (const invalid of [null, [], "string"]) {
+      assert.equal((await worker.fetch(jsonRequest(url, invalid, headers))).status, 400);
+    }
+    for (const padding of ["x".repeat(65536), "é".repeat(33000)]) {
+      assert.equal((await worker.fetch(jsonRequest(url, { ...body, padding }, headers))).status, 413);
+    }
+    assert.equal(calls.length, before + 1);
+  }
+  let cancelled = false;
+  const body = new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(40000)); },
+    cancel() { cancelled = true; },
+  });
+  const response = await worker.fetch(new Request(url, {
+    method: "POST", body, duplex: "half", headers: { ...headers, "content-length": "1" },
+  }));
+  assert.equal(response.status, 413);
+  assert.equal(cancelled, true);
+  assert.equal(calls.length, 2);
+});
+
 test("background Owner connectors use scoped credentials and report health", async () => {
   const ownerActionStore = createMemoryOwnerActionStore();
   const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);

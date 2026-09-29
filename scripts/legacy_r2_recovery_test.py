@@ -28,6 +28,14 @@ class LegacyRecoveryTest(unittest.TestCase):
         catalog = self.root / "assets/catalog/photosbyelie.sqlite"
         catalog.parent.mkdir(parents=True)
         shutil.copy2(Path(__file__).resolve().parents[1] / "assets/catalog/photosbyelie.sqlite", catalog)
+        self.media = "img-1404-b704ed7a17"
+        # Model the pre-recovery defect only in this disposable catalog. The
+        # checked-in production photo may already have been repaired; tests
+        # must not lose their missing-metadata scenario when that happens.
+        with closing(sqlite3.connect(catalog)) as conn, conn:
+            conn.execute("""UPDATE media_assets SET bytes=NULL WHERE media_id=?
+                AND asset_type_id IN (SELECT asset_type_id FROM asset_types
+                  WHERE code IN ('still_900','still_1800'))""", (self.media,))
         self.payload = catalog.read_bytes()
         self.owner = self.root / "assets/owner-actions/Owner.sqlite"
         with connect(self.root):
@@ -36,7 +44,6 @@ class LegacyRecoveryTest(unittest.TestCase):
         with connect(self.root) as conn:
             ensure_policy_schema(conn)
             conn.commit()
-        self.media = "img-1404-b704ed7a17"
         import_projection(self.owner, catalog, approved_policy="PBE-173")
         with closing(sqlite3.connect(self.owner)) as conn, conn:
             revision = conn.execute("SELECT revision FROM owner_public_catalog_projections").fetchone()[0]

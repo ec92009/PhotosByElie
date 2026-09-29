@@ -8,6 +8,7 @@ import { apiUrl, publicUrl, authHeaders, declaration, hash, videoBytes } from ".
 // Only synthetic local bindings. No remote option, credential loading or cloud mutation.
 test("workerd streams through real FixedLengthStream, D1 and R2 checksum/conditional APIs", async () => {
   const binding = declaration(8);
+  binding.components[0].canonicalAssetId = '1771BFE7-370A-497D-B499-FD72B65835C2:001:Ad41tbP1NGEFh/LkQamoHN+xrGAZ';
   const source = `
     import { createCampaignVideoHost } from "./worker/campaign-video-hosting.mjs";
     import { createOwnerConnectorAuth } from "./worker/owner-connector-auth.mjs";

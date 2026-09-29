@@ -62,6 +62,26 @@ test("native connector only; no browser/cookie/query/origin upgrade or data writ
   assert.equal(f.bucket.puts, 0);
 });
 
+test("opaque native Photos IDs round-trip without loosening public media or source-key rules", async () => {
+  const binding = declaration();
+  const id = '4BBAA87D-9330-4C4C-A11A-332166C281F4:001:AfjAbhpA+cZGePXLT2BkgEl6WMZW';
+  binding.components[0].canonicalAssetId = id;
+  binding.components[1].canonicalAssetId = '1771BFE7-370A-497D-B499-FD72B65835C2:001:Ad41tbP1NGEFh/LkQamoHN+xrGAZ';
+  const f = fixture(binding);
+  await code(await f.reserve(), 200);
+  assert.equal((await f.fetch(apiUrl, {headers:authHeaders})).status, 200);
+  assert.equal(validateVideoBinding(binding).components[0].canonicalAssetId, id);
+  for (const invalid of ['https://private.test/original', '../master', 'a/b', `${id}\n`,
+    '4BBAA87D-9330-4C4C-A11A-332166C281F4:001:../original']) {
+    const value = declaration(); value.components[0].canonicalAssetId = invalid;
+    assert.throws(() => validateVideoBinding(value));
+  }
+  for (const key of ['assetId','canonicalMediaId']) {
+    const value = declaration(); value.components[0][key] = id;
+    assert.throws(() => validateVideoBinding(value));
+  }
+});
+
 test("unconfigured/disabled host fails closed and only native assets are intercepted", async () => {
   const f = fixture(undefined, { enabled: false });
   await code(await f.reserve(), 503, "campaign_video_host_disabled");

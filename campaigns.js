@@ -36,7 +36,7 @@
     meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
     const count = document.createElement('p');
     count.textContent = video
-      ? 'Vertical YouTube Short · View collection →'
+      ? `${video.portraitMp4 ? 'Portrait photo film' : 'Vertical YouTube Short'} · View collection →`
       : `${entries.length} photos · View collection →`;
     caption.append(title, meta, count);
     return caption;
@@ -82,20 +82,35 @@
     return card;
   };
 
-  /** A public Short is the directory representation for a video-backed campaign. */
+  /** Prefer the verified portrait derivative; retain the public YouTube fallback. */
   const videoCardFor = (campaign, video) => {
     const card = document.createElement('article');
     card.className = 'campaign-directory-card campaign-directory-card--video';
-    card.dataset.campaignRepresentation = 'vertical-youtube-video';
+    card.dataset.campaignRepresentation = video.portraitMp4 ? 'native-portrait-video' : 'vertical-youtube-video';
     const frame = document.createElement('div');
     frame.className = 'campaign-directory-video';
-    const player = document.createElement('iframe');
-    player.src = video.portraitEmbedUrl;
-    player.title = `${campaign.title} on YouTube`;
-    player.loading = 'lazy';
-    player.referrerPolicy = 'strict-origin-when-cross-origin';
-    player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-    player.allowFullscreen = true;
+    const player = document.createElement(video.portraitMp4 ? 'video' : 'iframe');
+    if (video.portraitMp4) {
+      player.src = video.portraitMp4;
+      player.controls = true;
+      player.playsInline = true;
+      player.preload = 'none';
+      if (campaign.imageUrl) player.poster = campaign.imageUrl;
+      player.setAttribute('aria-label', campaign.title);
+      player.addEventListener('error', () => {
+        const message = document.createElement('p');
+        message.setAttribute('role', 'status');
+        message.textContent = 'The film could not load. Watch it on YouTube below.';
+        frame.replaceChildren(message);
+      }, { once: true });
+    } else {
+      player.src = video.portraitEmbedUrl;
+      player.title = `${campaign.title} on YouTube`;
+      player.loading = 'lazy';
+      player.referrerPolicy = 'strict-origin-when-cross-origin';
+      player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      player.allowFullscreen = true;
+    }
     frame.append(player);
     card.append(frame, captionFor(campaign, [], { video }));
     const watch = document.createElement('a');
@@ -106,6 +121,12 @@
     watch.rel = 'noopener noreferrer';
     watch.textContent = 'Watch on YouTube';
     card.querySelector('.campaign-directory-caption').append(watch);
+    if (video.musicCredit) {
+      const credit = document.createElement('p');
+      credit.className = 'campaign-directory-meta';
+      credit.textContent = video.musicCredit;
+      card.querySelector('.campaign-directory-caption').append(credit);
+    }
     return card;
   };
 

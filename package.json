@@ -32,7 +32,8 @@
     "worker:release-check": "node --test worker/checkout-worker.test.mjs worker/paid-order-fulfillment.test.mjs worker/paid-order-refund.test.mjs worker/wst-commerce-snapshot.test.mjs worker/owner-api-v1.test.mjs scripts/public_worker_origin_policy.test.mjs worker/campaign-video-hosting.test.mjs worker/campaign-video-runtime.test.mjs worker/campaign-video-catalog.test.mjs worker/campaign-video-catalog-runtime.test.mjs worker/public-catalog-authority.test.mjs",
     "audit:backstage": "uv run scripts/backstage_maintainability.py --check docs/architecture/backstage-maintainability-baseline.json",
     "test:campaign-video": "node --test scripts/campaign_video.test.mjs",
-    "test:catalog-authority": "python3 -B -m unittest scripts.catalog_authority_client_test scripts.owner_catalog_projection_test scripts.native_publication_pipeline_test scripts.public_catalog_policy_test scripts.legacy_r2_recovery_test scripts.legacy_r2_catalog_test scripts.test_legacy_r2_photos_isolation",
+    "test:catalog-authority": "python3 -B -m unittest scripts.catalog_authority_client_test scripts.owner_catalog_projection_test scripts.native_publication_pipeline_test scripts.public_catalog_policy_test scripts.legacy_r2_recovery_test scripts.legacy_r2_catalog_test scripts.test_legacy_r2_photos_isolation scripts.verified_preview_metadata_test",
+    "test:verified-preview-metadata": "python3 -B -m unittest scripts.verified_preview_metadata_test",
     "test:campaign-video-hosting": "node --test worker/campaign-video-hosting.test.mjs worker/campaign-video-runtime.test.mjs worker/campaign-video-catalog.test.mjs worker/campaign-video-catalog-runtime.test.mjs worker/public-catalog-authority.test.mjs"
   },
   "dependencies": {

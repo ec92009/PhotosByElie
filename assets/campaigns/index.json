@@ -1,9 +1,63 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-29T12:22:14.176Z",
-  "campaign_count": 182,
+  "generated_at": "2026-10-03T03:39:52.947Z",
+  "campaign_count": 183,
   "campaigns": [
+    {
+      "id": "youtube-valencia-cathedral-light-modern-curves-2026-10-03",
+      "source": "YouTube",
+      "title": "Valencia: Cathedral Light & Modern Curves",
+      "description": "Valencia moves from the Cathedral’s quiet stone interior to the sweeping white architecture of the City of Arts and Sciences. This photo film lingers on ribbed vaults, a gilded altar, sculptural bridges, glass walls and reflecting pools in soft morning light. Eight owner-approved original photographs appear in their selected order, composed independently for portrait and widescreen viewing. The film invites viewers to discover the individual still photographs; the video itself is promotional and is not offered for sale. Music: ‘Dance of Andalusia - Flamenco Acoustic Guitar Instrumental’ by nickpanekAIassets via Pixabay.",
+      "date": "2026-10-03",
+      "href": "./campaign.html?c=youtube-valencia-cathedral-light-modern-curves-2026-10-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-valencia-cathedral-light-modern-curves-2026-10-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-56259ddc4b_900.jpg",
+      "imageAlt": "Valencia, Catedral",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/001-56259ddc4b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-b6b927bc0e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-fb050b93f6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-8fdbed7773_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-c7508b6184_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-feb7603de8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-79a8854eeb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-82df4c1c75_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "uiy53WWNKdw",
+        "shortId": "u2AUGTE4NCY",
+        "title": "Valencia: Cathedral Light & Modern Curves | Photo Film",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/uiy53WWNKdw?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/u2AUGTE4NCY?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=uiy53WWNKdw",
+        "shortUrl": "https://youtube.com/shorts/u2AUGTE4NCY",
+        "visibility": "public",
+        "portraitMp4": "https://download.photos-by-elie.com/assets/campaign-media/native-d61775ba8dbb648cb812af5b82e53944.mp4",
+        "musicCredit": "Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay"
+      },
+      "photoIds": [
+        "001-56259ddc4b",
+        "001-b6b927bc0e",
+        "001-fb050b93f6",
+        "001-8fdbed7773",
+        "001-c7508b6184",
+        "001-feb7603de8",
+        "001-79a8854eeb",
+        "001-82df4c1c75"
+      ],
+      "compositePhotoIds": [
+        "001-56259ddc4b",
+        "001-b6b927bc0e",
+        "001-fb050b93f6",
+        "001-8fdbed7773"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1790998786755
+    },
     {
       "id": "youtube-cordoba-mezquita-arches-sacred-detail-2026-09-24",
       "source": "YouTube",

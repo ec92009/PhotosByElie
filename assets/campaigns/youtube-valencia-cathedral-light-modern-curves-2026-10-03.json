@@ -1,0 +1,30 @@
+{
+  "id": "youtube-valencia-cathedral-light-modern-curves-2026-10-03",
+  "source": "YouTube",
+  "public": true,
+  "title": "Valencia: Cathedral Light & Modern Curves",
+  "eyebrow": "Spain · Photographs",
+  "description": "Valencia moves from the Cathedral’s quiet stone interior to the sweeping white architecture of the City of Arts and Sciences. This photo film lingers on ribbed vaults, a gilded altar, sculptural bridges, glass walls and reflecting pools in soft morning light. Eight owner-approved original photographs appear in their selected order, composed independently for portrait and widescreen viewing. The film invites viewers to discover the individual still photographs; the video itself is promotional and is not offered for sale. Music: ‘Dance of Andalusia - Flamenco Acoustic Guitar Instrumental’ by nickpanekAIassets via Pixabay.",
+  "heroPhotoId": "001-56259ddc4b",
+  "primaryPhotoIds": [
+    "001-56259ddc4b",
+    "001-b6b927bc0e",
+    "001-fb050b93f6",
+    "001-8fdbed7773",
+    "001-c7508b6184",
+    "001-feb7603de8",
+    "001-79a8854eeb",
+    "001-82df4c1c75"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "uiy53WWNKdw",
+    "shortId": "u2AUGTE4NCY",
+    "title": "Valencia: Cathedral Light & Modern Curves | Photo Film",
+    "durationSeconds": 40,
+    "visibility": "public",
+    "portraitMp4": "https://download.photos-by-elie.com/assets/campaign-media/native-d61775ba8dbb648cb812af5b82e53944.mp4",
+    "musicCredit": "Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay"
+  }
+}

@@ -40,3 +40,12 @@ pre-change bundle for rollback; never commit that runtime or secret values.
 Web pages: https://web-by-elie.com/june.rowan,
 https://web-by-elie.com/nora.vela, https://web-by-elie.com/elena.brooks.
 No charge or paid checkout was performed during this build.
+
+## Introductory offer and letters — 16 October 2026
+
+All three kits now use fixed $0 live Stripe Prices, with no card, subscription,
+renewal or future charge. Original paid prices remain valid only for earlier
+orders. The shop requires a delivery email and offers a separate unchecked
+letter opt-in. Completed opt-ins are stored privately in ORDERS_KV with dated
+consent; future letters must include the opaque-token unsubscribe link and
+honor suppressed records. No letter campaign has been sent.

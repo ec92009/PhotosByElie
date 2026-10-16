@@ -4,9 +4,9 @@ const SITE='https://web-by-elie.com';
 const BACKEND='https://photosbyelie-checkout-mock.ec92009.workers.dev';
 const TTL=30*86400;
 const CATALOG={
- 'easier-week':{name:'The Easier Week Kit',host:'June Rowan',page:'june.rowan',amount:1500},
- 'before-you-spend':{name:'Before You Spend Kit',host:'Nora Vela',page:'nora.vela',amount:1900},
- 'say-it-clearly':{name:'Say It Clearly',host:'Elena Brooks',page:'elena.brooks',amount:1500},
+ 'easier-week':{name:'The Easier Week Kit',host:'June Rowan',page:'june.rowan',amount:0,standard_amount:1500},
+ 'before-you-spend':{name:'Before You Spend Kit',host:'Nora Vela',page:'nora.vela',amount:0,standard_amount:1900},
+ 'say-it-clearly':{name:'Say It Clearly',host:'Elena Brooks',page:'elena.brooks',amount:0,standard_amount:1500},
 };
 const cors={'access-control-allow-origin':SITE,'access-control-allow-methods':'GET,POST,OPTIONS','access-control-allow-headers':'content-type,idempotency-key','vary':'Origin'};
 const headers={...cors,'cache-control':'private, no-store','cdn-cache-control':'no-store','referrer-policy':'no-referrer','x-content-type-options':'nosniff'};
@@ -56,26 +56,54 @@ async function setup(request,env,stripe){
  return json({ready:true,products:config.products,webhook:config.webhook,automatic_tax:config.automatic_tax,tax_registration_status:config.tax_registration_status,merchant:config.merchant});
 }
 
+/** Activate only the owner's fixed zero-dollar offer, retaining earlier paid entitlements. */
+async function introductoryOffer(request,env,stripe){
+ if(!owner(request,env))return json({error:'Unauthorized'},401);
+ const config=await read(env,'tilbury:configuration');
+ if(!config?.setup_locked)return json({error:'Initial setup is incomplete'},409);
+ if(config.intro_offer?.active)return json({active:true,amount:0,products:config.products});
+ for(const [sku,p] of Object.entries(CATALOG)){
+  const entry=config.products[sku];
+  const lookup=entry.product+'_intro_zero_usd';
+  let price=(await stripe.prices.list({lookup_keys:[lookup],active:true,limit:1})).data[0];
+  if(!price)price=await stripe.prices.create({product:entry.product,currency:'usd',unit_amount:0,tax_behavior:'exclusive',lookup_key:lookup,metadata:{tilbury:'v1',sku,offer:'introductory-zero'}},{idempotencyKey:'tilbury-intro-zero-'+sku+'-v1'});
+  if(price.unit_amount!==0||price.currency!=='usd'||price.product!==entry.product)throw new Error('Unexpected introductory price');
+  entry.standard_price=entry.standard_price||entry.price;entry.price=price.id;entry.amount=0;
+  await stripe.products.update(entry.product,{default_price:price.id});
+ }
+ // A stale, unfinished checkout must not charge the old price during this offer.
+ let after,expired=0;
+ do{
+  const page=await stripe.checkout.sessions.list({status:'open',limit:100,...(after?{starting_after:after}:{})});
+  for(const session of page.data)if(session.metadata?.tilbury==='v1'&&CATALOG[session.metadata.sku]&&session.amount_total>0){await stripe.checkout.sessions.expire(session.id);expired++}
+  after=page.has_more?page.data.at(-1)?.id:undefined;
+ }while(after);
+ config.intro_offer={active:true,amount:0,currency:'usd',activated_at:new Date().toISOString(),expires_at:null,expired_paid_checkouts:expired};
+ await env.ORDERS_KV.put('tilbury:configuration',JSON.stringify(config));
+ return json({active:true,amount:0,products:config.products,expired_paid_checkouts:expired});
+}
+
 /** Start a server-priced Checkout Session; the request cannot choose an amount. */
 async function checkout(request,env,stripe){
  if(request.headers.get('origin')!==SITE)return json({error:'Open checkout from the product page.'},403);
  if(Number(request.headers.get('content-length'))>2048)return json({error:'Request too large'},413);
  const body=await request.json();const p=CATALOG[body.sku];
  if(!p||body.digitalConsent!==true||body.termsConsent!==true)return json({error:'Choose a product and accept the purchase terms.'},400);
+ const email=typeof body.email==='string'?body.email.trim():'';
+ if(email.length>254||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:'Enter a valid email address for your kit.'},400);
  const attempt=request.headers.get('idempotency-key')||'';
  if(!/^[a-zA-Z0-9-]{20,80}$/.test(attempt))return json({error:'Invalid checkout request'},400);
  const config=await read(env,'tilbury:configuration');
- if(!config?.products[body.sku]?.price)return json({error:'Checkout is not available yet.'},503);
+ if(!config?.products[body.sku]?.price||!config.intro_offer?.active)return json({error:'The introductory offer is being prepared. Please try again shortly.'},503);
  const orderId='tilbury-'+attempt;
- const metadata={tilbury:'v1',sku:body.sku,order_id:orderId,terms_version:'2026-10-16',digital_delivery_consent:'yes'};
- const session=await stripe.checkout.sessions.create({mode:'payment',line_items:[{price:config.products[body.sku].price,quantity:1}],
+ const metadata={tilbury:'v1',sku:body.sku,order_id:orderId,terms_version:'2026-10-16-intro',digital_delivery_consent:'yes',offer:'introductory-zero',letter_opt_in:body.letterOptIn===true?'yes':'no',letter_consent_version:'2026-10-16-v1'};
+ const session=await stripe.checkout.sessions.create({mode:'payment',customer_email:email,line_items:[{price:config.products[body.sku].price,quantity:1}],
   success_url:SITE+'/creators.order?session_id={CHECKOUT_SESSION_ID}',cancel_url:SITE+'/'+p.page+'#shop',
   metadata,client_reference_id:orderId,automatic_tax:{enabled:config.automatic_tax===true},
   consent_collection:{terms_of_service:'required'},
-  custom_text:{terms_of_service_acceptance:{message:'I agree to the [Web By Elie digital product terms]('+SITE+'/creators.terms).'},submit:{message:'One-time digital purchase from Web By Elie. Download after confirmed payment. Your bank may show Photos By Elie.'}},
-  payment_intent_data:{description:p.name+' — Web By Elie',metadata,statement_descriptor_suffix:'WEB BY ELIE'},
+  custom_text:{terms_of_service_acceptance:{message:'I agree to the [Web By Elie digital product terms]('+SITE+'/creators.terms).'},submit:{message:'Free introductory kit from Web By Elie. No card required, no subscription and no future charge.'}},
   integration_identifier:'tilbury_shop_rkmvpsaj',expires_at:Math.floor(Date.now()/1000)+1800,
- },{idempotencyKey:'tilbury-checkout-'+body.sku+'-'+attempt});
+ },{idempotencyKey:'tilbury-intro-checkout-'+body.sku+'-'+attempt});
  await save(env,key(session.id),{session:session.id,sku:body.sku,orderId,status:'pending',created:session.created});
  return json({url:session.url});
 }
@@ -85,12 +113,17 @@ async function paidSession(id,env,stripe){
  if(!/^cs_live_[A-Za-z0-9_]{20,200}$/.test(id))return null;
  const session=await stripe.checkout.sessions.retrieve(id,{expand:['payment_intent.latest_charge']});
  const p=CATALOG[session.metadata?.sku];
- if(!p||session.metadata.tilbury!=='v1'||session.payment_status!=='paid'||session.status!=='complete'||session.currency!=='usd'||session.amount_subtotal!==p.amount||Date.now()/1000-session.created>TTL)return null;
- const charge=session.payment_intent?.latest_charge;
- if(!charge||typeof charge==='string'||charge.refunded||charge.amount_refunded>0||charge.disputed)return null;
+ if(!p||session.metadata.tilbury!=='v1'||session.status!=='complete'||session.currency!=='usd'||Date.now()/1000-session.created>TTL)return null;
+ const free=session.amount_subtotal===0&&session.amount_total===0&&session.payment_status==='no_payment_required'&&session.payment_intent==null;
+ if(!free){
+  if(session.payment_status!=='paid'||session.amount_subtotal!==p.standard_amount)return null;
+  const charge=session.payment_intent?.latest_charge;
+  if(!charge||typeof charge==='string'||charge.refunded||charge.amount_refunded>0||charge.disputed)return null;
+ }
  const config=await read(env,'tilbury:configuration');
  const items=await stripe.checkout.sessions.listLineItems(id,{limit:2});
- if(items.data.length!==1||items.data[0].quantity!==1||items.data[0].price?.id!==config?.products[session.metadata.sku]?.price)return null;
+ const entry=config?.products[session.metadata.sku];
+ if(items.data.length!==1||items.data[0].quantity!==1||items.data[0].price?.id!==(free?entry?.price:entry?.standard_price||entry?.price))return null;
  return session;
 }
 
@@ -98,16 +131,46 @@ async function paidSession(id,env,stripe){
 async function fulfill(session,env,requireEmail=false){
  const sku=session.metadata.sku,p=CATALOG[sku];
  const prior=await read(env,key(session.id));
- const record={...prior,session:session.id,sku,orderId:session.metadata.order_id,status:'paid',created:session.created,expires:session.created+TTL};
+ const free=session.amount_total===0;
+ const record={...prior,session:session.id,sku,orderId:session.metadata.order_id,status:free?'free':'paid',created:session.created,expires:session.created+TTL};
  await save(env,key(session.id),record);
  const email=session.customer_details?.email||session.customer_email;
+ if(email&&session.metadata.letter_opt_in==='yes'&&!prior?.letter_recorded){
+  await subscribeLetter(email,sku,session.created,env);record.letter_recorded=true;await save(env,key(session.id),record);
+ }
  if(!prior?.email_sent&&email&&env.RESEND_API_KEY){
   const recovery=SITE+'/creators.order?session_id='+encodeURIComponent(session.id);
-  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:'Bearer '+env.RESEND_API_KEY,'content-type':'application/json','idempotency-key':'tilbury-delivery-'+session.id},body:JSON.stringify({from:env.ORDER_EMAIL_FROM,to:[email],reply_to:'hello@web-by-elie.com',subject:'Your '+p.name+' — Web By Elie',text:'Thank you for your purchase from Web By Elie.\n\nOpen your private delivery page:\n'+recovery+'\n\nDownloads are available for 30 days after purchase. Keep your ZIP and this email. This link grants access to your purchase; do not share it.\n\nNeed help? Reply to hello@web-by-elie.com with your purchase email and receipt reference. Never send card details.\n\nThe presenter '+p.host+' is a fictional AI creator. This is a one-time purchase.'})});
+  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:'Bearer '+env.RESEND_API_KEY,'content-type':'application/json','idempotency-key':'tilbury-delivery-'+session.id},body:JSON.stringify({from:env.ORDER_EMAIL_FROM,to:[email],reply_to:'hello@web-by-elie.com',subject:'Your '+p.name+' — Web By Elie',text:(free?'Thank you for claiming your free introductory kit. No payment is due and no future charge is created.':'Thank you for your purchase from Web By Elie.')+'\n\nOpen your private delivery page:\n'+recovery+'\n\nDownloads are available for 30 days after your order. Keep your ZIP and this email. This link grants access to your kit; do not share it.\n\nNeed help? Reply to hello@web-by-elie.com with your order email and reference. Never send card details.\n\nThe presenter '+p.host+' is a fictional AI creator. No subscription is included.'})});
   if(!r.ok){if(requireEmail)throw new Error('Delivery email could not be sent')}
   else{record.email_sent=true;await save(env,key(session.id),record);}
  }
  return record;
+}
+
+/** Store only completed, explicit letter opt-ins outside expiring delivery records. */
+async function subscribeLetter(email,sku,created,env){
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(email.toLowerCase()));
+ const id=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+ const k='tilbury:letter:'+id,prior=await read(env,k);
+ // A replay of an old checkout must not reverse a later unsubscribe.
+ if(prior?.last_order_created>=created)return;
+ const token=prior?.unsubscribe_token||crypto.randomUUID();
+ await env.ORDERS_KV.put(k,JSON.stringify({...prior,email,status:'subscribed',source:'completed-free-kit',sku,consent_version:'2026-10-16-v1',consented_at:new Date(created*1000).toISOString(),last_order_created:created,unsubscribe_token:token}));
+ await env.ORDERS_KV.put('tilbury:letter-token:'+token,id);
+}
+
+/** Show an explicit confirmation form; GET requests never change consent. */
+async function unsubscribeLetter(request,env,url){
+ const token=url.searchParams.get('token')||'';
+ if(!/^[a-f0-9-]{36}$/.test(token))return json({error:'Invalid unsubscribe link'},400);
+ const id=await env.ORDERS_KV.get('tilbury:letter-token:'+token);
+ if(!id)return json({error:'Unsubscribe link unavailable. Email hello@web-by-elie.com.'},404);
+ if(request.method==='POST'){
+  const k='tilbury:letter:'+id,record=await read(env,k);
+  if(record){record.status='unsubscribed';record.unsubscribed_at=new Date().toISOString();await env.ORDERS_KV.put(k,JSON.stringify(record));}
+ }
+ const done=request.method==='POST';
+ return new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><title>Web By Elie letters</title><main style="max-width:38rem;margin:10vh auto;padding:2rem;font:18px system-ui"><h1>'+ (done?'You are unsubscribed.':'Unsubscribe from our letters?')+'</h1><p>'+(done?'You will not receive future letters. Your kit remains yours.':'This changes only future letters from Web By Elie; it does not affect your download.')+'</p>'+(done?'':'<form method="post"><button style="padding:1rem">Unsubscribe</button></form>')+'</main></html>',{headers:{...headers,'content-type':'text/html; charset=utf-8','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"}});
 }
 
 /** Validate a dedicated webhook before invoking the same idempotent fulfillment. */
@@ -115,7 +178,7 @@ async function webhook(request,env,stripe){
  const secret=await env.ORDERS_KV.get('tilbury:webhook-secret');if(!secret)return json({error:'Not configured'},503);
  let event;try{event=await stripe.webhooks.constructEventAsync(await request.text(),request.headers.get('stripe-signature'),secret,300,Stripe.createSubtleCryptoProvider())}catch{return json({error:'Invalid signature'},400)}
  if(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded'){
-  const s=event.data.object;if(s.metadata?.tilbury==='v1'&&s.payment_status==='paid'){
+  const s=event.data.object;if(s.metadata?.tilbury==='v1'&&['paid','no_payment_required'].includes(s.payment_status)){
    const paid=await paidSession(s.id,env,stripe);if(paid)await fulfill(paid,env,true);
   }
  }
@@ -135,7 +198,9 @@ export async function handleTilbury(request,env){
  }
  try{
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+  if(path==='/tilbury/unsubscribe'&&['GET','POST'].includes(request.method))return await unsubscribeLetter(request,env,url);
   if(path==='/tilbury/setup'&&request.method==='POST')return await setup(request,env,stripe);
+  if(path==='/tilbury/intro-offer'&&request.method==='POST')return await introductoryOffer(request,env,stripe);
   if(path==='/tilbury/checkout'&&request.method==='POST')return await checkout(request,env,stripe);
   if(path==='/tilbury/webhook'&&request.method==='POST')return await webhook(request,env,stripe);
   if(path==='/tilbury/catalog'&&request.method==='GET'){const c=await read(env,'tilbury:configuration');return json({ready:!!c?.webhook,products:CATALOG})}
@@ -144,7 +209,7 @@ export async function handleTilbury(request,env){
    const session=await paidSession(id,env,stripe);
    if(!session)return json({error:'Payment is pending, access has expired, or this order is unavailable.'},403);
    const record=await fulfill(session,env),p=CATALOG[record.sku];
-   if(path==='/tilbury/order')return json({paid:true,name:p.name,host:p.host,page:p.page,expires:record.expires,download:BACKEND+'/tilbury/download?session_id='+encodeURIComponent(id)});
+   if(path==='/tilbury/order')return json({paid:record.status==='paid',free:record.status==='free',name:p.name,host:p.host,page:p.page,expires:record.expires,download:BACKEND+'/tilbury/download?session_id='+encodeURIComponent(id)});
    const file=await env.PRIVATE_MEDIA.get('tilbury/products/'+record.sku+'.zip');
    if(!file)return json({error:'Download temporarily unavailable; please contact support.'},503);
    return new Response(file.body,{headers:{...headers,'content-type':'application/zip','content-disposition':'attachment; filename="'+record.sku+'.zip"'}});

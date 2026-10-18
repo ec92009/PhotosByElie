@@ -4,9 +4,9 @@ const SITE='https://web-by-elie.com';
 const BACKEND='https://photosbyelie-checkout-mock.ec92009.workers.dev';
 const TTL=30*86400;
 const CATALOG={
- 'easier-week':{name:'The Easier Week Kit',host:'June Rowan',page:'june.rowan',amount:0,standard_amount:1500},
- 'before-you-spend':{name:'Before You Spend Kit',host:'Nora Vela',page:'nora.vela',amount:0,standard_amount:1900},
- 'say-it-clearly':{name:'Say It Clearly',host:'Elena Brooks',page:'elena.brooks',amount:0,standard_amount:1500},
+ 'easier-week':{name:'The Easier Week Kit',host:'June Rowan',page:'june.rowan',amount:99,standard_amount:1500},
+ 'before-you-spend':{name:'Before You Spend Kit',host:'Nora Vela',page:'nora.vela',amount:99,standard_amount:1900},
+ 'say-it-clearly':{name:'Say It Clearly',host:'Elena Brooks',page:'elena.brooks',amount:99,standard_amount:1500},
 };
 const cors={'access-control-allow-origin':SITE,'access-control-allow-methods':'GET,POST,OPTIONS','access-control-allow-headers':'content-type,idempotency-key','vary':'Origin'};
 const headers={...cors,'cache-control':'private, no-store','cdn-cache-control':'no-store','referrer-policy':'no-referrer','x-content-type-options':'nosniff'};
@@ -56,31 +56,36 @@ async function setup(request,env,stripe){
  return json({ready:true,products:config.products,webhook:config.webhook,automatic_tax:config.automatic_tax,tax_registration_status:config.tax_registration_status,merchant:config.merchant});
 }
 
-/** Activate only the owner's fixed zero-dollar offer, retaining earlier paid entitlements. */
-async function introductoryOffer(request,env,stripe){
+/** Activate the fixed 99-cent price while retaining completed historical orders. */
+async function activatePrice099(request,env,stripe){
  if(!owner(request,env))return json({error:'Unauthorized'},401);
  const config=await read(env,'tilbury:configuration');
  if(!config?.setup_locked)return json({error:'Initial setup is incomplete'},409);
- if(config.intro_offer?.active)return json({active:true,amount:0,products:config.products});
  for(const [sku,p] of Object.entries(CATALOG)){
   const entry=config.products[sku];
-  const lookup=entry.product+'_intro_zero_usd';
+  if(!entry?.product||p.amount!==99)throw new Error('Unexpected product configuration');
+  const lookup=entry.product+'_usd_099_v1';
   let price=(await stripe.prices.list({lookup_keys:[lookup],active:true,limit:1})).data[0];
-  if(!price)price=await stripe.prices.create({product:entry.product,currency:'usd',unit_amount:0,tax_behavior:'exclusive',lookup_key:lookup,metadata:{tilbury:'v1',sku,offer:'introductory-zero'}},{idempotencyKey:'tilbury-intro-zero-'+sku+'-v1'});
-  if(price.unit_amount!==0||price.currency!=='usd'||price.product!==entry.product)throw new Error('Unexpected introductory price');
-  entry.standard_price=entry.standard_price||entry.price;entry.price=price.id;entry.amount=0;
+  if(!price)price=await stripe.prices.create({product:entry.product,currency:'usd',unit_amount:99,tax_behavior:'exclusive',lookup_key:lookup,metadata:{tilbury:'v1',sku,offer:'usd-099'}},{idempotencyKey:'tilbury-usd-099-'+sku+'-v1'});
+  if(price.unit_amount!==99||price.currency!=='usd'||price.product!==entry.product||price.recurring)throw new Error('Unexpected 99-cent price');
+  entry.previous_prices=entry.previous_prices||[];
+  if(entry.price!==price.id&&!entry.previous_prices.some(v=>v.price===entry.price))entry.previous_prices.push({price:entry.price,amount:entry.amount??0});
+  entry.price=price.id;entry.amount=99;
   await stripe.products.update(entry.product,{default_price:price.id});
  }
- // A stale, unfinished checkout must not charge the old price during this offer.
+ // Save the complete catalog together; old completed purchases keep their entitlements.
+ config.intro_offer={...config.intro_offer,active:false,ended_at:config.intro_offer?.ended_at||new Date().toISOString()};
+ config.current_offer={active:true,amount:99,currency:'usd',version:'2026-10-18-usd099'};
+ await env.ORDERS_KV.put('tilbury:configuration',JSON.stringify(config));
  let after,expired=0;
  do{
   const page=await stripe.checkout.sessions.list({status:'open',limit:100,...(after?{starting_after:after}:{})});
-  for(const session of page.data)if(session.metadata?.tilbury==='v1'&&CATALOG[session.metadata.sku]&&session.amount_total>0){await stripe.checkout.sessions.expire(session.id);expired++}
+  for(const session of page.data)if(session.metadata?.tilbury==='v1'&&CATALOG[session.metadata.sku]&&session.metadata.offer!=='usd-099'){
+   try{await stripe.checkout.sessions.expire(session.id);expired++}catch(e){if(e.code!=='checkout_session_not_open')throw e}
+  }
   after=page.has_more?page.data.at(-1)?.id:undefined;
  }while(after);
- config.intro_offer={active:true,amount:0,currency:'usd',activated_at:new Date().toISOString(),expires_at:null,expired_paid_checkouts:expired};
- await env.ORDERS_KV.put('tilbury:configuration',JSON.stringify(config));
- return json({active:true,amount:0,products:config.products,expired_paid_checkouts:expired});
+ return json({active:true,amount:99,currency:'usd',products:config.products,expired_old_checkouts:expired});
 }
 
 /** Start a server-priced Checkout Session; the request cannot choose an amount. */
@@ -94,16 +99,16 @@ async function checkout(request,env,stripe){
  const attempt=request.headers.get('idempotency-key')||'';
  if(!/^[a-zA-Z0-9-]{20,80}$/.test(attempt))return json({error:'Invalid checkout request'},400);
  const config=await read(env,'tilbury:configuration');
- if(!config?.products[body.sku]?.price||!config.intro_offer?.active)return json({error:'The introductory offer is being prepared. Please try again shortly.'},503);
+ if(!config?.products[body.sku]?.price||config.products[body.sku].amount!==p.amount||!config.current_offer?.active)return json({error:'The shop is being updated. Please try again shortly.'},503);
  const orderId='tilbury-'+attempt;
- const metadata={tilbury:'v1',sku:body.sku,order_id:orderId,terms_version:'2026-10-16-intro',digital_delivery_consent:'yes',offer:'introductory-zero',letter_opt_in:body.letterOptIn===true?'yes':'no',letter_consent_version:'2026-10-16-v1'};
+ const metadata={tilbury:'v1',sku:body.sku,order_id:orderId,terms_version:'2026-10-18-usd099',digital_delivery_consent:'yes',offer:'usd-099',letter_opt_in:body.letterOptIn===true?'yes':'no',letter_consent_version:'2026-10-16-v1'};
  const session=await stripe.checkout.sessions.create({mode:'payment',customer_email:email,line_items:[{price:config.products[body.sku].price,quantity:1}],
   success_url:SITE+'/creators.order?session_id={CHECKOUT_SESSION_ID}',cancel_url:SITE+'/'+p.page+'#shop',
   metadata,client_reference_id:orderId,automatic_tax:{enabled:config.automatic_tax===true},
   consent_collection:{terms_of_service:'required'},
-  custom_text:{terms_of_service_acceptance:{message:'I agree to the [Web By Elie digital product terms]('+SITE+'/creators.terms).'},submit:{message:'Free introductory kit from Web By Elie. No card required, no subscription and no future charge.'}},
+  custom_text:{terms_of_service_acceptance:{message:'I agree to the [Web By Elie digital product terms]('+SITE+'/creators.terms).'},submit:{message:'One-time US$0.99 digital kit from Web By Elie. No subscription or automatic renewal.'}},
   integration_identifier:'tilbury_shop_rkmvpsaj',expires_at:Math.floor(Date.now()/1000)+1800,
- },{idempotencyKey:'tilbury-intro-checkout-'+body.sku+'-'+attempt});
+ },{idempotencyKey:'tilbury-usd099-checkout-'+body.sku+'-'+attempt});
  await save(env,key(session.id),{session:session.id,sku:body.sku,orderId,status:'pending',created:session.created});
  return json({url:session.url});
 }
@@ -114,16 +119,19 @@ async function paidSession(id,env,stripe){
  const session=await stripe.checkout.sessions.retrieve(id,{expand:['payment_intent.latest_charge']});
  const p=CATALOG[session.metadata?.sku];
  if(!p||session.metadata.tilbury!=='v1'||session.status!=='complete'||session.currency!=='usd'||Date.now()/1000-session.created>TTL)return null;
- const free=session.amount_subtotal===0&&session.amount_total===0&&session.payment_status==='no_payment_required'&&session.payment_intent==null;
+ const config=await read(env,'tilbury:configuration');
+ const entry=config?.products[session.metadata.sku];
+ if(!entry)return null;
+ const items=await stripe.checkout.sessions.listLineItems(id,{limit:2});
+ if(items.data.length!==1||items.data[0].quantity!==1||items.data[0].price?.product!==entry.product)return null;
+ const accepted=[{price:entry.price,amount:entry.amount??0},{price:entry.standard_price,amount:p.standard_amount},...(entry.previous_prices||[])].find(v=>v.price&&v.price===items.data[0].price?.id);
+ if(!accepted||session.amount_subtotal!==accepted.amount)return null;
+ const free=accepted.amount===0&&session.amount_total===0&&session.payment_status==='no_payment_required'&&session.payment_intent==null;
  if(!free){
-  if(session.payment_status!=='paid'||session.amount_subtotal!==p.standard_amount)return null;
+  if(accepted.amount<=0||session.payment_status!=='paid'||session.amount_total<accepted.amount)return null;
   const charge=session.payment_intent?.latest_charge;
   if(!charge||typeof charge==='string'||charge.refunded||charge.amount_refunded>0||charge.disputed)return null;
  }
- const config=await read(env,'tilbury:configuration');
- const items=await stripe.checkout.sessions.listLineItems(id,{limit:2});
- const entry=config?.products[session.metadata.sku];
- if(items.data.length!==1||items.data[0].quantity!==1||items.data[0].price?.id!==(free?entry?.price:entry?.standard_price||entry?.price))return null;
  return session;
 }
 
@@ -155,7 +163,7 @@ async function subscribeLetter(email,sku,created,env){
  // A replay of an old checkout must not reverse a later unsubscribe.
  if(prior?.last_order_created>=created)return;
  const token=prior?.unsubscribe_token||crypto.randomUUID();
- await env.ORDERS_KV.put(k,JSON.stringify({...prior,email,status:'subscribed',source:'completed-free-kit',sku,consent_version:'2026-10-16-v1',consented_at:new Date(created*1000).toISOString(),last_order_created:created,unsubscribe_token:token}));
+ await env.ORDERS_KV.put(k,JSON.stringify({...prior,email,status:'subscribed',source:'completed-kit',sku,consent_version:'2026-10-16-v1',consented_at:new Date(created*1000).toISOString(),last_order_created:created,unsubscribe_token:token}));
  await env.ORDERS_KV.put('tilbury:letter-token:'+token,id);
 }
 
@@ -200,7 +208,7 @@ export async function handleTilbury(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(path==='/tilbury/unsubscribe'&&['GET','POST'].includes(request.method))return await unsubscribeLetter(request,env,url);
   if(path==='/tilbury/setup'&&request.method==='POST')return await setup(request,env,stripe);
-  if(path==='/tilbury/intro-offer'&&request.method==='POST')return await introductoryOffer(request,env,stripe);
+  if(path==='/tilbury/price-099'&&request.method==='POST')return await activatePrice099(request,env,stripe);
   if(path==='/tilbury/checkout'&&request.method==='POST')return await checkout(request,env,stripe);
   if(path==='/tilbury/webhook'&&request.method==='POST')return await webhook(request,env,stripe);
   if(path==='/tilbury/catalog'&&request.method==='GET'){const c=await read(env,'tilbury:configuration');return json({ready:!!c?.webhook,products:CATALOG})}

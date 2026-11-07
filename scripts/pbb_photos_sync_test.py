@@ -126,6 +126,17 @@ class PersistentPhotosSyncTest(unittest.TestCase):
         with connect(self.root) as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM sidecar_assets WHERE missing_at IS NOT NULL").fetchone()[0], 0)
 
+    def test_terminal_run_receipt_keeps_its_counts_separate_from_inventory_totals(self):
+        for state in ("done", "failed"):
+            receipt = dict(jobId="executed-job", status=state, indexedCount=0, importedCount=0, totalCount=2, progress=0.5)
+            with patch.dict(server.INDEX_JOB, receipt, clear=True), patch.object(server, "_summary_snapshot", return_value={"indexedCount":1000}):
+                result = server._index_job_snapshot(self.root)
+            self.assertEqual(result["importedCount"], 0)
+            self.assertEqual(result["totalCount"], 2)
+            self.assertEqual(result["sidecarSummary"]["indexedCount"], 1000)
+        with patch.dict(server.INDEX_JOB, {"jobId":"", "status":"idle"}, clear=True), patch.object(server, "_summary_snapshot", return_value={"indexedCount":1000}):
+            self.assertEqual(server._index_job_snapshot(self.root)["importedCount"], 1000)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -180,7 +180,9 @@ def _index_job_snapshot(repo_root: Path) -> dict:
     try:
         sidecar_summary = _summary_snapshot(repo_root)
         payload["sidecarSummary"] = sidecar_summary
-        if payload.get("status") != "running":
+        # Inventory totals belong to idle status, not an executed job's receipt.
+        # In particular a zero-change incremental run must remain zero here.
+        if not payload.get("jobId"):
             payload["indexedCount"] = int(sidecar_summary.get("indexedCount") or 0)
             payload["importedCount"] = int(sidecar_summary.get("indexedCount") or 0)
             payload["totalCount"] = int(sidecar_summary.get("indexedCount") or 0)

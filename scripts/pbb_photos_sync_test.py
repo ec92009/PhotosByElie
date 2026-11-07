@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -114,6 +115,16 @@ class PersistentPhotosSyncTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "changed between pages"):
             scan.accept(dict(page, nextChangeToken="other-token", nextOffset=2, hasMore=False), [], 1, 1)
         self.assertEqual(sync.checkpoint(self.root, "pbb-max"), {})
+
+    def test_large_raw_exclusion_set_does_not_rescan_every_owner_row_per_identifier(self):
+        upsert_assets(self.root, [source("existing-" + str(i)) for i in range(1000)])
+        started = time.monotonic()
+        result = self.finish("large-baseline", [source("known")],
+                             removed=["unsupported-raw-" + str(i) for i in range(20_000)])
+        self.assertEqual(result["missingMarkedCount"], 0)
+        self.assertLess(time.monotonic() - started, 5, "RAW exclusions must use one identity pass, not one full scan each")
+        with connect(self.root) as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM sidecar_assets WHERE missing_at IS NOT NULL").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

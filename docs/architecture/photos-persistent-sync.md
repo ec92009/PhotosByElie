@@ -40,6 +40,11 @@ missing markers preserve fixture decisions, editorial approvals, source-version
 history, publication receipts and permanent sold deliveries. Capture date
 remains a Gallery filter, never a discovery cursor.
 
+Absence reconciliation resolves the Photos identity projection once and updates
+matched asset primary keys in batches. Unsupported RAW identities that were
+never indexed produce no asset update, rather than a repeated JSON scan of the
+entire Owner database. A 20,000-exclusion regression bounds this completion step.
+
 Implementation: `PhotoLibraryChangeReader.swift`, the existing signed Photos IPC,
 `scripts/pbb_photos_sync.py` and `sidecar_server.py`. Focused regression coverage:
 `pbb_photos_sync_test.py`, `BackstagePhotosJobAuthorityTests`, and the existing

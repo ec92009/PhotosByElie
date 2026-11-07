@@ -72,6 +72,28 @@ def checkpoint(root: Path, consumer: str) -> dict:
         return {}
 
 
+def _mark_removed(conn, consumer: str, removed: set[str], now: str) -> int:
+    # Resolve the identity projection ONCE. An OR/json_extract scan per absent
+    # RAW would turn a large first inventory into billions of row inspections
+    # while holding the writer lock. Mutations below use the asset primary key.
+    assets = set()
+    for row in conn.execute("SELECT asset_id,raw_json FROM sidecar_assets WHERE source_anchor LIKE 'apple-photos%'"):
+        local = json.loads(row["raw_json"] or "{}").get("localIdentifier")
+        if row["asset_id"] in removed or local in removed:
+            assets.add(row["asset_id"])
+    missing = 0
+    ids = sorted(assets)
+    for start in range(0, len(ids), 500):
+        batch = ids[start:start + 500]
+        marks = ",".join("?" for _ in batch)
+        changed = conn.execute(f"""UPDATE sidecar_assets SET missing_at=?,updated_at=?
+            WHERE asset_id IN ({marks}) AND COALESCE(missing_at,'')=''""", [now, now, *batch])
+        missing += changed.rowcount
+    conn.executemany("DELETE FROM pbb_photos_sync_members WHERE consumer=? AND local_identifier=?",
+                     [(consumer, local) for local in removed])
+    return missing
+
+
 def complete(root: Path, consumer: str, previous_token: str | None, path: Path, report: dict) -> dict:
     from sidecar_state_db import connect, now_iso
     if not consumer or not report.get("syncComplete") or not report.get("nextChangeToken"):
@@ -101,15 +123,7 @@ def complete(root: Path, consumer: str, previous_token: str | None, path: Path, 
         if report.get("syncBaseline"):
             owned = conn.execute("SELECT local_identifier FROM pbb_photos_sync_members WHERE consumer=?", (consumer,))
             removed.update(row[0] for row in owned if row[0] not in present)
-        missing = 0
-        for local in removed - present.keys():
-            # Match exact Photos identity only, not filename/date. Private edits
-            # and recovered R2 originals have separate source capabilities.
-            changed = conn.execute("""UPDATE sidecar_assets SET missing_at=?,updated_at=?
-                WHERE (asset_id=? OR json_extract(raw_json,'$.localIdentifier')=?)
-                AND source_anchor LIKE 'apple-photos%' AND COALESCE(missing_at,'')=''""", (now, now, local, local))
-            missing += changed.rowcount
-            conn.execute("DELETE FROM pbb_photos_sync_members WHERE consumer=? AND local_identifier=?", (consumer, local))
+        missing = _mark_removed(conn, consumer, removed - present.keys(), now) if removed else 0
         conn.executemany("""INSERT INTO pbb_photos_sync_members VALUES (?,?,?)
             ON CONFLICT(consumer,local_identifier) DO UPDATE SET asset_id=excluded.asset_id""",
             [(consumer, local, asset) for local, asset in present.items()])

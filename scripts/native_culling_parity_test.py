@@ -686,7 +686,7 @@ class NativeCullingParityTest(unittest.TestCase):
         index_source = photo_library.split("public func libraryIndex(", 1)[1].split(
             "public func preview(", 1
         )[0]
-        row_source = photo_library.split("private func libraryIndexRow(", 1)[1].split(
+        row_source = photo_library.split("func libraryIndexRow(", 1)[1].split(
             "private func resourceRows(", 1
         )[0]
         self.assertIn("let recoverySnapshot = RawRecoveryBatchRegistry.snapshot()", fetch_source)

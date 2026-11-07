@@ -178,6 +178,7 @@ public protocol PhotoLibraryServing: Sendable {
     /// infer deletion from a partial fetch, a download failure or limited access.
     func sourceAvailability(identifiers: [String]) async throws -> [String: Bool]
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
+    func libraryChangesPage(sessionID: String, checkpoint: String?, limit: Int, offset: Int) async throws -> Data
     func identityMap(localIdentifiers: [String]) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
@@ -214,6 +215,9 @@ public protocol PhotoLibraryServing: Sendable {
 }
 
 public extension PhotoLibraryServing {
+    func libraryChangesPage(sessionID: String, checkpoint: String?, limit: Int, offset: Int) async throws -> Data {
+        throw PhotoLibraryError.metadataFailed("This Photos reader does not support persistent sync.")
+    }
     func sourceAvailability(identifiers: [String]) async throws -> [String: Bool] { [:] }
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
@@ -1711,7 +1715,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
     }
 
-    private func libraryIndexRow(
+    func libraryIndexRow(
         _ asset: PHAsset,
         index: Int,
         cloudIdentifier: String,
@@ -1879,7 +1883,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return []
     }
 
-    private func cloudIdentifiers(for localIdentifiers: [String]) -> [String: String] {
+    func cloudIdentifiers(for localIdentifiers: [String]) -> [String: String] {
         guard #available(macOS 12.0, *) else { return [:] }
         var resolved: [String: String] = [:]
         // PhotoKit accepts a collection and is markedly faster in bounded

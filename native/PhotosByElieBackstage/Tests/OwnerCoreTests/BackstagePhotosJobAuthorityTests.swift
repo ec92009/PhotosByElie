@@ -106,6 +106,26 @@ struct BackstagePhotosJobAuthorityTests {
         #expect(await authority.consume(try signedPhotosJobRequest(raw("photos.library-index", fields: ["dateFrom":"2026-01-01", "offset":1000,"limit":1000]), credential: credential)) != nil)
     }
 
+    @Test("Persistent sync authority freezes its private checkpoint and follows scanned offsets")
+    func persistentSyncScope() async throws {
+        let authority = BackstagePhotosJobAuthority()
+        let sessionID = UUID().uuidString
+        let credential = try await issue(authority, .init(operations: ["photos.library-index"],
+            syncSession: sessionID, syncCheckpoint: "private-token"))
+        let fields: [String: Any] = ["offset": 0, "limit": 200, "syncSession": sessionID, "syncCheckpoint": "private-token"]
+        var wrong = fields
+        wrong["syncCheckpoint"] = "another-app-token"
+        #expect(await authority.consume(try signedPhotosJobRequest(raw("photos.library-index", fields: wrong), credential: credential)) == nil)
+        let first = try raw("photos.library-index", fields: fields)
+        let envelope = try signedPhotosJobRequest(first, credential: credential)
+        #expect(await authority.consume(envelope) != nil)
+        await authority.recordResponse(envelopeData: envelope, requestData: first,
+            response: Data(#"{"ok":true,"nextOffset":125,"count":0}"#.utf8))
+        var next = fields
+        next["offset"] = 125
+        #expect(await authority.consume(try signedPhotosJobRequest(raw("photos.library-index", fields: next), credential: credential)) != nil)
+    }
+
     @Test("Metadata writes match approved values and preserve tombstone metadata")
     func metadataScope() async throws {
         let authority = BackstagePhotosJobAuthority()

@@ -1236,9 +1236,9 @@ struct CullingView: View {
             .accessibilityLabel(
                 model.isLoadingPhotos || model.isReconcilingPhotosIndex
                     ? "Discovering recent Photos"
-                    : "Refresh previews and discover recent Photos"
+                    : "Refresh previews and sync Apple Photos"
             )
-            .backstageHelp("Check source availability for the current Gallery page, refresh previews, discover recent Photos, and reload Gallery. Full library audit checks removals across the entire library. Existing decisions are preserved.")
+            .backstageHelp("Sync additions and changes from Apple Photos using PBB's own checkpoint, regardless of capture date. The first pass inventories the entire library and recovers previously missed supported photos. Full library audit rebuilds that inventory. Existing decisions are preserved.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {

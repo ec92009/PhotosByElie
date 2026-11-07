@@ -1,7 +1,7 @@
 # Gallery source availability (PBB-194)
 
 `Refresh & discover` checks up to 500 sources in the current Gallery page before
-running the existing incremental discovery. It resolves the exact Photos
+running [PBB-owned persistent discovery](photos-persistent-sync.md). It resolves the exact Photos
 identities, without downloading originals or comparing filenames. The resulting
 observations update only `sidecar_assets.missing_at` for those identities.
 
@@ -17,7 +17,7 @@ recheck unavailable entries. A failed Quick Look also checks the current page
 and reloads it when Photos explicitly cannot resolve the source. Permission,
 download, timeout and rendering failures are not treated as deletion.
 
-`Full library audit` remains the explicit global reconciliation path. An asset
+`Full library audit` explicitly rebuilds PBB's complete inventory. An asset
 missing from an incremental discovery subset is never sufficient evidence that
 it has been removed. A full audit can take several minutes on a large library.
 

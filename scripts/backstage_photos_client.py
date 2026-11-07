@@ -135,6 +135,10 @@ def request_library_index(
         request["dateFrom"] = date_from
     if date_to:
         request["dateTo"] = date_to
+    credential = backstage_photos_job.credential() or {}
+    if credential.get("syncSession"):
+        request["syncSession"] = credential["syncSession"]
+        request["syncCheckpoint"] = credential.get("syncCheckpoint")
     response_data = _send_request(
         request,
         descriptor,

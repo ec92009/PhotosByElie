@@ -11,13 +11,22 @@ public struct BackstagePhotosJobPlan: Codable, Sendable {
     public var dateFrom: String
     public var dateTo: String
     public var maxPixel: Int
+    public var syncSession: String?
+    public var syncCheckpoint: String?
+    public var syncConsumer: String?
+    public var syncPreviousCheckpoint: String?
 
     public init(operations: Set<String> = [], assetIDs: Set<String> = [],
                 writes: [PhotoMetadataApplyRequest] = [], preserveMetadataIDs: Set<String> = [],
-                dateFrom: String = "", dateTo: String = "", maxPixel: Int = 1800) {
+                dateFrom: String = "", dateTo: String = "", maxPixel: Int = 1800,
+                syncSession: String? = nil, syncCheckpoint: String? = nil, syncConsumer: String? = nil,
+                syncPreviousCheckpoint: String? = nil) {
         self.operations = operations; self.assetIDs = assetIDs; self.writes = writes
         self.preserveMetadataIDs = preserveMetadataIDs
         self.dateFrom = dateFrom; self.dateTo = dateTo; self.maxPixel = maxPixel
+        self.syncSession = syncSession; self.syncCheckpoint = syncCheckpoint
+        self.syncConsumer = syncConsumer
+        self.syncPreviousCheckpoint = syncPreviousCheckpoint
     }
 }
 
@@ -27,6 +36,10 @@ public struct BackstagePhotosJobCredential: Codable, Sendable {
     public let expiresAt: TimeInterval
     public let dateFrom: String
     public let dateTo: String
+    public var syncSession: String?
+    public var syncCheckpoint: String?
+    public var syncConsumer: String?
+    public var syncPreviousCheckpoint: String?
 }
 
 /// The descriptor advertises transport only. Authority comes from a secret
@@ -69,7 +82,9 @@ public actor BackstagePhotosJobAuthority {
         jobs[id] = Job(plan: plan, key: key, expiresAt: deadline, deviceID: deviceID, checkSession: checkSession)
         return BackstagePhotosJobCredential(jobID: id,
             secret: key.withUnsafeBytes { Data($0).base64EncodedString() },
-            expiresAt: deadline.timeIntervalSince1970, dateFrom: plan.dateFrom, dateTo: plan.dateTo)
+            expiresAt: deadline.timeIntervalSince1970, dateFrom: plan.dateFrom, dateTo: plan.dateTo,
+            syncSession: plan.syncSession, syncCheckpoint: plan.syncCheckpoint, syncConsumer: plan.syncConsumer,
+            syncPreviousCheckpoint: plan.syncPreviousCheckpoint)
     }
 
     public func revokeAll() { jobs.removeAll() }
@@ -110,7 +125,7 @@ public actor BackstagePhotosJobAuthority {
         if request.operation == "photos.library-index" { job.indexInFlight = false }
         guard payload["ok"] as? Bool == true else { jobs[envelope.jobID] = job; return }
         if request.operation == "photos.library-index" {
-            job.nextOffset = (request.offset ?? 0) + (request.limit ?? 0)
+            job.nextOffset = payload["nextOffset"] as? Int ?? ((request.offset ?? 0) + (request.limit ?? 0))
         }
         if request.operation == "photos.metadata-read-many",
            let items = payload["items"] as? [[String: Any]] {
@@ -131,6 +146,7 @@ public actor BackstagePhotosJobAuthority {
         switch request.operation {
         case "photos.library-index":
             return !job.indexInFlight && (request.dateFrom ?? "") == job.plan.dateFrom && (request.dateTo ?? "") == job.plan.dateTo
+                && request.syncSession == job.plan.syncSession && request.syncCheckpoint == job.plan.syncCheckpoint
                 && request.offset == job.nextOffset && (1...1000).contains(request.limit ?? 0)
         case "photos.preview":
             return job.plan.assetIDs.contains(request.assetId ?? "")
@@ -161,6 +177,7 @@ public actor BackstagePhotosJobAuthority {
         var requestId: String; var operation: String
         var assetId: String?; var maxPixel: Int?; var limit: Int?; var offset: Int?
         var dateFrom: String?; var dateTo: String?
+        var syncSession: String?; var syncCheckpoint: String?
         var requests: [PhotoMetadataApplyRequest]?; var localIdentifiers: [String]?
     }
 }

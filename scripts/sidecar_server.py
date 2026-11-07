@@ -31,6 +31,7 @@ from backstage_photos_client import (
     request_library_index,
     request_preview,
 )
+import backstage_photos_job
 
 from sidecar_state_db import (
     ai_metadata_plan,
@@ -389,6 +390,9 @@ def _write_backstage_library_index(
     offset = 0
     total_count = 0
     source_census: dict[str, Any] = {}
+    from pbb_photos_sync import ScanReceipt
+    session = (backstage_photos_job.credential() or {}).get("syncSession")
+    sync = ScanReceipt(repo_root, session) if session else None
     with index_path.open("w", encoding="utf-8") as stream:
         while True:
             payload = _run_backstage_photos_library_index(
@@ -415,14 +419,16 @@ def _write_backstage_library_index(
                 row for row in payload.get("items") or []
                 if isinstance(row, dict) and is_jpeg_source_row(row)
             ]
+            next_offset = sync.accept(payload, rows, offset, page_size) if sync else offset + len(rows)
             for row in rows:
                 stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
             stream.flush()
             total_count += len(rows)
-            offset += len(rows)
+            offset = next_offset
             _set_index_job(
                 status="running",
-                stage=f"Indexing through Backstage ({total_count} assets)",
+                stage=(f"Checking Apple Photos inventory: {offset:,} of {payload['totalCount']:,}; {len(sync.recovered):,} previously unindexed"
+                       if sync else f"Indexing through Backstage ({total_count} assets)"),
                 jobId=job_id,
                 indexedCount=total_count,
                 importedCount=0,
@@ -430,7 +436,9 @@ def _write_backstage_library_index(
                 progress=0,
                 error="",
             )
-            if not rows or len(rows) < page_size:
+            if sync and sync.report["syncComplete"]:
+                break
+            if not sync and (not rows or len(rows) < page_size):
                 break
             if offset >= 1_000_000:
                 raise RuntimeError("Backstage library-index exceeded the safe offset limit.")
@@ -440,6 +448,7 @@ def _write_backstage_library_index(
         "count": total_count,
         "totalCount": total_count,
         **source_census,
+        **(sync.report if sync else {}),
     }
 
 
@@ -483,10 +492,17 @@ def _run_index_job(
             job_id=job_id,
         )
         total_count = int(index_payload.get("totalCount") or index_payload.get("count") or 0)
-        imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
+        imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count,
+            prune_missing=not index_payload.get("syncSession") and not date_from and not date_to)
         _invalidate_summary_cache()
         completed_at = _utc_now()
-        checkpoint = (
+        credential = backstage_photos_job.credential() or {}
+        if index_payload.get("syncSession"):
+            from pbb_photos_sync import complete
+            checkpoint = complete(repo_root, credential["syncConsumer"], credential.get("syncPreviousCheckpoint"), index_path, index_payload)
+            missing_count = checkpoint["missingMarkedCount"]
+        else:
+            checkpoint = (
             record_photos_discovery_checkpoint(
                 repo_root,
                 mode=mode,
@@ -497,7 +513,7 @@ def _run_index_job(
             )
             if mode in {"incremental", "full"}
             else {}
-        )
+            )
         _set_index_job(
             ok=True,
             status="done",
@@ -519,6 +535,9 @@ def _run_index_job(
             dateFrom=date_from,
             dateTo=date_to,
             discoveryCheckpoint=checkpoint,
+            persistentSync=bool(index_payload.get("syncSession")),
+            baselineSync=bool(index_payload.get("syncBaseline")),
+            recoveredCount=int(index_payload.get("recoveredCount") or 0),
             sidecarSummary=_summary_snapshot(repo_root, force=True),
         )
     except Exception as error:
@@ -565,10 +584,12 @@ def _start_index_job(
         mode = "full"
     elif date_from or date_to:
         mode = "range"
-    else:
+    elif not (backstage_photos_job.credential() or {}).get("syncSession"):
         policy = photos_discovery_window(repo_root)
         mode = "incremental"
         date_from = str(policy["dateFrom"])
+    else:
+        mode = "incremental"
     thread = threading.Thread(
         target=_run_index_job,
         args=(repo_root, job_id, date_from, date_to),

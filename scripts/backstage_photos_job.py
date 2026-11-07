@@ -17,6 +17,7 @@ from pathlib import Path
 import sqlite3
 import sys
 import time
+import uuid
 
 # Only the fixed, app-sealed dependency directory is added. Isolated jobs never
 # load user site-packages or environment-supplied Python paths.
@@ -95,13 +96,18 @@ def plan(root: Path, action: dict) -> dict:
     kind = action.get("actionKind") or action.get("type")
     mode = manifest.get("mode", "")
     if kind == "sidecar-photos-index-sync":
-        from sidecar_state_db import photos_discovery_window
         full = bool(payload.get("fullLibrary")) or payload.get("mode") == "full"
         lower, upper = payload.get("dateFrom") or "", payload.get("dateTo") or ""
         if full and (lower or upper):
             raise ValueError("Full library reconciliation cannot have date bounds")
-        if not full and not lower and not upper:
-            lower = photos_discovery_window(root)["dateFrom"]
+        if not lower and not upper:
+            from pbb_photos_sync import checkpoint
+            consumer = str(payload.get("requestedConnector") or action.get("target") or "")
+            if not consumer:
+                raise ValueError("PBB Photos sync requires an exact connector consumer")
+            saved = checkpoint(root, consumer)
+            result.update(syncSession=str(uuid.uuid4()), syncCheckpoint=None if full else saved.get("token"),
+                          syncConsumer=consumer, syncPreviousCheckpoint=saved.get("token"))
         result.update(operations=["photos.library-index"], dateFrom=lower, dateTo=upper)
     elif kind == "sidecar-culling-review" and mode in {"fixture-photos-writeback-plan", "fixture-photos-writeback-commit"}:
         from apple_photos_metadata_writer import writeback_plan

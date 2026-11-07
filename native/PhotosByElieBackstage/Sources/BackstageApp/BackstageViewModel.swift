@@ -1949,6 +1949,10 @@ final class BackstageViewModel: ObservableObject {
                 parts.append("\(report.importedCount.formatted()) indexed")
             }
             parts.append("\(report.missingMarkedCount.formatted()) unavailable marked")
+            if report.persistentSync {
+                parts.append("\(report.recoveredCount.formatted()) previously unindexed recovered")
+                parts.append("PBB sync checkpoint saved")
+            }
             photoStatus = parts.joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
@@ -1971,7 +1975,7 @@ final class BackstageViewModel: ObservableObject {
         }
         do {
             let result = try await reconcileVisiblePhotoSources()
-            photoStatus = "Gallery sources checked. Discovering recent Photos…"
+            photoStatus = "Gallery sources checked. Syncing Apple Photos additions and changes…"
             await discoverRecentPhotosIndex()
             if hasCurrentCullingFixture, cullingPool == nil {
                 await loadFixtureCullingWindow(preservingVisibleWindow: true)
@@ -2000,7 +2004,7 @@ final class BackstageViewModel: ObservableObject {
         guard !isReconcilingPhotosIndex, !isPhotosMaintenanceActive else { return }
         guard [.authorized, .limited].contains(photoAccess) else { return }
         isReconcilingPhotosIndex = true
-        photoStatus = "Synchronizing recent Photos with the Owner index…"
+        photoStatus = "Syncing Apple Photos with PBB; checking the library and saved checkpoint…"
         defer { isReconcilingPhotosIndex = false }
         await discoverRecentPhotosIndex()
     }
@@ -2009,6 +2013,16 @@ final class BackstageViewModel: ObservableObject {
         guard await prepareAuthenticatedOperation() else { return }
         do {
             let report = try await fixtureService.reconcilePhotosIndex()
+            if report.persistentSync {
+                photoStatus = [
+                    report.baselineSync ? "Complete Photos inventory synchronized" : "Photos changes synchronized",
+                    "\(report.importedCount.formatted()) indexed",
+                    "\(report.recoveredCount.formatted()) previously unindexed recovered",
+                    "\(report.missingMarkedCount.formatted()) unavailable marked",
+                    "PBB checkpoint saved",
+                ].joined(separator: " • ")
+                return
+            }
             photoStatus = [
                 "Recent Photos discovered",
                 "\(report.importedCount.formatted()) indexed",

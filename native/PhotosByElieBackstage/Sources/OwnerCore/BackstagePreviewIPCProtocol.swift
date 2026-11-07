@@ -241,12 +241,17 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         do {
             let dateFrom = try parseDate(request.dateFrom, field: "dateFrom")
             let dateTo = try parseDate(request.dateTo, field: "dateTo")
-            let payloadData = try await libraryIndexWithTimeout(
-                limit: limit,
-                offset: offset,
-                dateFrom: dateFrom,
-                dateTo: dateTo
-            )
+            let payloadData: Data
+            if let session = request.syncSession {
+                guard dateFrom == nil, dateTo == nil else { throw LibraryDateArgumentError(field: "syncSession") }
+                payloadData = try await photoLibrary.libraryChangesPage(
+                    sessionID: session, checkpoint: request.syncCheckpoint, limit: limit, offset: offset
+                )
+            } else {
+                payloadData = try await libraryIndexWithTimeout(
+                    limit: limit, offset: offset, dateFrom: dateFrom, dateTo: dateTo
+                )
+            }
             guard var payload = try JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
                   payload["ok"] as? Bool == true,
                   payload["mode"] as? String == "library-index",
@@ -803,6 +808,8 @@ private struct PreviewRequest: Decodable {
     var offset: Int?
     var dateFrom: String?
     var dateTo: String?
+    var syncSession: String?
+    var syncCheckpoint: String?
     var allowICloudDownloads: Bool?
     var requests: [PhotoMetadataApplyRequest]?
     var localIdentifiers: [String]?
@@ -814,6 +821,7 @@ private struct PreviewRequest: Decodable {
         case maxPixel
         case limit, offset
         case dateFrom, dateTo
+        case syncSession, syncCheckpoint
         case allowICloudDownloads
         case requests
         case localIdentifiers

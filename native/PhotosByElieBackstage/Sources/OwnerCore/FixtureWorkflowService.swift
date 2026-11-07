@@ -1252,6 +1252,9 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
     public var excludedStillFormatCounts: [String: Int]
     public var completedAt: String
     public var checkpointCaptureDate: String
+    public var persistentSync: Bool
+    public var baselineSync: Bool
+    public var recoveredCount: Int
 
     init(json: [String: JSONValue]) {
         mode = json["mode"]?.stringValue ?? ""
@@ -1272,6 +1275,9 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
             }
         completedAt = json["completedAt"]?.stringValue ?? ""
         checkpointCaptureDate = json["discoveryCheckpoint"]?.objectValue?["captureDate"]?.stringValue ?? ""
+        persistentSync = json["persistentSync"]?.boolValue ?? false
+        baselineSync = json["baselineSync"]?.boolValue ?? false
+        recoveredCount = json["recoveredCount"]?.intValue ?? 0
     }
 }
 

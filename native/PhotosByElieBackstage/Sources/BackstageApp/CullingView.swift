@@ -1226,7 +1226,7 @@ struct CullingView: View {
                     HStack(spacing: 6) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Discovering recent Photos…")
+                        Text("Syncing Apple Photos…")
                     }
                 } else {
                     Text("Refresh & discover")
@@ -1235,7 +1235,7 @@ struct CullingView: View {
             .disabled(model.isPhotoLibraryOperationInProgress)
             .accessibilityLabel(
                 model.isLoadingPhotos || model.isReconcilingPhotosIndex
-                    ? "Discovering recent Photos"
+                    ? "Syncing Apple Photos"
                     : "Refresh previews and sync Apple Photos"
             )
             .backstageHelp("Sync additions and changes from Apple Photos using PBB's own checkpoint, regardless of capture date. The first pass inventories the entire library and recovers previously missed supported photos. Full library audit rebuilds that inventory. Existing decisions are preserved.")
@@ -1245,7 +1245,7 @@ struct CullingView: View {
                 if model.isReconcilingPhotosIndex {
                     ProgressView()
                         .controlSize(.small)
-                        .accessibilityLabel("Reconciling complete Photos library")
+                        .accessibilityLabel("Apple Photos sync in progress")
                 } else {
                     Text("Full library audit")
                 }

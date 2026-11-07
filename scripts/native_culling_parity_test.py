@@ -1850,7 +1850,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "              allowDuringReconciliation || !isReconcilingPhotosIndex else { return }",
             model_source,
         )
-        self.assertIn('Text("Discovering recent Photos…")', culling)
+        self.assertIn('Text("Syncing Apple Photos…")', culling)
         self.assertIn('Text("Refresh & discover")', culling)
         self.assertIn('Text("Full library audit")', culling)
         self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)

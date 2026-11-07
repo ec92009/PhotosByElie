@@ -1715,6 +1715,12 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
     }
 
+    /// Check resources before cloud-identity/metadata work. RAW-only exclusion
+    /// must remain cheap during a complete persistent-sync baseline.
+    func isLibraryIndexEligible(_ asset: PHAsset, recovered: Bool) -> Bool {
+        recovered || preferredAcceptedStillResource(for: asset) != nil
+    }
+
     func libraryIndexRow(
         _ asset: PHAsset,
         index: Int,

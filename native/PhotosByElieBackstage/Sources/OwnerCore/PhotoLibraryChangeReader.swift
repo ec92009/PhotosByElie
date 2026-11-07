@@ -41,17 +41,23 @@ actor PhotoLibraryChangeReader {
         guard offset <= total else { throw PhotoLibraryError.metadataFailed("Invalid Photos sync offset.") }
         let end = min(offset + limit, total)
         let assets = (min(offset, state.assets.count)..<min(end, state.assets.count)).map { state.assets.object(at: $0) }
-        let clouds = reader.cloudIdentifiers(for: assets.map(\.localIdentifier))
         let recovery = RawRecoveryBatchRegistry.snapshot()
         var rows: [[String: Any]] = []
         var removed = Array(state.removed[max(0, offset - state.assets.count)..<max(0, end - state.assets.count)])
+        var supported: [(PHAsset, RawRecoveryResolvedDerivative?)] = []
         for asset in assets {
             try Task.checkCancellation()
-            let row = reader.libraryIndexRow(asset, index: offset + rows.count + 1,
+            let recovered = recovery?.resolvedDerivative(localIdentifier: asset.localIdentifier)
+            if reader.isLibraryIndexEligible(asset, recovered: recovered != nil) {
+                supported.append((asset, recovered))
+            } else { removed.append(asset.localIdentifier) }
+        }
+        let clouds = reader.cloudIdentifiers(for: supported.map { $0.0.localIdentifier })
+        for (asset, recovered) in supported {
+            try Task.checkCancellation()
+            rows.append(reader.libraryIndexRow(asset, index: offset + rows.count + 1,
                 cloudIdentifier: clouds[asset.localIdentifier] ?? "",
-                recovered: recovery?.resolvedDerivative(localIdentifier: asset.localIdentifier))
-            if row["eligible"] as? Bool == true { rows.append(row) }
-            else { removed.append(asset.localIdentifier) }
+                recovered: recovered))
         }
         // Revoked/limited access must never certify a complete inventory.
         guard reader.authorization() == .authorized else { throw PhotoLibraryError.accessDenied }

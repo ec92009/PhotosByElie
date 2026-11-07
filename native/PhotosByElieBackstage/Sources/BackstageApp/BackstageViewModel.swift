@@ -111,7 +111,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
         case .photosAccess:
             "Choose Allow Photos or grant Full Access in System Settings."
         case .assetUnavailable:
-            "This asset is not in the current Photos library. Retry after Photos sync completes."
+            "Photos cannot find this photo. Restore it from Recently Deleted if needed, or use Refresh & discover to update this Gallery page."
         case .previewUnavailable:
             "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
         case .timedOut:
@@ -518,6 +518,7 @@ final class BackstageViewModel: ObservableObject {
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
+    let sourceAvailabilityStore: OwnerPhotoAvailabilitySQLiteStore?
     private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
     private let currentEquipmentCache: (any OwnerCurrentEquipmentCaching)?
     private let equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore?
@@ -845,6 +846,9 @@ final class BackstageViewModel: ObservableObject {
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
             .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:)),
+        sourceAvailabilityStore: OwnerPhotoAvailabilitySQLiteStore? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map(OwnerPhotoAvailabilitySQLiteStore.init(databaseURL:)),
         currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
@@ -934,6 +938,7 @@ final class BackstageViewModel: ObservableObject {
             sidecarDecisionService: decisionService
         )
         self.workflowRecoveryStore = workflowRecoveryStore
+        self.sourceAvailabilityStore = sourceAvailabilityStore
         self.currentImageSizeCache = currentImageSizeCache
         self.currentEquipmentCache = currentEquipmentCache
         self.equipmentBackfillStore = equipmentBackfillStore
@@ -1954,8 +1959,31 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshPhotosAndRecentIndex() async {
-        await refreshPhotos()
-        await reconcileRecentPhotosIndex()
+        guard !isPhotoLibraryOperationInProgress else { return }
+        isReconcilingPhotosIndex = true
+        photoStatus = "Refreshing Gallery: checking Photos access…"
+        cullingStatus = "Refreshing Gallery sources…"
+        defer { isReconcilingPhotosIndex = false }
+        await refreshPhotos(allowDuringReconciliation: true)
+        guard [.authorized, .limited].contains(photoAccess) else {
+            cullingStatus = photoStatus
+            return
+        }
+        do {
+            let result = try await reconcileVisiblePhotoSources()
+            photoStatus = "Gallery sources checked. Discovering recent Photos…"
+            await discoverRecentPhotosIndex()
+            if hasCurrentCullingFixture, cullingPool == nil {
+                await loadFixtureCullingWindow(preservingVisibleWindow: true)
+            }
+            cullingStatus = "Refresh checked \(result.checked.formatted()) Gallery sources; \(result.unavailable.formatted()) unavailable. \(photoStatus)"
+        } catch is CancellationError {
+            photoStatus = "Gallery refresh cancelled."
+            cullingStatus = photoStatus
+        } catch {
+            photoStatus = "Gallery source check failed: \(userFacingMessage(for: error))"
+            cullingStatus = photoStatus
+        }
     }
 
     func discoverRecentPhotosAtStartupIfNeeded() async {
@@ -1974,6 +2002,10 @@ final class BackstageViewModel: ObservableObject {
         isReconcilingPhotosIndex = true
         photoStatus = "Synchronizing recent Photos with the Owner index…"
         defer { isReconcilingPhotosIndex = false }
+        await discoverRecentPhotosIndex()
+    }
+
+    private func discoverRecentPhotosIndex() async {
         guard await prepareAuthenticatedOperation() else { return }
         do {
             let report = try await fixtureService.reconcilePhotosIndex()
@@ -7176,7 +7208,19 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Prepared \(urls.count) private Quick Look item\(urls.count == 1 ? "" : "s") from Photos."
             return urls
         } catch {
-            cullingStatus = userFacingMessage(for: error)
+            let previewMessage = userFacingMessage(for: error)
+            if case .assetNotFound = error as? PhotoLibraryError {
+                do {
+                    _ = try await reconcileVisiblePhotoSources()
+                    if hasCurrentCullingFixture, cullingPool == nil {
+                        await loadFixtureCullingWindow(preservingVisibleWindow: true)
+                    }
+                } catch {
+                    cullingStatus = "\(previewMessage) The Gallery index could not be refreshed: \(userFacingMessage(for: error))"
+                    return []
+                }
+            }
+            cullingStatus = previewMessage
             return []
         }
     }

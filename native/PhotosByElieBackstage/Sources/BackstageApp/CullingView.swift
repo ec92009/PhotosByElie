@@ -1238,7 +1238,7 @@ struct CullingView: View {
                     ? "Discovering recent Photos"
                     : "Refresh previews and discover recent Photos"
             )
-            .backstageHelp("Refresh local previews, resume recent-photo discovery from the durable Owner checkpoint, and reload Gallery. A seven-day overlap safely rechecks the boundary without changing decisions.")
+            .backstageHelp("Check source availability for the current Gallery page, refresh previews, discover recent Photos, and reload Gallery. Full library audit checks removals across the entire library. Existing decisions are preserved.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {

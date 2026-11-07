@@ -155,7 +155,7 @@ extension PhotoLibraryError: LocalizedError {
         case .accessDenied:
             return "Photos access is unavailable for Backstage. Choose Allow Photos or grant Full Access in System Settings."
         case .assetNotFound:
-            return "This photo is unavailable in the current Photos library. Retry after Photos sync completes."
+            return "Photos cannot find this photo in the current library. If it was deleted, restore it in Photos → Recently Deleted. Refresh & discover checks the current Gallery page; Full library audit checks the whole library."
         case .unsupportedMediaType:
             return "Backstage source workflows accept still photos only."
         case .resourceNotFound:
@@ -174,6 +174,9 @@ public protocol PhotoLibraryServing: Sendable {
     func authorization() -> PhotoLibraryAccess
     func requestAuthorization() async -> PhotoLibraryAccess
     func fetch(limit: Int) async -> [PhotoLibraryItem]
+    /// Omitted identifiers are unknown, not missing. Implementations must not
+    /// infer deletion from a partial fetch, a download failure or limited access.
+    func sourceAvailability(identifiers: [String]) async throws -> [String: Bool]
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
     func identityMap(localIdentifiers: [String]) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
@@ -211,6 +214,7 @@ public protocol PhotoLibraryServing: Sendable {
 }
 
 public extension PhotoLibraryServing {
+    func sourceAvailability(identifiers: [String]) async throws -> [String: Bool] { [:] }
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
     }
@@ -2034,9 +2038,12 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     }
 
     private func fetchAsset(localIdentifier: String) -> PHAsset? {
-        PHAsset.fetchAssets(
+        let options = PHFetchOptions()
+        options.includeHiddenAssets = true
+        options.includeAllBurstAssets = true
+        return PHAsset.fetchAssets(
             withLocalIdentifiers: [localIdentifier],
-            options: nil
+            options: options
         ).firstObject
     }
 

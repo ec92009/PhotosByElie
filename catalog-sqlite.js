@@ -311,8 +311,11 @@
   };
 
   const decodeCatalog = (input) => {
+    const clock = () => Number(globalThis.performance?.now?.() ?? Date.now());
+    const startedAt = clock();
     const reader = new SQLiteCatalogReader(input);
     const roots = reader.rootPages();
+    const initializedAt = clock();
     const collections = reader.table(roots, "collections", ["collection_id", "slug", "title", "description", "scope", "sort_order", "created_at", "updated_at"]);
     const cameras = mapBy(reader.table(roots, "cameras", ["camera_id", "name", "maker", "model"]), "camera_id", "name");
     const lenses = mapBy(reader.table(roots, "lenses", ["lens_id", "name", "maker", "model"]), "lens_id", "name");
@@ -428,6 +431,7 @@
       "caption_color",
     ], "index");
     const mediaAssets = reader.table(roots, "media_assets", ["media_id", "asset_type_id", "width", "height", "duration_seconds", "bytes", "format_id"], "index");
+    const queriedAt = clock();
 
     const collectionById = mapBy(collections, "collection_id");
     const productPricesByProductId = new Map();
@@ -669,6 +673,11 @@
       data,
       owner,
       productCatalog,
+      timings: {
+        sqliteInitMs: Math.max(0, initializedAt - startedAt),
+        queryMs: Math.max(0, queriedAt - initializedAt),
+        projectionMs: Math.max(0, clock() - queriedAt),
+      },
       counts: {
         collections: collections.length,
         mediaItems: mediaItems.length,

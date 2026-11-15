@@ -2320,6 +2320,7 @@ window.photosByElieApplyStorefrontPolicy = (collections = {}) => {
   return collections;
 };
 const applyProductCatalog = (catalog = {}) => {
+  if (window.photosByElieCatalogGeneration) return true;
   const products = Array.isArray(catalog.products) ? catalog.products : [];
   if (!products.length) return false;
   window.photosByElieProductCatalog = catalog;

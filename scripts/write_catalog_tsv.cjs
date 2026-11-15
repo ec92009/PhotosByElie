@@ -4,6 +4,7 @@ const childProcess = require("node:child_process");
 const path = require("node:path");
 const {
   GENERATED_HELPER_MARKER,
+  catalogGenerationFor,
   helperTailFromPhotosData,
   loadCatalogBundleFromSqlite,
 } = require("./catalog_tsv.cjs");
@@ -12,40 +13,57 @@ const repoRoot = path.resolve(__dirname, "..");
 const dataPath = path.join(repoRoot, "photos-data.js");
 
 const runtimeParser = `(() => {
-  const readBinary = (relativePath) => {
-    const script = document.currentScript;
-    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+  const catalogGeneration = Object.freeze(__CATALOG_GENERATION__);
+  Object.freeze(catalogGeneration.pricing);
+  window.photosByElieCatalogGeneration = catalogGeneration;
+  // Capture once: currentScript is null after an asynchronous boundary.
+  const script = document.currentScript;
+  const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
+  const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+  const assetUrl = (relativePath) => {
     const url = new URL(relativePath, scriptUrl || window.location.href);
     if (version) url.searchParams.set("v", version);
-    const request = new XMLHttpRequest();
-    request.open("GET", url.href, false);
-    request.overrideMimeType?.("text/plain; charset=x-user-defined");
-    request.send(null);
-    if (request.status && (request.status < 200 || request.status >= 300)) {
-      throw new Error(\`Could not load \${relativePath}: HTTP \${request.status}\`);
+    return url;
+  };
+  const clock = () => Number(window.performance?.now?.() ?? Date.now());
+  const timings = window.photosByElieCatalogTimings = {
+    schemaVersion: 1,
+    generation: catalogGeneration.sha256,
+    pricingGeneration: catalogGeneration.pricing.sha256,
+    state: "loading",
+    startedAt: clock(),
+  };
+  window.performance?.mark?.("pbe:catalog:start");
+  const duration = (startedAt) => Math.max(0, clock() - startedAt);
+  const hexDigest = (bytes) => [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+  const verifyCatalogGeneration = async (bytes, generation) => {
+    if (bytes.byteLength !== generation.bytes) {
+      throw new Error("Catalog generation size does not match its bootstrap.");
     }
-    const response = request.responseText || "";
-    const bytes = new Uint8Array(response.length);
-    for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
+    const subtle = globalThis.crypto?.subtle;
+    if (!subtle) throw new Error("Catalog checksum verification is unavailable.");
+    const digest = await subtle.digest("SHA-256", bytes);
+    if (hexDigest(new Uint8Array(digest)) !== generation.sha256) {
+      throw new Error("Catalog generation checksum does not match its bootstrap.");
+    }
+  };
+  const readBinary = async (generation, timingPrefix = "") => {
+    const url = assetUrl(generation.path);
+    const startedAt = clock();
+    const response = await fetch(url.href, { cache: "default", credentials: "same-origin" });
+    if (!response.ok) throw new Error(\`Could not load \${generation.path}: HTTP \${response.status}\`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    timings[timingPrefix ? "pricingDownloadMs" : "downloadMs"] = duration(startedAt);
+    timings[timingPrefix ? "pricingDownloadBytes" : "downloadBytes"] = bytes.byteLength;
+    const verifyStartedAt = clock();
+    await verifyCatalogGeneration(bytes, generation);
+    timings[timingPrefix ? "pricingChecksumMs" : "checksumMs"] = duration(verifyStartedAt);
+    timings[timingPrefix ? "pricingChecksumVerified" : "checksumVerified"] = true;
     return bytes;
   };
-  const readJson = (relativePath, fallback = {}) => {
-    try {
-      const script = document.currentScript;
-      const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-      const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-      const url = new URL(relativePath, scriptUrl || window.location.href);
-      if (version) url.searchParams.set("v", version);
-      const request = new XMLHttpRequest();
-      request.open("GET", url.href, false);
-      request.overrideMimeType?.("application/json; charset=utf-8");
-      request.send(null);
-      if (request.status && (request.status < 200 || request.status >= 300)) return fallback;
-      return JSON.parse(request.responseText || "{}");
-    } catch {
-      return fallback;
-    }
+  const readJson = async (generation) => {
+    const bytes = await readBinary(generation, "pricing");
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   };
   const normalizePriceTiers = (priceTiers = {}) => Array.isArray(priceTiers)
     ? Object.fromEntries(priceTiers.map((tier) => [tier.id, { label: tier.label }]))
@@ -89,8 +107,11 @@ const runtimeParser = `(() => {
     .flatMap((collection) => Array.isArray(collection?.photos) ? collection.photos : []);
 
   const requestedDetailPhotoId = () => {
-    if (!String(window.location.pathname || "").endsWith("/photo.html")) return "";
-    return String(new URLSearchParams(window.location.search || "").get("id") || "").trim();
+    const pathname = String(window.location.pathname || "");
+    const generatedRoute = /\\/photo--[a-zA-Z0-9][a-zA-Z0-9_-]{0,199}\\.html$/.test(pathname);
+    if (!pathname.endsWith("/photo.html") && !generatedRoute) return "";
+    const queryId = new URLSearchParams(window.location.search || "").get("id");
+    return String(queryId || (generatedRoute ? document.body?.dataset?.photoId : "") || "").trim();
   };
 
   const lifecycleCandidateIds = (data = {}) => {
@@ -100,11 +121,17 @@ const runtimeParser = `(() => {
   };
 
   const isLocalhost = () => /^(localhost|127\\.0\\.0\\.1)$/i.test(window.location.hostname);
+  const lifecycleBatchSize = 100;
+  const lifecycleMaxConcurrency = 6;
   let lifecycleVisibleIds = null;
+  let catalogPhotosById = new Map();
+  const pendingCollections = {};
 
   const lifecycleSafePhoto = (photo) => {
     const id = String(photo?.id || "").trim();
-    if (!id || !lifecycleVisibleIds?.has(id)) return null;
+    if (!id || !lifecycleVisibleIds?.has(id) || !catalogPhotosById.has(id)) return null;
+    // Contexts select catalog identities; their stale metadata/keys are not authority.
+    photo = catalogPhotosById.get(id);
     const media = photo?.media && typeof photo.media === "object" ? { ...photo.media } : {};
     const preview = media.publicPreview && typeof media.publicPreview === "object"
       ? { ...media.publicPreview }
@@ -162,6 +189,7 @@ const runtimeParser = `(() => {
 
   const installLifecycleGuardedCatalog = (data = {}) => {
     if (isLocalhost()) {
+      timings.lifecycleMode = "localhost-bypass";
       window.photosByElieData = data;
       return data;
     }
@@ -169,10 +197,12 @@ const runtimeParser = `(() => {
     const guarded = new Proxy(target, {
       set(collections, key, collection) {
         if (typeof key === "symbol") return Reflect.set(collections, key, collection);
+        if (lifecycleVisibleIds === null) pendingCollections[key] = collection;
         return Reflect.set(collections, key, lifecycleSafeCollection(collection));
       },
       defineProperty(collections, key, descriptor) {
         if (typeof key === "symbol") return Reflect.defineProperty(collections, key, descriptor);
+        if (lifecycleVisibleIds === null) pendingCollections[key] = descriptor.value;
         return Reflect.defineProperty(collections, key, {
           ...descriptor,
           value: lifecycleSafeCollection(descriptor.value),
@@ -182,6 +212,7 @@ const runtimeParser = `(() => {
     const replace = (next) => {
       if (next === guarded) return;
       Object.keys(target).forEach((key) => delete target[key]);
+      if (lifecycleVisibleIds === null) Object.keys(pendingCollections).forEach((key) => delete pendingCollections[key]);
       Object.entries(next && typeof next === "object" ? next : {}).forEach(([key, collection]) => {
         guarded[key] = collection;
       });
@@ -197,26 +228,58 @@ const runtimeParser = `(() => {
   };
 
   const applyLifecycleVisibility = async (data = {}) => {
-    if (isLocalhost()) return data;
+    if (isLocalhost()) {
+      timings.lifecycleMs = 0;
+      timings.lifecycleBatchCount = 0;
+      timings.lifecycleConcurrency = 0;
+      return data;
+    }
+    const startedAt = clock();
+    timings.lifecycleMode = "authority";
     const base = lifecycleWorkerBase();
-    const ids = lifecycleCandidateIds(data);
-    const requestedIds = new Set(ids);
-    if (!base || !ids.length) throw new Error("Lifecycle visibility authority is unavailable.");
+    const ids = lifecycleCandidateIds(data).filter((id) => catalogPhotosById.has(id));
+    if (!base) throw new Error("Lifecycle visibility authority is unavailable.");
     const visibleIds = new Set();
-    for (let index = 0; index < ids.length; index += 100) {
+    const batches = [];
+    for (let index = 0; index < ids.length; index += lifecycleBatchSize) {
+      batches.push(ids.slice(index, index + lifecycleBatchSize));
+    }
+    let cursor = 0;
+    let stopped = false;
+    const controller = new AbortController();
+    const authorizeNext = async () => {
+      if (stopped) return;
+      const batchIndex = cursor;
+      cursor += 1;
+      if (batchIndex >= batches.length) return;
+      const requestedIds = new Set(batches[batchIndex]);
       const response = await fetch(\`\${base}/lifecycle/visibility\`, {
         method: "POST",
         cache: "no-store",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mediaIds: ids.slice(index, index + 100) }),
+        body: JSON.stringify({ mediaIds: batches[batchIndex] }),
+        signal: controller.signal,
       });
       if (!response.ok) throw new Error(\`Lifecycle visibility failed with HTTP \${response.status}.\`);
       const payload = await response.json();
-      (payload.visibleMediaIds || []).forEach((id) => {
-        const normalized = String(id || "").trim();
-        if (!requestedIds.has(normalized)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
-        visibleIds.add(normalized);
+      if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
+      payload.visibleMediaIds.forEach((id) => {
+        if (typeof id !== "string" || !requestedIds.has(id)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
+        visibleIds.add(id);
       });
+      await authorizeNext();
+    };
+    const concurrency = Math.min(lifecycleMaxConcurrency, batches.length);
+    timings.lifecycleBatchCount = batches.length;
+    timings.lifecycleConcurrency = concurrency;
+    try {
+      await Promise.all(Array.from({ length: concurrency }, () => authorizeNext()));
+    } catch (error) {
+      stopped = true;
+      controller.abort();
+      throw error;
+    } finally {
+      timings.lifecycleMs = duration(startedAt);
     }
     lifecycleVisibleIds = visibleIds;
     return Object.fromEntries(Object.entries(data).map(([key, collection]) => [key, {
@@ -226,30 +289,42 @@ const runtimeParser = `(() => {
   };
 
   const finishCatalogLoad = async (source, data, owner, productCatalog) => {
-    const existingData = window.photosByElieData || {};
-    const filteredData = await applyLifecycleVisibility({ ...(data || {}), ...existingData });
-    installLifecycleGuardedCatalog(filteredData);
-    window.photosByElieOwnerData = owner || {};
-    const canonicalCatalog = readJson("./assets/catalog/product-pricing.json");
+    catalogPhotosById = new Map(publicPhotos(data).map((photo) => [photo.id, photo]));
+    const canonicalCatalog = await readJson(catalogGeneration.pricing);
     applyProductCatalog({ ...canonicalCatalog, ...(productCatalog || {}), storefrontPolicy: canonicalCatalog.storefrontPolicy || {} });
+    const filteredData = await applyLifecycleVisibility(data);
+    const contexts = isLocalhost() ? window.photosByElieData : pendingCollections;
+    installLifecycleGuardedCatalog({ ...(contexts || {}), ...filteredData });
+    Object.keys(pendingCollections).forEach((key) => delete pendingCollections[key]);
+    window.photosByElieOwnerData = owner || {};
     window.photosByElieCatalogSource = source;
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieData);
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieOwnerData);
     window.photosByElieApplyStorefrontPolicy?.(window.photosByElieData);
-    window.dispatchEvent?.(new CustomEvent("photosbyelie:catalogready", { detail: { source } }));
+    timings.state = "ready";
+    timings.readyMs = duration(timings.startedAt);
+    window.performance?.mark?.("pbe:catalog:ready");
+    window.performance?.measure?.("pbe:catalog:startup", "pbe:catalog:start", "pbe:catalog:ready");
+    window.dispatchEvent?.(new CustomEvent("photosbyelie:catalogready", { detail: { source, timings: { ...timings } } }));
     return window.photosByElieData;
   };
-  window.photosByElieData = window.photosByElieData || {};
+  installLifecycleGuardedCatalog(window.photosByElieData || {});
   window.photosByElieOwnerData = window.photosByElieOwnerData || {};
   window.photosByElieCatalogReady = (async () => {
     if (window.photosByElieCatalogSqlite?.decodeCatalog) {
       try {
-        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
+        const bytes = await readBinary(catalogGeneration);
+        const decodeStartedAt = clock();
+        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(bytes);
+        timings.decodeMs = duration(decodeStartedAt);
+        Object.assign(timings, bundle.timings || {});
         return await finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
       } catch (error) {
         console.warn(error?.message || "SQLite catalog load failed.");
       }
     }
+    timings.state = "failed";
+    timings.failedAtMs = duration(timings.startedAt);
     lifecycleVisibleIds = new Set();
     installLifecycleGuardedCatalog({});
     window.photosByElieCatalogSource = "lifecycle-denied";
@@ -259,11 +334,13 @@ const runtimeParser = `(() => {
 
 const writeBootstrap = () => {
   const tail = helperTailFromPhotosData(repoRoot);
+  const parser = runtimeParser
+    .replace("__CATALOG_GENERATION__", JSON.stringify(catalogGenerationFor(repoRoot)));
   fs.writeFileSync(
     dataPath,
     [
       "// Generated bootstrap: loads the plain SQLite catalog.",
-      runtimeParser,
+      parser,
       GENERATED_HELPER_MARKER,
       tail.trimEnd(),
       "",
@@ -328,4 +405,4 @@ if (bootstrapOnly) {
   writeHomeData();
   writeBootstrap();
 }
-console.log("Wrote assets/catalog/photosbyelie.sqlite");
+console.log(bootstrapOnly ? "Wrote public catalog bootstrap and home projection (SQLite unchanged)." : "Wrote assets/catalog/photosbyelie.sqlite");

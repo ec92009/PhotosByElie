@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import vm from "node:vm";
+import { webcrypto } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -97,14 +98,6 @@ test("source-of-truth docs record the accepted customer-only cutover", () => {
 
 const runCatalogBootstrap = async ({ pathname, search = "", photos }) => {
   const visibilityRequests = [];
-  class MockXMLHttpRequest {
-    open(_method, url) { this.url = url; }
-    overrideMimeType() {}
-    send() {
-      this.status = 200;
-      this.responseText = this.url.includes("photosbyelie.sqlite") ? "catalog" : "{}";
-    }
-  }
   const window = {
     location: { hostname: "photos-by-elie.com", pathname, search, href: `https://photos-by-elie.com${pathname}${search}` },
     photosByElieMediaConfig: { authWorkerBaseUrl: "https://worker.example" },
@@ -124,13 +117,18 @@ const runCatalogBootstrap = async ({ pathname, search = "", photos }) => {
     currentScript: { src: "https://photos-by-elie.com/photos-data.js?v=240.0" },
     querySelector: () => null,
   };
-  const fetch = async (_url, options) => {
+  const fetch = async (url, options) => {
+    for (const name of ["photosbyelie.sqlite", "product-pricing.json"]) {
+      if (!new URL(url).pathname.endsWith(name)) continue;
+      const bytes = fs.readFileSync(path.join(root, "assets/catalog", name));
+      return { ok: true, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+    }
     const ids = JSON.parse(options.body).mediaIds;
     visibilityRequests.push(ids);
     return { ok: true, json: async () => ({ visibleMediaIds: ids }) };
   };
   vm.runInNewContext(read("photos-data.js"), {
-    window, document, fetch, URL, URLSearchParams, XMLHttpRequest: MockXMLHttpRequest,
+    window, document, fetch, URL, URLSearchParams, crypto: webcrypto, TextDecoder, AbortController,
     Uint8Array, JSON, Intl, navigator: { language: "en-US", languages: ["en-US"] },
     CustomEvent: class CustomEvent {}, console,
   });

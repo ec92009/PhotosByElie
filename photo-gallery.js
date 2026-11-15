@@ -2444,8 +2444,10 @@ const ensureGalleryCommandBar = () => {
 };
 
 const renderGallery = ({ scrollSelection = true } = {}) => {
+  const renderStartedAt = Number(window.performance?.now?.() ?? Date.now());
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
+  const queryMs = Math.max(0, Number(window.performance?.now?.() ?? Date.now()) - renderStartedAt);
   ensureOwnerSelection(photos);
   const likedIds = likedPhotoIds();
   if (isSelectionGallery && !activeFilterCount()) {
@@ -2636,6 +2638,25 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       : filterStatus);
   } else {
     setGalleryStatus(filterStatus);
+  }
+  const timings = window.photosByElieCatalogTimings;
+  if (timings?.state === "ready" && timings.firstGalleryRenderMs == null) {
+    Object.assign(timings, {
+      firstGalleryQueryMs: queryMs,
+      firstGalleryRenderMs: Math.max(0, Number(window.performance?.now?.() ?? Date.now()) - renderStartedAt - queryMs),
+      firstGalleryCardCount: visibleSubset.length,
+      firstGalleryReadyMs: Math.max(0, Number(window.performance?.now?.() ?? Date.now()) - timings.startedAt),
+    });
+    window.performance?.mark?.("pbe:gallery:first-cards");
+    window.performance?.measure?.("pbe:gallery:first-cards-ready", "pbe:catalog:start", "pbe:gallery:first-cards");
+    window.dispatchEvent?.(new CustomEvent("photosbyelie:galleryfirstrender", {
+      detail: {
+        cardCount: visibleSubset.length,
+        queryMs,
+        renderMs: timings.firstGalleryRenderMs,
+        readyMs: timings.firstGalleryReadyMs,
+      },
+    }));
   }
 };
 

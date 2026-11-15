@@ -1,0 +1,193 @@
+{
+  "schema": "photosbyelie.catalog-startup-rehearsal.v1",
+  "measuredAt": "2026-11-15T16:48:37+01:00",
+  "sourceBase": "618f9da211810a09fbc0aed88f6283ec0ba536aa",
+  "candidateBranch": "t3/catalog-bootstrap-lifecycle",
+  "catalogSha256": "ba14324a33fc400d5506738c4614fe0bf3f0e11747a46cab70f4b3b41706c632",
+  "pricingSha256": "4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f",
+  "productionClaim": false,
+  "liveLifecycleBenchmark": {
+    "result": "TimeoutError after a 20000 ms request deadline; no aggregate timing receipt produced"
+  },
+  "localhost": {
+    "scope": "headless Chrome, mobile viewport 390x844, localhost skips lifecycle",
+    "samples": [
+      {
+        "mode": "cold",
+        "timings": {
+          "schemaVersion": 1,
+          "generation": "ba14324a33fc400d5506738c4614fe0bf3f0e11747a46cab70f4b3b41706c632",
+          "pricingGeneration": "4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f",
+          "state": "ready",
+          "startedAt": 241.89999997615814,
+          "lifecycleMode": "localhost-bypass",
+          "downloadMs": 18.799999952316284,
+          "downloadBytes": 3788800,
+          "checksumMs": 2.8000000715255737,
+          "checksumVerified": true,
+          "decodeMs": 72.09999990463257,
+          "sqliteInitMs": 0.19999992847442627,
+          "queryMs": 45.700000047683716,
+          "projectionMs": 26.199999928474426,
+          "pricingDownloadMs": 1.8000000715255737,
+          "pricingDownloadBytes": 30726,
+          "pricingChecksumMs": 0,
+          "pricingChecksumVerified": true,
+          "lifecycleMs": 0,
+          "lifecycleBatchCount": 0,
+          "lifecycleConcurrency": 0,
+          "readyMs": 98.39999997615814,
+          "firstGalleryQueryMs": 42.200000047683716,
+          "firstGalleryRenderMs": 91.29999995231628,
+          "firstGalleryCardCount": 24,
+          "firstGalleryReadyMs": 291.6999999284744
+        },
+        "cards": 24,
+        "status": "Showing 24 of 2723 media items.",
+        "catalogResource": [
+          {
+            "transferSize": 3789100,
+            "encodedBodySize": 3788800,
+            "duration": 7.099999904632568
+          }
+        ]
+      },
+      {
+        "mode": "warm",
+        "timings": {
+          "schemaVersion": 1,
+          "generation": "ba14324a33fc400d5506738c4614fe0bf3f0e11747a46cab70f4b3b41706c632",
+          "pricingGeneration": "4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f",
+          "state": "ready",
+          "startedAt": 16.100000023841858,
+          "lifecycleMode": "localhost-bypass",
+          "downloadMs": 17.399999976158142,
+          "downloadBytes": 3788800,
+          "checksumMs": 2.5,
+          "checksumVerified": true,
+          "decodeMs": 60.39999997615814,
+          "sqliteInitMs": 0.2999999523162842,
+          "queryMs": 36.10000002384186,
+          "projectionMs": 24,
+          "pricingDownloadMs": 3.899999976158142,
+          "pricingDownloadBytes": 30726,
+          "pricingChecksumMs": 0,
+          "pricingChecksumVerified": true,
+          "lifecycleMs": 0,
+          "lifecycleBatchCount": 0,
+          "lifecycleConcurrency": 0,
+          "readyMs": 86.69999992847443,
+          "firstGalleryQueryMs": 42.09999990463257,
+          "firstGalleryRenderMs": 93.30000007152557,
+          "firstGalleryCardCount": 24,
+          "firstGalleryReadyMs": 283.89999997615814
+        },
+        "cards": 24,
+        "status": "Showing 24 of 2723 media items.",
+        "catalogResource": [
+          {
+            "transferSize": 0,
+            "encodedBodySize": 3788800,
+            "duration": 8
+          }
+        ]
+      }
+    ]
+  },
+  "guardedFixture": {
+    "scope": "headless Chrome 390x844; non-local HTTPS origin; mocked 30 ms lifecycle authority, no provider contact; routing disables browser cache; first cards are DOM/interaction, excludes image paint",
+    "peak": 6,
+    "samples": [
+      {
+        "sample": "fresh",
+        "batchCount": 54,
+        "timings": {
+          "schemaVersion": 1,
+          "generation": "ba14324a33fc400d5506738c4614fe0bf3f0e11747a46cab70f4b3b41706c632",
+          "pricingGeneration": "4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f",
+          "state": "ready",
+          "startedAt": 38.5,
+          "downloadMs": 57.800000071525574,
+          "downloadBytes": 3788800,
+          "checksumMs": 2.299999952316284,
+          "checksumVerified": true,
+          "decodeMs": 74,
+          "sqliteInitMs": 0.30000007152557373,
+          "queryMs": 44.09999990463257,
+          "projectionMs": 29.600000023841858,
+          "pricingDownloadMs": 6,
+          "pricingDownloadBytes": 30726,
+          "pricingChecksumMs": 0,
+          "pricingChecksumVerified": true,
+          "lifecycleMode": "authority",
+          "lifecycleBatchCount": 54,
+          "lifecycleConcurrency": 6,
+          "lifecycleMs": 317.2000000476837,
+          "readyMs": 466.7000000476837,
+          "firstGalleryQueryMs": 43.89999997615814,
+          "firstGalleryRenderMs": 95,
+          "firstGalleryCardCount": 24,
+          "firstGalleryReadyMs": 672.6000000238419
+        },
+        "cards": 24
+      },
+      {
+        "sample": "repeat",
+        "batchCount": 54,
+        "timings": {
+          "schemaVersion": 1,
+          "generation": "ba14324a33fc400d5506738c4614fe0bf3f0e11747a46cab70f4b3b41706c632",
+          "pricingGeneration": "4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f",
+          "state": "ready",
+          "startedAt": 36.700000047683716,
+          "downloadMs": 67.29999995231628,
+          "downloadBytes": 3788800,
+          "checksumMs": 2.100000023841858,
+          "checksumVerified": true,
+          "decodeMs": 63.60000002384186,
+          "sqliteInitMs": 0.3999999761581421,
+          "queryMs": 37.60000002384186,
+          "projectionMs": 25.600000023841858,
+          "pricingDownloadMs": 5,
+          "pricingDownloadBytes": 30726,
+          "pricingChecksumMs": 0,
+          "pricingChecksumVerified": true,
+          "lifecycleMode": "authority",
+          "lifecycleBatchCount": 54,
+          "lifecycleConcurrency": 6,
+          "lifecycleMs": 321.3000000715256,
+          "readyMs": 469.1999999284744,
+          "firstGalleryQueryMs": 43.89999997615814,
+          "firstGalleryRenderMs": 92.70000004768372,
+          "firstGalleryCardCount": 24,
+          "firstGalleryReadyMs": 671.7999999523163
+        },
+        "cards": 24
+      }
+    ],
+    "detail": {
+      "mediaCount": 1,
+      "state": "ready",
+      "batches": 1,
+      "lastBatchSize": 1
+    },
+    "basket": {
+      "items": 1,
+      "total": "1 asset, $65",
+      "rawItems": 1
+    },
+    "revoked": {
+      "url": "https://pbe217.test/gallery.html?gallery=selection&v=241.0",
+      "deniedIdPresent": false,
+      "storedItems": 1
+    },
+    "failure": {
+      "state": "failed",
+      "mediaCount": 0,
+      "storedItems": 1
+    },
+    "errors": [
+      "Could not load a lifecycle-authorized public catalog."
+    ]
+  }
+}

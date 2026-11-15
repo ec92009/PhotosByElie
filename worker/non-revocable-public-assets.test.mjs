@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import test from "node:test";
 
 import deployedWorker from "./deployed-worker.mjs";
@@ -123,6 +125,8 @@ test("deployed media route rechecks the deny plane after the R2 read", async () 
 
 const runCatalogBootstrap = async ({ hostname, visibleMediaIds, responseOk = true }) => {
   const source = readFileSync(new URL("../photos-data.js", import.meta.url), "utf8");
+  const catalogBytes = readFileSync(new URL("../assets/catalog/photosbyelie.sqlite", import.meta.url));
+  const pricingBytes = readFileSync(new URL("../assets/catalog/product-pricing.json", import.meta.url));
   const events = [];
   const page = {
     location: { hostname, href: `https://${hostname}/gallery.html` },
@@ -142,26 +146,36 @@ const runCatalogBootstrap = async ({ hostname, visibleMediaIds, responseOk = tru
         productCatalog: {},
       }),
     },
+    crypto: webcrypto,
+    performance,
     dispatchEvent: (event) => events.push(event),
   };
   page.window = page;
-  class MockRequest {
-    open(_method, url) { this.url = url; }
-    overrideMimeType() {}
-    send() {
-      this.status = 200;
-      this.responseText = this.url.includes("product-pricing.json") ? "{}" : "catalog";
-    }
-  }
   const context = {
     window: page,
     document: { currentScript: { src: `https://${hostname}/photos-data.js?v=test` }, querySelector: () => null },
-    XMLHttpRequest: MockRequest,
     CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
     URL,
+    URLSearchParams,
+    AbortController,
+    TextDecoder,
     Uint8Array,
     console,
-    fetch: async () => ({ ok: responseOk, status: responseOk ? 200 : 503, json: async () => ({ visibleMediaIds }) }),
+    crypto: webcrypto,
+    fetch: async (url) => {
+      const pathname = new URL(url).pathname;
+      if (pathname.endsWith("photosbyelie.sqlite")) {
+        return {
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => catalogBytes.buffer.slice(catalogBytes.byteOffset, catalogBytes.byteOffset + catalogBytes.byteLength),
+        };
+      }
+      if (pathname.endsWith("product-pricing.json")) {
+        return { ok: true, status: 200, arrayBuffer: async () => pricingBytes.buffer.slice(pricingBytes.byteOffset, pricingBytes.byteOffset + pricingBytes.byteLength) };
+      }
+      return { ok: responseOk, status: responseOk ? 200 : 503, json: async () => ({ visibleMediaIds }) };
+    },
   };
   const { runInNewContext } = await import("node:vm");
   runInNewContext(source, context);

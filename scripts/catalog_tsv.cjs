@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const childProcess = require("node:child_process");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -7,6 +8,23 @@ const CATALOG_DIR = path.join("assets", "catalog");
 const PRODUCT_PRICING_JSON = path.join(CATALOG_DIR, "product-pricing.json");
 const HELPER_MARKER = "window.photosByElieOriginTypes =";
 const GENERATED_HELPER_MARKER = "// Generated catalog helper boundary.";
+
+// Bind generated consumers to the exact public SQLite and pricing artifacts.
+const catalogGenerationFor = (repoRoot) => {
+  const artifact = (relativePath) => {
+    const bytes = fs.readFileSync(path.join(repoRoot, relativePath));
+    return {
+      path: `./${relativePath}`,
+      bytes: bytes.byteLength,
+      sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+    };
+  };
+  return {
+    schemaVersion: 1,
+    ...artifact("assets/catalog/photosbyelie.sqlite"),
+    pricing: artifact("assets/catalog/product-pricing.json"),
+  };
+};
 
 const loadCatalogBundleFromSqlite = (repoRoot) => {
   const dbPath = path.join(repoRoot, CATALOG_DIR, "photosbyelie.sqlite");
@@ -120,6 +138,7 @@ const loadCatalogWindow = (repoRoot) => {
 };
 
 module.exports = {
+  catalogGenerationFor,
   GENERATED_HELPER_MARKER,
   PRODUCT_PRICING_JSON,
   helperTailFromPhotosData,

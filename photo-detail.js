@@ -28,7 +28,7 @@ const formatMoney = (value) => {
     maximumFractionDigits: 2,
   }).format(amount);
 };
-const requestedPhotoId = params.get("id") || "";
+const requestedPhotoId = params.get("id") || document.body.dataset.photoId || "";
 const photoId = requestedPhotoId || "france-1";
 const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
 const ownerReviewDetailPhotoMaxAgeMs = 1000 * 60 * 60 * 2;

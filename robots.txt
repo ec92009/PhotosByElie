@@ -9,4 +9,4 @@ Disallow: /real-estate.html
 Disallow: /experiments/
 Disallow: /socials/
 
-Sitemap: https://ec92009.github.io/PhotosByElie/sitemap.xml
+Sitemap: https://photos-by-elie.com/sitemap.xml

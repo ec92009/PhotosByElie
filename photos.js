@@ -3996,8 +3996,31 @@ window.photosByElieSeo = (() => {
     }
   };
   const currentPublicUrl = () => absoluteUrl(`${window.location.pathname || "/"}${window.location.search || ""}`);
+  // Flat generated files work on GitHub Pages without rewrites. Query links
+  // remain the interactive entry points; only their canonical identity changes.
+  const entityPath = (kind, key) => {
+    if (!['photo', 'gallery'].includes(kind) || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,199}$/.test(String(key || ''))) return '';
+    return `/${kind}--${key}.html`;
+  };
   const pageUrl = (path, params = {}) => {
     const url = new URL(path || "/", siteOrigin);
+    const collections = Object.entries(window.photosByElieData || {})
+      .filter(([key]) => !['shared', 'pbe-owner'].includes(key));
+    const publicPhoto = path === '/photo.html' && collections.some(([key, collection]) =>
+      !window.photosByElieCollectionIsRetired?.(key) && (collection.photos || []).some((photo) =>
+        photo.id === params.id && photo.sourceOrigin === 'camera'
+        && window.photosByElieStorefrontAllowsPhoto?.(photo, key) !== false
+        && (photo.media?.type || 'photo') === 'photo'
+        && photo.media?.publicPreview?.allowed === true
+        && !photo.media.publicPreview.galleryMissing));
+    const publicGallery = path === '/gallery.html' && collections.some(([key, collection]) =>
+      key === params.gallery && !window.photosByElieCollectionIsRetired?.(key)
+      && (collection.photos || []).some((photo) => photo.sourceOrigin === 'camera'
+        && window.photosByElieStorefrontAllowsPhoto?.(photo, key) !== false
+        && (photo.media?.type || 'photo') === 'photo'
+        && photo.media?.publicPreview?.allowed === true && !photo.media.publicPreview.galleryMissing));
+    const generated = publicPhoto ? entityPath('photo', params.id) : publicGallery ? entityPath('gallery', params.gallery) : '';
+    if (generated) return new URL(generated, siteOrigin).toString();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
     });
@@ -4097,6 +4120,7 @@ window.photosByElieSeo = (() => {
     collectionPageJsonLd,
     currentPublicUrl,
     defaultImage,
+    entityPath,
     imageObjectJsonLd,
     pageUrl,
     siteName,

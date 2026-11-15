@@ -47,7 +47,12 @@ export function renderEntity(template, entity) {
   }
   html = html.replace('</head>', () => `<script type="application/ld+json" id="photosbyelie-page-jsonld">${safeJson(jsonLd)}</script>\n</head>`);
   const dataAttr = kind === 'photo' ? 'data-photo-id' : 'data-gallery';
-  html = replaceRequired(html, /<body([^>]*)>/, (_, attrs) => `<body${attrs} ${dataAttr}="${escapeHtml(key)}">`);
+  html = replaceRequired(html, /<body([^>]*)>/, (_, attrs) => {
+    // Existing gallery shells already carry data-gallery="". Duplicate HTML
+    // attributes retain the first value and would hydrate the wrong collection.
+    const remaining = attrs.replace(new RegExp(`\\s${dataAttr}=(?:"[^"]*"|'[^']*')`, 'gi'), '');
+    return `<body${remaining} ${dataAttr}="${escapeHtml(key)}">`;
+  });
   return replaceRequired(html, /<main\b[^>]*>/, (main) =>
     `${main}\n<noscript><section class="panel"><h1>${escapeHtml(imageAlt)}</h1><p>${escapeHtml(description)}</p>${body}</section></noscript>`);
 }

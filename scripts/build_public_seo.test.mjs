@@ -80,6 +80,11 @@ test('static HTTP metadata, sitemap and no-JS links contain only eligible public
     const response = await fetch(`http://127.0.0.1:${server.address().port}/${route}`);
     const html = await response.text();
     assert.equal(response.status, 200);
+    const bodyTag = html.match(/<body[^>]*>/)[0];
+    const identityAttr = route.startsWith('gallery') ? 'data-gallery' : 'data-photo-id';
+    const identity = route.startsWith('gallery') ? 'france' : 'good';
+    assert.equal((bodyTag.match(new RegExp(identityAttr + '=', 'g')) || []).length, 1);
+    assert.ok(bodyTag.includes(`${identityAttr}="${identity}"`));
     assert.match(html, new RegExp(`<link rel="canonical" href="https://photos-by-elie.com/${route}"`));
     assert.match(html, /<meta property="og:image" content="https:\/\/download.photos-by-elie.com\/media\/expo\/good_900.jpg"/);
     assert.match(html, /<meta name="twitter:image"/);

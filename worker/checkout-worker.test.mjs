@@ -2746,6 +2746,22 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
     basket: [{ photoId, options: [{ id: "full" }] }],
     language: "fr",
     theme: "dark",
+    galleryCheckpoints: [
+      {
+        collectionKey: "spain",
+        photoId,
+        filterState: { query: "Spain", orientation: "landscape", sort: "oldest" },
+        windowStart: 96,
+        windowEnd: 999,
+        anchorOffset: 42.5,
+        updatedAt: "2026-05-07T11:59:00.000Z",
+      },
+      {
+        collectionKey: "invalid key",
+        photoId: "missing-photo",
+        updatedAt: "2026-05-07T11:59:30.000Z",
+      },
+    ],
   }, { origin }));
   assert.equal(saveProfileResponse.status, 200);
   const savedProfile = await saveProfileResponse.json();
@@ -2755,6 +2771,11 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(savedProfile.profile.basket[0].options[0].id, "full");
   assert.equal(savedProfile.profile.language, "fr");
   assert.equal(savedProfile.profile.theme, "dark");
+  assert.equal(savedProfile.profile.galleryCheckpoints.length, 1);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].collectionKey, "spain");
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].windowStart, 96);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].windowEnd, 288);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].anchorOffset, 42.5);
 
   const mismatchResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/account", {
     email: "other@example.com",
@@ -2787,6 +2808,7 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(accountProfileResponse.headers.get("cache-control"), "private, no-store");
   const accountProfile = await accountProfileResponse.json();
   assert.equal(accountProfile.orders.length, 1);
+  assert.equal(accountProfile.profile.galleryCheckpoints[0].photoId, photoId);
   assert.equal(accountProfile.orders[0].id, paid.order.id);
   assert.equal(accountProfile.orders[0].delivery.files[0].downloadUrl, paid.order.delivery.files[0].downloadUrl);
 
@@ -2809,6 +2831,76 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   }));
   assert.equal(forbiddenOrderResponse.status, 403);
   assert.equal(forbiddenOrderResponse.headers.get("cache-control"), "private, no-store");
+});
+
+test("account checkpoints stay bounded, normalized and scoped to the verified account", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const store = createMemoryStore();
+  const origin = "https://photos-by-elie.com";
+  const workerFor = (email) => createPhotosByElieWorker({ catalog, store, accessAuth: fakeAccessAuthFor(email) });
+  const worker = workerFor("buyer@example.com");
+  const checkpoint = {
+    collectionKey: "spain", photoId, updatedAt: "2026-09-01T12:00:00Z",
+    windowStart: -3, windowEnd: 999, anchorOffset: -1e9,
+    filterState: { query: "x".repeat(200), orientation: "invalid", sort: "invalid", dateFrom: "private-data" },
+  };
+  const save = async (payload) => {
+    const response = await worker.fetch(jsonRequest("https://worker.test/account/profile", payload, { origin }));
+    assert.equal(response.status, 200);
+    return (await response.json()).profile;
+  };
+  const saved = await save({ email: "other@example.com", galleryCheckpoints: [
+    { ...checkpoint, updatedAt: "2026-08-01T00:00:00Z", windowEnd: 1 },
+    checkpoint,
+    { ...checkpoint, collectionKey: "bad key" },
+    { ...checkpoint, collectionKey: "missing", photoId: "not-in-catalog" },
+    { ...checkpoint, collectionKey: "invalid-date", updatedAt: "invalid" },
+  ] });
+  assert.equal(saved.email, "buyer@example.com");
+  assert.equal(saved.galleryCheckpoints.length, 1);
+  const restored = saved.galleryCheckpoints[0];
+  assert.equal(restored.windowStart, 0);
+  assert.equal(restored.windowEnd, 192);
+  assert.equal(restored.anchorOffset, -10_000);
+  assert.equal(restored.filterState.query.length, 160);
+  assert.equal(restored.filterState.orientation, "all");
+  assert.equal(restored.filterState.sort, "newest");
+  assert.equal(restored.filterState.dateFrom, "");
+  assert.deepEqual((await save({ language: "fr" })).galleryCheckpoints, saved.galleryCheckpoints);
+  const other = await workerFor("other@example.com").fetch(new Request("https://worker.test/account/profile", { headers: { origin } }));
+  assert.deepEqual((await other.json()).profile.galleryCheckpoints, []);
+  const anonymous = await workerFor("").fetch(jsonRequest("https://worker.test/account/profile", { galleryCheckpoints: [checkpoint] }, { origin }));
+  assert.equal(anonymous.status, 401);
+  const bounded = await save({ galleryCheckpoints: Array.from({ length: 35 }, (_, index) => ({
+    ...checkpoint, collectionKey: `collection-${index}`, updatedAt: new Date(Date.UTC(2026, 8, index + 1)).toISOString(),
+  })) });
+  assert.equal(bounded.galleryCheckpoints.length, 24);
+  assert.equal(bounded.galleryCheckpoints[0].collectionKey, "collection-34");
+  assert.deepEqual((await save({ galleryCheckpoints: [] })).galleryCheckpoints, []);
+});
+
+test("account checkpoints independently obey lifecycle denial and unavailable authority", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const store = createMemoryStore();
+  await store.putAccountProfile({ email: "buyer@example.com", galleryCheckpoints: [{
+    collectionKey: "spain", photoId, updatedAt: "2026-09-01T12:00:00Z",
+  }] });
+  const calls = [];
+  const lifecycleDenyStore = allowLifecycleFor([photoId]);
+  const visibilityFor = lifecycleDenyStore.visibilityFor;
+  lifecycleDenyStore.visibilityFor = async (ids) => { calls.push(ids); return visibilityFor(ids); };
+  const worker = createPhotosByElieWorker({ catalog, store, accessAuth: fakeAccessAuthFor("buyer@example.com"), lifecycleDenyStore });
+  const request = () => new Request("https://worker.test/account/profile", { headers: { origin: "https://photos-by-elie.com" } });
+  const denied = await worker.fetch(request());
+  assert.equal(denied.status, 200);
+  assert.deepEqual((await denied.json()).profile.galleryCheckpoints, []);
+  assert.deepEqual(calls, [[photoId]]);
+  lifecycleDenyStore.visibilityFor = async () => { throw Object.assign(new Error("Unavailable"), { status: 503, code: "lifecycle_authority_unavailable" }); };
+  const unavailable = await worker.fetch(request());
+  assert.equal(unavailable.status, 503);
+  assert.equal((await unavailable.json()).error.code, "lifecycle_authority_unavailable");
 });
 
 test("account profile lifecycle visibility is queried in at most 100-ID chunks", async () => {

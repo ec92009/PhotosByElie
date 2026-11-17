@@ -30,7 +30,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<noscript><style>[data-customer-recovery] { display: none; }</style></noscript>
+<noscript><style>
+  [data-customer-recovery], .header-controls { display: none !important; }
+  .topbar { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: #f8f5ef; color: #111; }
+  main noscript .panel { background: #f8f5ef; color: #111; }
+</style></noscript>
 </head>
 <body class="commerce-page" data-fixed-header>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>

@@ -6,6 +6,7 @@ const TTL=30*86400;
 const CATALOG={
  'easier-week':{name:'The Easier Week Kit',host:'June Rowan',page:'june.rowan',amount:99,standard_amount:1500},
  'before-you-spend':{name:'Before You Spend Kit',host:'Nora Vela',page:'nora.vela',amount:99,standard_amount:1900},
+ 'tech-proof':{name:'The Tech Proof Kit',host:'Alex Ward',page:'alex.ward',amount:99,standard_amount:99},
  'say-it-clearly':{name:'Say It Clearly',host:'Elena Brooks',page:'elena.brooks',amount:99,standard_amount:1500},
 };
 const cors={'access-control-allow-origin':SITE,'access-control-allow-methods':'GET,POST,OPTIONS','access-control-allow-headers':'content-type,idempotency-key','vary':'Origin'};
@@ -86,6 +87,41 @@ async function activatePrice099(request,env,stripe){
   after=page.has_more?page.data.at(-1)?.id:undefined;
  }while(after);
  return json({active:true,amount:99,currency:'usd',products:config.products,expired_old_checkouts:expired});
+}
+
+/** Provision only the approved Alex ZIP and fixed one-time price; retain all existing shops. */
+async function setupTechProof(request,env,stripe){
+ if(!owner(request,env))return json({error:'Unauthorized'},401);
+ if(request.headers.get('content-type')!=='application/zip')return json({error:'Expected the approved ZIP'},415);
+ if(Number(request.headers.get('content-length')||0)>500000)return json({error:'File too large'},413);
+ const chunks=[];let size=0;const reader=request.body?.getReader();
+ if(!reader)return json({error:'Product file is required'},400);
+ while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>500000){await reader.cancel();return json({error:'File too large'},413);}chunks.push(value);}
+ const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+ const sha=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+ if(sha!=='6140174d891acd121113dd5bf4fa7769c319c3f63e80ea7bac9df5e89a2ea433')return json({error:'The file does not match the approved product'},400);
+ const config=await read(env,'tilbury:configuration');
+ if(!config?.setup_locked||!config.webhook||!config.current_offer?.active)return json({error:'Existing shop setup must be ready'},409);
+ const sku='tech-proof',id='tilbury_tech_proof_v1',lookup=id+'_usd_099_v1';
+ await env.PRIVATE_MEDIA.put('tilbury/products/tech-proof.zip',bytes,{httpMetadata:{contentType:'application/zip'},customMetadata:{sha256:sha}});
+ const file=await env.PRIVATE_MEDIA.head('tilbury/products/tech-proof.zip');
+ if(file?.size!==bytes.byteLength||file.customMetadata?.sha256!==sha)throw new Error('Product storage verification failed');
+ let product;
+ try{product=await stripe.products.retrieve(id);}catch(e){if(e.code!=='resource_missing')throw e;product=await stripe.products.create({id,name:'The Tech Proof Kit',description:'Alex Ward digital kit: seven-lesson field guide, seven-page workbook, offline calculator and editable checklists. One-time purchase; personal or internal use.',metadata:{tilbury:'v1',sku}},{idempotencyKey:'tilbury-product-tech-proof-v1'});}
+ if(product.deleted||product.id!==id)throw new Error('Unexpected Alex product');
+ let price=(await stripe.prices.list({lookup_keys:[lookup],active:true,limit:1})).data[0];
+ if(!price)price=await stripe.prices.create({product:id,currency:'usd',unit_amount:99,tax_behavior:'exclusive',lookup_key:lookup,metadata:{tilbury:'v1',sku,offer:'usd-099'}},{idempotencyKey:'tilbury-usd-099-tech-proof-v1'});
+ if(!price.active||price.currency!=='usd'||price.unit_amount!==99||price.product!==id||price.recurring)throw new Error('Unexpected Alex price');
+ const prior=config.products[sku];
+ if(prior&&(prior.product!==id||prior.price!==price.id||prior.amount!==99))throw new Error('Existing Alex configuration differs');
+ await stripe.products.update(id,{default_price:price.id,description:'Alex Ward digital kit: eight-page seven-lesson field guide, seven-page workbook, offline calculator and two CSV checklists. One-time purchase; personal or internal use.'});
+ const latest=await read(env,'tilbury:configuration');
+ if(!latest?.setup_locked||latest.webhook!==config.webhook)throw new Error('Shop configuration changed; retry provisioning');
+ const current=latest.products[sku];
+ if(current&&(current.product!==id||current.price!==price.id||current.amount!==99))throw new Error('Alex configuration changed');
+ latest.products[sku]={product:id,price:price.id,amount:99};
+ await env.ORDERS_KV.put('tilbury:configuration',JSON.stringify(latest));
+ return json({ready:true,sku,product:id,price:price.id,amount:99,currency:'usd',recurring:false,zip_bytes:file.size,sha256:sha,webhook:config.webhook});
 }
 
 /** Start a server-priced Checkout Session; the request cannot choose an amount. */
@@ -208,6 +244,7 @@ export async function handleTilbury(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(path==='/tilbury/unsubscribe'&&['GET','POST'].includes(request.method))return await unsubscribeLetter(request,env,url);
   if(path==='/tilbury/setup'&&request.method==='POST')return await setup(request,env,stripe);
+  if(path==='/tilbury/setup-tech-proof'&&request.method==='POST')return await setupTechProof(request,env,stripe);
   if(path==='/tilbury/price-099'&&request.method==='POST')return await activatePrice099(request,env,stripe);
   if(path==='/tilbury/checkout'&&request.method==='POST')return await checkout(request,env,stripe);
   if(path==='/tilbury/webhook'&&request.method==='POST')return await webhook(request,env,stripe);

@@ -1127,3 +1127,28 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .metrics-grid{grid-template-columns:1fr}
   .site-footer .shell{flex-direction:column;align-items:flex-start}
 }
+
+/* Keep partial/unauthorized customer content out of view until page readiness. */
+main[data-customer-state]:not([data-customer-state="ready"]) [data-gallery-root],
+main[data-customer-state]:not([data-customer-state="ready"]) .detail-layout,
+main[data-customer-state]:not([data-customer-state="ready"]) .purchase-panel,
+main[data-customer-state]:not([data-customer-state="ready"]) .basket-panel { display: none; }
+.customer-recovery { grid-column: 1 / -1; }
+.customer-recovery p { overflow-wrap: anywhere; }
+.customer-recovery .btn { margin: .25rem; }
+/* Recovery and settings copy must remain readable over any photograph. */
+.customer-recovery, .site-settings-dialog {
+  background: rgb(var(--glass-surface-rgb) / .96);
+}
+.site-settings-slot [data-theme-preference] {
+  width: 100%;
+  min-height: 38px;
+  padding: .4rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--glass-control-bg);
+  color: var(--text);
+  font: inherit;
+}
+html[data-theme="dark"] [data-theme-preference] { color-scheme: dark; }
+html[data-theme="light"] [data-theme-preference] { color-scheme: light; }

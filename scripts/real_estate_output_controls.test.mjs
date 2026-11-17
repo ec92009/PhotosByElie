@@ -112,7 +112,7 @@ test("Language preference follows the active account and syncs with account prof
   assert.match(siteScript, /language: root\.dataset\.language/);
   assert.match(siteScript, /if \(profile\.language\) setLanguage\(profile\.language\)/);
   assert.match(siteScript, /activeThemePreferenceKey/);
-  assert.match(siteScript, /if \(profile\.theme\) setTheme\(profile\.theme\)/);
+  assert.match(siteScript, /if \(profile\.theme && window\.photosByElieTheme\.preference\(\) !== "system"\) setTheme\(profile\.theme\)/);
   assert.match(siteScript, /photosbyelie:themechange/);
   assert.match(checkoutWorker, /language: \["en", "fr", "es"\]/);
   assert.match(checkoutWorker, /theme: \["light", "dark"\]/);

@@ -381,8 +381,10 @@ test("detail controller redirects retired Owner URLs and renders public readines
         createElement: () => ({}),
         querySelector: (selector) => selectors[selector] || null,
       };
+      let recoveryFailures = 0;
       let replaced = "";
       const window = {
+        photosByElieCustomerRecovery: { fail: () => { recoveryFailures += 1; } },
         location: {
           href: "https://photos-by-elie.com/photo.html?gallery=france&id=france-one",
           search: "?gallery=france&id=france-one",
@@ -402,8 +404,9 @@ test("detail controller redirects retired Owner URLs and renders public readines
       assert.equal(replaced, "");
       assert.equal(elements.preview.hidden, true);
       assert.equal(elements.purchase.hidden, true);
-      assert.equal(elements.meta.textContent, "Photo unavailable");
-      assert.equal(elements.title.textContent, "Fixture authorization unavailable");
+      assert.equal(elements.meta.textContent, "");
+      assert.equal(elements.title.textContent, "");
+      assert.equal(recoveryFailures, 1);
   });
 });
 

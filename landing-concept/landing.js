@@ -45,7 +45,7 @@
       italy: "Italy", portugal: "Portugal", slovakia: "Slovakia",
       latestSocial: "Latest social",
       footerLine: "A quieter way to see more.", support: "Support", privacy: "Privacy", terms: "Terms", dataDeletion: "Data deletion",
-      display: "Display", language: "Language", theme: "Theme", night: "Night", day: "Day",
+      display: "Display", language: "Language", theme: "Theme", night: "Night", day: "Day", system: "System",
       surface: "Surface", glass: "Glass", solid: "Solid", transparency: "Overlay transparency", translucency: "Frosted blur",
       continueGoogle: "Continue with Google", legacyLogin: "Or use legacy access", username: "Username or email",
       password: "Password", showPassword: "Show", hidePassword: "Hide", continueVisitor: "Continue as visitor",
@@ -111,7 +111,7 @@
       italy: "Italie", portugal: "Portugal", slovakia: "Slovaquie",
       latestSocial: "Dernières publications",
       footerLine: "Une manière plus paisible d’en voir davantage.", support: "Assistance", privacy: "Confidentialité", terms: "Conditions", dataDeletion: "Suppression des données",
-      display: "Affichage", language: "Langue", theme: "Thème", night: "Nuit", day: "Jour",
+      display: "Affichage", language: "Langue", theme: "Thème", night: "Nuit", day: "Jour", system: "Système",
       surface: "Surface", glass: "Verre", solid: "Opaque", transparency: "Transparence des panneaux", translucency: "Flou du verre",
       continueGoogle: "Continuer avec Google", legacyLogin: "Ou utiliser l’accès classique", username: "Nom d’utilisateur ou e-mail",
       password: "Mot de passe", showPassword: "Afficher", hidePassword: "Masquer", continueVisitor: "Continuer comme visiteur",
@@ -177,7 +177,7 @@
       italy: "Italia", portugal: "Portugal", slovakia: "Eslovaquia",
       latestSocial: "Últimas publicaciones",
       footerLine: "Una forma más serena de ver más.", support: "Ayuda", privacy: "Privacidad", terms: "Condiciones", dataDeletion: "Eliminación de datos",
-      display: "Pantalla", language: "Idioma", theme: "Tema", night: "Noche", day: "Día",
+      display: "Pantalla", language: "Idioma", theme: "Tema", night: "Noche", day: "Día", system: "Sistema",
       surface: "Superficie", glass: "Cristal", solid: "Sólida", transparency: "Transparencia de los paneles", translucency: "Desenfoque del cristal",
       continueGoogle: "Continuar con Google", legacyLogin: "O usar el acceso clásico", username: "Usuario o correo electrónico",
       password: "Contraseña", showPassword: "Mostrar", hidePassword: "Ocultar", continueVisitor: "Continuar como visitante",
@@ -318,7 +318,7 @@
   };
 
   const readPreferences = () => {
-    try { return JSON.parse(localStorage.getItem(storageKey) || "{}"); }
+    try { return JSON.parse(window.photosByElieTheme.storage.getItem(storageKey) || "{}"); }
     catch { return {}; }
   };
 
@@ -326,22 +326,26 @@
     if (!languageSelect || !transparencyRange) return;
     const preferences = {
       language: languageSelect.value,
-      theme: document.querySelector('input[name="theme"]:checked')?.value || "night",
+      theme: document.querySelector('input[name="theme"]:checked')?.value || "system",
       surface: document.querySelector('input[name="surface"]:checked')?.value || "glass",
       transparency: Number(transparencyRange.value),
       translucency: Number(translucencyRange?.value || 16)
     };
-    localStorage.setItem(storageKey, JSON.stringify(preferences));
+    window.photosByElieTheme.storage.setItem(storageKey, JSON.stringify(preferences));
+    window.photosByElieTheme.set(preferences.theme);
     window.dispatchEvent(new CustomEvent("photosbyelie:landingpreferenceschange", { detail: preferences }));
   };
 
   const applyPreferences = (preferences) => {
     const language = setLanguage(preferences.language || navigator.language.slice(0, 2));
-    const theme = preferences.theme === "day" ? "day" : "night";
+    const canonical = window.photosByElieTheme.storage.getItem("byelie-theme");
+    const preference = window.photosByElieTheme.normalize(canonical || preferences.theme);
+    const theme = preference === "light" ? "day" : preference === "dark" ? "night" : "system";
+    window.photosByElieTheme.set(preference);
     const surface = preferences.surface === "solid" ? "solid" : "glass";
     const transparency = Math.min(90, Math.max(35, Number(preferences.transparency) || 68));
     const translucency = Math.min(30, Math.max(6, Number(preferences.translucency) || 16));
-    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.theme = window.photosByElieTheme.resolved() === "dark" ? "night" : "day";
     document.documentElement.dataset.surface = surface;
     document.documentElement.style.setProperty("--glass-alpha", String(transparency / 100));
     document.documentElement.style.setProperty("--glass-blur", `${translucency}px`);
@@ -463,11 +467,11 @@
       const mergedPreferences = {
         ...localPreferences,
         language: accountProfile.language || localPreferences.language,
-        theme: accountProfile.theme === "dark" ? "night" : accountProfile.theme === "light" ? "day" : localPreferences.theme
+        theme: window.photosByElieTheme.preference() === "system" ? "system" : accountProfile.theme === "dark" ? "night" : accountProfile.theme === "light" ? "day" : localPreferences.theme
       };
       applyingAccountProfile = true;
       applyPreferences(mergedPreferences);
-      localStorage.setItem(storageKey, JSON.stringify(mergedPreferences));
+      window.photosByElieTheme.storage.setItem(storageKey, JSON.stringify(mergedPreferences));
       applyingAccountProfile = false;
     };
 
@@ -498,7 +502,7 @@
           liked: Array.isArray(accountProfile.liked) ? accountProfile.liked : [],
           basket: Array.isArray(accountProfile.basket) ? accountProfile.basket : [],
           language: preferences.language,
-          theme: preferences.theme === "night" ? "dark" : "light"
+          theme: preferences.theme === "system" ? (accountProfile.theme || "") : preferences.theme === "night" ? "dark" : "light"
         };
         try {
           const response = await fetch(`${worker}/account/profile`, {
@@ -666,12 +670,18 @@
     }
   });
 
+  window.photosByElieTheme.subscribe((theme, preference) => {
+    document.documentElement.dataset.theme = theme === "dark" ? "night" : "day";
+    const value = preference === "system" ? "system" : preference === "dark" ? "night" : "day";
+    const radio = document.querySelector(`input[name="theme"][value="${value}"]`);
+    if (radio) radio.checked = true;
+  });
   settingsButton?.addEventListener("click", () => settingsDialog.showModal());
+  settingsDialog?.addEventListener("close", () => settingsButton?.focus());
   settingsDialog?.addEventListener("click", (event) => { if (event.target === settingsDialog) settingsDialog.close(); });
   languageSelect?.addEventListener("change", () => { setLanguage(languageSelect.value); savePreferences(); });
   document.querySelectorAll('input[name="theme"], input[name="surface"]').forEach((input) => {
     input.addEventListener("change", () => {
-      document.documentElement.dataset.theme = document.querySelector('input[name="theme"]:checked')?.value || "night";
       document.documentElement.dataset.surface = document.querySelector('input[name="surface"]:checked')?.value || "glass";
       savePreferences();
     });

@@ -114,6 +114,9 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time, settlement } =
     let incomingAttempt = Number(refund?.metadata?.refund_attempt || fallback.attempt || order.refund?.attempt || 1);
     const existingAttempt = Number(order.refund?.attempt || 0);
     if (order.refund?.status === "succeeded") return order;
+    // A local projection failure supplies no evidence that an accepted provider
+    // refund became unknown or failed. Keep its identity and confirmed state.
+    if (!refund && order.refund?.id && ["pending", "requires_action"].includes(order.refund.status)) return order;
     if (status === "succeeded") incomingAttempt = Math.max(incomingAttempt, existingAttempt);
     if (order.refund && (
       incomingAttempt < existingAttempt
@@ -212,7 +215,7 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time, settlement } =
     // confirmed recovery after a short lease, using exactly the original request.
     // A still-running request remains safe through provider idempotency and CAS.
     // API v1 keys may be pruned after 24h; never replay past the 23h safety bound.
-    const replay = attemptAge >= 0 && attemptAge < 23 * 60 * 60 * 1000
+    const replay = !order.refund?.id && attemptAge >= 0 && attemptAge < 23 * 60 * 60 * 1000
       && (order.refund?.status === "unknown" || (order.refund?.status === "pending"
         && !order.refund.id && handoffAge >= 60_000));
     if (replay) reason = order.refund.reason;

@@ -53,7 +53,7 @@ test("workerd D1 enforces refund/readiness exclusion, CAS outcomes and guarded l
   } finally { await mf.dispose(); }
 });
 
-for (const scenario of ["ready-projection", "refund-mirror", "interrupted-reservation"]) test(`workerd D1 recovers ${scenario} while retaining settlement exclusion`, async (t) => {
+for (const scenario of ["ready-projection", "refund-mirror", "interrupted-reservation", "confirmed-pending-mirror"]) test(`workerd D1 recovers ${scenario} while retaining settlement exclusion`, async (t) => {
   const { refundHarness } = await import("./paid-refund-test-support.mjs");
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{ name: "refund-recovery-test", modules: true,
     script: 'export default { fetch() { return new Response("local only"); } };',
@@ -81,6 +81,22 @@ for (const scenario of ["ready-projection", "refund-mirror", "interrupted-reserv
     assert.equal((await database.prepare("SELECT state FROM pbe_paid_order_settlements WHERE order_id=?").bind(h.order.id).first()).state, "ready");
   } else {
     await h.begin();
+    if (scenario === "confirmed-pending-mirror") {
+      let outage = false;
+      const put = h.rawStore.putOrder;
+      h.rawStore.putOrder = async (value) => { if (outage) throw Error("Synthetic accepted-pending mirror outage"); return put(value); };
+      h.stripe.listRefunds = async () => { if (outage) throw Error("Synthetic provider read outage"); return []; };
+      h.provider = async () => { outage = true; return { id: "re_synthetic_pending", status: "pending", amount: 800,
+        currency: "usd", payment_intent: h.session.payment_intent, metadata: { order_id: h.order.id, refund_attempt: "1" } }; };
+      await assert.rejects(h.request(), { code: "stripe_refund_unknown" });
+      assert.equal((await h.settlement.refundOrderFor(h.order.id)).order.refund.status, "pending");
+      outage = false; clock += 60_000;
+      await assert.rejects(h.request(), { code: "refund_not_allowed" });
+      assert.equal(h.requests.length, 1);
+      await assert.rejects(h.fulfillment().fulfillPaidSession(h.session), { code: "refund_blocks_fulfillment" });
+      assert.equal(h.downloads.size + h.emails.length, 0);
+      return;
+    }
     if (scenario === "refund-mirror") {
       const put = h.rawStore.putOrder; let faulted = false;
       h.rawStore.putOrder = async (value) => {

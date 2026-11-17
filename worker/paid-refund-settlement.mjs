@@ -81,8 +81,8 @@ export function createPaidRefundSettlement({ database, assertReady, now }) {
                 AND ?=json_extract(order_json,'$.refund.attempt')+1)
               OR ((json_extract(order_json,'$.refund.status')='unknown'
                 OR (json_extract(order_json,'$.refund.status')='pending'
-                  AND json_extract(order_json,'$.refund.id') IS NULL
                   AND json_extract(order_json,'$.refund.updatedAt')<=?))
+                AND json_extract(order_json,'$.refund.id') IS NULL
                 AND ?=json_extract(order_json,'$.refund.attempt')
                 AND ?=json_extract(order_json,'$.refund.idempotencyKey')
                 AND ?=json_extract(order_json,'$.refund.requestedAt')

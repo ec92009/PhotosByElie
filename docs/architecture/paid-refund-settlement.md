@@ -70,7 +70,11 @@ provider refund ID. Explicit confirmation can resume that same request after a
 60-second handoff lease, within the original 23-hour key lifetime. The CAS
 reservation validates the original attempt, key, requested time and reason,
 and renews the handoff timestamp without changing the original requested time.
-Confirmed provider-pending refunds are reconciled, never reissued. A long-running
+Confirmed provider-pending refunds are reconciled, never reissued. A local mirror
+failure cannot replace their evidenced pending/requires-action state with an
+unevidenced fallback. Both orchestration and reservation CAS refuse unknown
+replay when a provider refund ID is already recorded, including older downgraded
+projections. A long-running
 original request and a recovered request can overlap after the lease; provider
 idempotency with identical parameters and authoritative CAS preserve correctness.
 The lease limits overlapping handoffs; it is not the refund exclusion lock.

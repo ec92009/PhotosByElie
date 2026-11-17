@@ -268,3 +268,36 @@ test("provider-confirmed pending refunds are never replayed when the local hando
   await assert.rejects(h.request(), { code: "refund_not_allowed" });
   assert.equal(h.requests.length, 1);
 });
+
+for (const status of ["pending", "requires_action"]) test(`confirmed ${status} survives compounded mirror/list failures without another handoff`, async (t) => {
+  const h = await refundHarness(t); await h.begin();
+  let outage = false;
+  const put = h.rawStore.putOrder;
+  h.rawStore.putOrder = async (value) => { if (outage) throw Error("Synthetic outcome mirror outage"); return put(value); };
+  h.stripe.listRefunds = async () => { if (outage) throw Error("Synthetic provider read outage"); return []; };
+  h.provider = async () => { outage = true; return event(h, status); };
+  await assert.rejects(h.request(), { code: "stripe_refund_unknown" });
+  const saved = await h.settlement.refundOrderFor(h.order.id);
+  assert.equal(saved.order.refund.status, status);
+  assert.equal(saved.order.refund.id, "re_synthetic_1");
+  outage = false;
+  await assert.rejects(h.request(), { code: "refund_not_allowed" });
+  assert.equal(h.requests.length, 1);
+  await assert.rejects(h.fulfillment().fulfillPaidSession(h.session), { code: "refund_blocks_fulfillment" });
+  assert.equal(h.downloads.size + h.emails.length, 0);
+});
+
+test("legacy unknown projection with provider identity refuses replay in orchestration and reservation CAS", async (t) => {
+  const h = await refundHarness(t); await h.begin();
+  h.provider = async () => event(h, "pending");
+  await h.request();
+  const saved = await h.settlement.refundOrderFor(h.order.id);
+  const unknown = structuredClone(saved.order); unknown.refund.status = "unknown";
+  await h.settlement.savePaidRefund(unknown, saved.revision);
+  const current = await h.settlement.refundOrderFor(h.order.id);
+  await assert.rejects(h.request(), { code: "refund_not_allowed" });
+  const pending = structuredClone(unknown); pending.refund.status = "pending"; pending.refund.id = null;
+  await assert.rejects(h.settlement.reservePaidRefund(pending, current.revision), { code: "refund_not_allowed" });
+  assert.equal((await h.settlement.refundOrderFor(h.order.id)).revision, current.revision);
+  assert.equal(h.requests.length, 1);
+});

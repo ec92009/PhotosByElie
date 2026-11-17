@@ -1,5 +1,12 @@
 # PBE-221 Worker source reconciliation
 
+Superseded authority evidence: the parent subsequently captured the actual
+active Worker and corrected the public catalog in v321.12. See
+[the bounded live-source preservation comparison](pbe-live-worker-source-preservation.md)
+for the four-offer Tilbury restoration and current source compatibility result.
+The historical catalog hashes, counts and unresolved authentication/source gate
+below describe the earlier candidate only.
+
 Follow-up: independent review reproduced a refund/readiness race in this
 historical reconciliation. Integrated-base fix
 `513823a400cd4241327a8cc69d92499038d08dfe` adds authoritative exclusion and

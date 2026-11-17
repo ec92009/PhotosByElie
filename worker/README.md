@@ -69,7 +69,7 @@ not establish current deployed behavior or authorize provider actions. See
 [the source reconciliation](../docs/audits/pbe-221-worker-source-reconciliation.md)
 for provenance and remaining parent release gates.
 
-`worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public checkout. It uses durable Cloudflare bindings:
+`worker/cloud-worker.mjs` is the configured Cloudflare class entrypoint. It delegates PBE HTTP traffic to `worker/deployed-worker.mjs`, preserves the private WST binding RPC, and isolates Tilbury routing. The PBE runtime uses durable Cloudflare bindings:
 
 - `ORDERS_KV` stores orders, Checkout Session indexes, download tokens, and first-party analytics keys under `pbe:analytics:*` unless an `ANALYTICS_KV` binding is supplied. Recent-purchase allowance checks use these Worker order records as the purchase/download history source.
 - `PUBLIC_MEDIA` serves public preview JPEGs from the `photosbyelie-public` R2 bucket under the custom `https://download.photos-by-elie.com/media/...` route.
@@ -100,6 +100,7 @@ Live Stripe dashboard state as of 2026-05-22:
 - Successful-payment customer receipts are enabled; refund emails remain off.
 - Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
 - Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`; the first-party `https://download.photos-by-elie.com/stripe-webhook` endpoint is also live and can become the Stripe destination after a dashboard update.
+- Before adopting the restored refund workflow, verify the current webhook destination subscribes to `refund.created`, `refund.updated`, and `refund.failed`, and separately verify signed transitions. The dated receipt above does not establish current provider configuration.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Do not commit or document the secret values.
 - Live proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, order status `ready`, and a private R2 JPEG download of `401,035` bytes.
 

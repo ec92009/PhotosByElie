@@ -61,6 +61,10 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 ## Public Checkout
 
+PBE-221's refund race fix requires additive migration 0018 and the complete
+guard-aware Worker. See [paid refund settlement](../docs/architecture/paid-refund-settlement.md)
+for atomic ordering, unknown-outcome handling, legacy refusal and parent rollout.
+
 `npm run worker:release-check` validates the reconciled checkout, fulfillment,
 refund, lifecycle, native-video, Tilbury, private WST RPC and publisher contracts
 offline. The Wrangler custom build runs this gate before an ordinary bundle or

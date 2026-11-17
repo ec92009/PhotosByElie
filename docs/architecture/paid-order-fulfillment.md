@@ -23,8 +23,9 @@ External services use only these injected seams, also enforced by
 
 The module must not own Worker `Request`/`Response` objects, route paths, fetch
 calls, Stripe client construction, or webhook signature verification.
-Its only source import is the pure `refundBlocksFulfillment` predicate from
-`paid-order-refund.mjs`; refund provider orchestration stays in that module.
+It imports the refund predicate and refund-protected projection adapter; their
+I/O uses the injected order store and lifecycle settlement. Refund provider
+orchestration stays in `paid-order-refund.mjs`.
 
 ## Inputs, authority and failure contract
 
@@ -51,12 +52,12 @@ refund-based download denial, redemption counters and Real Estate asset
 verification. Internal bucket/object/ZIP keys must not reach a buyer through
 the module's internal return value; the Worker applies `publicOrder` first.
 
-The restored refund guard fresh-reads the order before settlement and the ready
-commit. Any retained refund status blocks fulfillment, including failed attempts
-that still require explicit refund recovery. With `throwOnRevocation`, this is
-`refund_blocks_fulfillment` (409); otherwise reconciliation returns the current
-blocked projection. Refund initiation during rendering cannot publish download
-capabilities. These source checks do not prove a provider refund was completed.
+The [D1 refund settlement](paid-refund-settlement.md) supplies the atomic exclusion
+against readiness before a provider request. A fresh KV read alone is insufficient.
+Any retained refund status blocks fulfillment, including failed/unknown attempts.
+With `throwOnRevocation`, this is `refund_blocks_fulfillment` (409); otherwise
+reconciliation returns D1's current refund projection. Stale renderer and email
+writes cannot erase that authority. Source tests do not prove a provider refund.
 
 | Seam | Required contract |
 | --- | --- |
@@ -68,11 +69,10 @@ capabilities. These source checks do not prove a provider refund was completed.
 | `time` | `now()` returns a `Date`. |
 | Download policy and identity | `downloadPolicy()` supplies expiry/limit, `applyDownloadPolicy(file, policy)` projects it, and `mediaIdsForOrder(order)` supplies canonical media IDs. |
 
-Missing mandatory functions fail at construction. Lifecycle methods remain
-optional for the existing in-process/local harnesses. This is **not** permission
-to omit deployed authority: `deployed-worker.mjs` still constructs the existing
-D1 lifecycle store. No authority, schema, binding or provider setup is changed
-by the extraction.
+Missing mandatory functions fail at construction. Production requires lifecycle
+and paid-settlement authority, including additive migration 0018. Only explicit
+local mocks opt into unsettled fulfillment; refund requests have no such fallback.
+`deployed-worker.mjs` constructs the existing D1 lifecycle store.
 
 Fences are checked before preparation, after rendering and before the ready
 commit. Settlement is checked around capability writes, the final order write,

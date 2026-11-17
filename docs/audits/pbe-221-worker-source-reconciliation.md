@@ -1,5 +1,12 @@
 # PBE-221 Worker source reconciliation
 
+Follow-up: independent review reproduced a refund/readiness race in this
+historical reconciliation. Integrated-base fix
+`513823a400cd4241327a8cc69d92499038d08dfe` adds authoritative exclusion and
+regressions; see [the settlement and rollout contract](../architecture/paid-refund-settlement.md).
+The earlier source-equivalence statements below describe the original candidate,
+not the later functional fix or a production release.
+
 This is a source-only candidate on accepted integration
 `92e753f74b1e60b4932cf64b41aaf210451ceb7f`. The parent owns the final release
 identity, combined PBE-225 integration, required release gate and any production

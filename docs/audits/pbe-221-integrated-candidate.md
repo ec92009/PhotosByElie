@@ -45,10 +45,12 @@ localization changes produced v321.1. The source-backed local-host startup
 fix produced v321.2, whose CI passed at `afe381ad`. Integration of the reviewed
 offline tool produced v321.3. The live landing reconciliation and approved
 PBE-224 offer were browser-checked in a private v321.4 staging build. After
-interruption, fresh preparation advances the final candidate to v321.5.
+interruption, fresh preparation produced v321.5, whose complete local release gate passed.
+A final browser check exposed legacy social analytics creating a local IPv6
+session. The bounded privacy correction advances the final candidate to v321.6.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill use v321.5, including the new purchase-link query. Packaging checks their
+README together. About and pill use v321.6, including the new purchase-link query. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -145,7 +147,12 @@ The integrated producer baseline is
 enter the existing sessionless handoff.
 Their transmitted paths normalize to `/photo.html` and `/gallery.html`.
 Existing semantic action IDs cover generated links and the customer settings
-gear. The WST assets inherit the initiating analytics script's version query.
+gear. The subsequent local privacy fix at `280350e3` recognizes bracketed IPv6
+loopback, suppresses monitoring previews and checks native collection enablement
+before normalizing an event. Disabled native collection creates zero session
+keys or requests. Focused tests also preserve the retained social route’s
+existing production fallback behavior. The approved WST route population and
+collector semantics retain their deployed contract. The WST assets inherit the initiating analytics script's version query.
 Privacy/route tests cover canonical and generated routes, production-origin
 restriction, local/IPv6/mesh/foreign origins, preview mode, DNT/GPC, late GPC,
 query removal, session-storage exclusion and stable dynamic CTA markers.

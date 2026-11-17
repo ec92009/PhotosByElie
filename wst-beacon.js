@@ -14,10 +14,11 @@
       consentState: script.dataset.wstConsent || "unknown",
       synthetic: script.dataset.wstSynthetic === "true",
       sessionless: script.dataset.wstSessionless === "true",
+      pbeFunnelEnabled: script.dataset.wstPbeFunnel === "true",
     };
     const allowedConsent = new Set(["granted", "denied", "not_required", "unknown"]);
     const allowedEnvironment = new Set(["production", "preview", "staging", "development", "test"]);
-    const allowedBrowserEvents = new Set(["page_view", "cta_press", "form_start", "form_submit_press"]);
+    const allowedBrowserEvents = new Set(["page_view", "cta_press", "form_start", "form_submit_press", "pbe_stage"]);
     const stableId = /^[a-z][a-z0-9._-]{1,63}$/;
     const siteId = /^[a-z][a-z0-9-]{2,47}$/;
     const startedForms = new Set();
@@ -70,6 +71,24 @@
       }
     }
 
+    function pbeAcquisition() {
+      const source = new URLSearchParams(window.location.search).get("utm_source");
+      if (source) {
+        if (["google", "bing", "duckduckgo"].includes(source.toLowerCase())) return "search";
+        if (["facebook", "instagram", "pinterest", "youtube", "threads"].includes(source.toLowerCase())) return "social";
+        if (["email", "newsletter"].includes(source.toLowerCase())) return "email";
+        return "campaign_other";
+      }
+      if (!document.referrer) return "direct";
+      try {
+        const host = new URL(document.referrer).hostname.toLowerCase();
+        if (host === window.location.hostname.toLowerCase()) return "internal";
+        if (/(^|\.)(google\.(com|fr|es|co\.uk)|bing\.com|duckduckgo\.com)$/.test(host)) return "search";
+        if (/(^|\.)(facebook\.com|instagram\.com|pinterest\.(com|fr|es)|youtube\.com|youtu\.be|threads\.net|threads\.com|t\.co)$/.test(host)) return "social";
+        return "referral";
+      } catch { return "unknown"; }
+    }
+
     function randomSessionId() {
       const bytes = new Uint8Array(18);
       window.crypto.getRandomValues(bytes);
@@ -95,6 +114,8 @@
       // Consent updates must not override browser privacy, including changes
       // made after installation. Check before creating a session or payload.
       if (navigator.globalPrivacyControl === true || navigator.doNotTrack === "1") return false;
+      if (config.siteId === "photosbyelie" && (window.doNotTrack === "1" || window.photosByElieMonitoringPreview
+        || navigator.webdriver || /bot|crawler|spider|headless|lighthouse|pagespeed|uptime|monitoring/i.test(navigator.userAgent || ""))) return false;
       return config.consentState === "granted" || config.consentState === "not_required";
     }
 
@@ -121,6 +142,7 @@
 
     function track(eventName, eventProperties) {
       if (!isAllowedToSend() || !allowedBrowserEvents.has(eventName)) return false;
+      if (eventName === "pbe_stage" && (config.siteId !== "photosbyelie" || !config.sessionless || !config.pbeFunnelEnabled || !["product_ready", "basket_add"].includes(eventProperties?.stage))) return false;
       const path = normalizePath(window.location.pathname);
       const properties = { path };
       if (!config.sessionless) properties.session_id = sessionId();
@@ -128,8 +150,13 @@
       const referrerSite = safeReferrerSite();
       const campaign = safeCampaign();
       if (locale) properties.locale = locale;
-      if (referrerSite) properties.referrer_site = referrerSite;
-      if (campaign) properties.campaign = campaign;
+      if (config.siteId === "photosbyelie") {
+        if (config.pbeFunnelEnabled) properties.acquisition_source = pbeAcquisition();
+      } else {
+        if (referrerSite) properties.referrer_site = referrerSite;
+        if (campaign) properties.campaign = campaign;
+      }
+      if (eventName === "pbe_stage") properties.stage = eventProperties.stage;
 
       if (eventName === "cta_press") {
         if (!stableId.test(eventProperties?.cta_id || "")) return false;

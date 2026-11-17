@@ -399,6 +399,7 @@ if (ownerDetailPurchaseHidden) {
   if (purchasePanel) purchasePanel.hidden = true;
 }
 
+let reportProductReady = () => {};
 if (!photo) {
   document.title = `Photos By Elie | ${collection.title}`;
   setCollectionNav();
@@ -813,6 +814,20 @@ preview.classList.add(collection.accent, photo.className);
 preview.classList.toggle("is-panorama", isPanorama);
 detailLayout?.classList.toggle("is-panorama", isPanorama);
 const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
+let purchaseControlsReady = false;
+let previewUsable = false;
+let productReadyReported = false;
+/** Readiness requires both usable media and the eligible, rendered purchase UI. */
+reportProductReady = () => {
+  if (productReadyReported || !purchaseControlsReady || !previewUsable || preview.hidden || ownerDetailPurchaseHidden || localModerationEnabled
+    || window.photosByElieIsPublicHidden?.(photo)
+    || !Object.values(window.photosByElieData || {}).some((entry) => entry.photos?.some((item) => item.id === photo.id))
+    || document.querySelector('main')?.dataset?.customerState !== 'ready'
+    || document.querySelector('.purchase-panel')?.hidden
+    || !document.querySelector('[data-resolution]')) return;
+  productReadyReported = true;
+  try { window.photosByElieAnalytics?.track?.('product_ready'); } catch { /* Readiness never depends on analytics. */ }
+};
 if (detailImageSrc && isVideo) {
   preview.classList.add("has-image", "has-video");
   const video = document.createElement("video");
@@ -835,6 +850,8 @@ if (detailImageSrc && isVideo) {
   const setPreviewAspectRatio = () => {
     if (!img.naturalWidth || !img.naturalHeight) return;
     applyPreviewAspectRatio(img.naturalWidth, img.naturalHeight);
+    previewUsable = true;
+    reportProductReady();
   };
   img.src = detailImageSrc;
   img.alt = photo.title;
@@ -1135,7 +1152,7 @@ if (!ownerDetailPurchaseHidden) {
       title: photo.title,
       collection: collection.title,
       options
-    });
+    }, { userInitiated: true });
     updateTotal();
     if (!options.length) {
       status.textContent = existing ? t("detail.removed_basket", { title: photo.title }) : t("detail.no_selection");
@@ -1182,9 +1199,11 @@ if (!ownerDetailPurchaseHidden) {
   });
 
   updateTotal();
+  purchaseControlsReady = availableResolutions.length > 0 && Boolean(basketStore?.setPhotoOptions);
 }
 }
 window.photosByElieCustomerRecovery?.ready();
+reportProductReady();
 })()).catch((error) => {
   const requestedCollectionKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
   const isPBEOwnerFailure = requestedCollectionKey === "pbe-owner";

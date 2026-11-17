@@ -985,7 +985,7 @@ const renderBasket = () => {
     const item = basketStore.read()[itemIndex];
     if (!item) return;
     const selectedOptions = selectedOptionsFor(itemIndex);
-    basketStore.updateOptions(itemIndex, selectedOptions);
+    basketStore.updateOptions(itemIndex, selectedOptions, { userInitiated: true });
     clearCheckoutState();
     scheduleRecentPurchaseCheck();
     status.textContent = selectedOptions.length

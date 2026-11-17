@@ -7,17 +7,54 @@
   );
   if (storefrontPaths.has(storefrontPath)) {
     window.photosByElieAnalytics = { enabled: () => false, track: () => {} };
-    if (window.location.origin !== 'https://photos-by-elie.com' || window.photosByElieMonitoringPreview
-      || navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+    const routeParams = new URLSearchParams(window.location.search || '');
+    const allowed = () => window.location.origin === 'https://photos-by-elie.com'
+      && !window.photosByElieMonitoringPreview && !navigator.webdriver
+      && !/bot|crawler|spider|headless|lighthouse|pagespeed|uptime|monitoring/i.test(navigator.userAgent || '')
+      && navigator.globalPrivacyControl !== true && navigator.doNotTrack !== '1' && window.doNotTrack !== '1'
+      && !document.body?.hasAttribute?.('data-owner-root')
+      && !document.body?.dataset?.ownerDetailMode
+      && routeParams.get('gallery')?.toLowerCase() !== 'pbe-owner' && routeParams.get('from') !== 'owner-review';
+    if (!allowed()) return;
+    // OFF unless the reviewed static artifact explicitly opts in after receiver adoption.
+    const funnelEnabled = document.currentScript?.dataset?.wstPbeFunnel === 'true';
+    const pending = [];
+    let productReady = false;
+    let beaconReady = false;
+    let beaconLoading = false;
+    let beaconFailed = false;
+    const transmitStage = (stage) => {
+      try { return window.WebSignals?.track?.('pbe_stage', { stage }) || false; } catch { return false; }
+    };
+    const sendStage = (stage) => {
+      if (!funnelEnabled || beaconFailed || !allowed() || !['product_ready', 'basket_add'].includes(stage)) return false;
+      if (stage === 'product_ready') {
+        if (storefrontPath !== '/photo.html' || productReady) return false;
+        productReady = true; // Latch before transport, including a reentrant transport stub.
+      }
+      if (beaconReady) return transmitStage(stage);
+      if (pending.length >= 50) return false;
+      pending.push(stage); // Bounded, page-local queue; never storage or a native session.
+      return true;
+    };
+    window.photosByElieAnalytics = { enabled: () => false, track: sendStage };
     const version = document.currentScript?.src
       ? new URL(document.currentScript.src).searchParams.get('v') : '';
     const versionQuery = version ? `?v=${encodeURIComponent(version)}` : '';
     const actions = document.createElement('script');
     actions.src = `/wst-actions.js${versionQuery}`;
     actions.onload = () => {
+      if (beaconLoading || !allowed()) return;
+      beaconLoading = true;
       const beacon = document.createElement('script');
       beacon.src = `/wst-beacon.js${versionQuery}`;
-      Object.assign(beacon.dataset, { wstEnabled: 'true', wstEndpoint: 'https://web-signals-collector.ec92009.workers.dev/v1/events', wstSite: 'photosbyelie', wstEnvironment: 'production', wstSessionless: 'true', wstConsent: 'not_required' });
+      Object.assign(beacon.dataset, { wstEnabled: 'true', wstEndpoint: 'https://web-signals-collector.ec92009.workers.dev/v1/events', wstSite: 'photosbyelie', wstEnvironment: 'production', wstSessionless: 'true', wstConsent: 'not_required', wstPbeFunnel: String(funnelEnabled) });
+      beacon.onload = () => {
+        if (beaconReady) return;
+        beaconReady = true;
+        for (const stage of pending.splice(0)) if (allowed()) transmitStage(stage);
+      };
+      beacon.onerror = () => { beaconFailed = true; pending.length = 0; };
       document.body.append(beacon);
     };
     document.body.append(actions);

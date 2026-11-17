@@ -11,7 +11,7 @@ function run({ origin = 'https://photos-by-elie.com', pathname = '/', gpc = fals
     currentScript: { src: `${origin}/analytics.js?v=321.0` },
     createElement: () => ({ dataset: {} }), body: { append: script => scripts.push(script) },
   };
-  vm.runInNewContext(code, { window, document, navigator: { globalPrivacyControl: gpc, doNotTrack: dnt }, Set, URL });
+  vm.runInNewContext(code, { window, document, navigator: { globalPrivacyControl: gpc, doNotTrack: dnt }, Set, URL, URLSearchParams });
   return { window, scripts };
 }
 test('approved storefront loads action map before sessionless beacon', () => {
@@ -68,7 +68,8 @@ test('the retained social fallback creates no session or traffic while disabled'
 test('order URLs expose no query or payment identifiers in configuration', () => {
   const { scripts } = run({ pathname: '/order.html' });
   scripts[0].onload();
-  assert.equal(Object.keys(scripts[1].dataset).length, 6);
+  assert.equal(Object.keys(scripts[1].dataset).length, 7);
+  assert.equal(scripts[1].dataset.wstPbeFunnel, 'false');
   assert.doesNotMatch(JSON.stringify(scripts), /session_id|order_id|buyerEmail/);
 });
 

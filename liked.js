@@ -168,7 +168,7 @@ const checkedLikedSelectionsFor = (itemIndex) => {
     .filter(Boolean);
 };
 
-const syncLikedSelectionToBasket = (itemIndex, { render = false } = {}) => {
+const syncLikedSelectionToBasket = (itemIndex, { render = false, userInitiated = false } = {}) => {
   const item = likedStore.read()[itemIndex];
   if (!item) return [];
   const selectedOptions = checkedLikedSelectionsFor(itemIndex);
@@ -177,7 +177,7 @@ const syncLikedSelectionToBasket = (itemIndex, { render = false } = {}) => {
     title: item.title,
     collection: item.collection,
     options: optionPayload(selectedOptions, item.photoId),
-  });
+  }, { userInitiated });
   if (render) {
     status.textContent = selectedOptions.length
         ? t("liked.added_to_basket", { title: item.title })
@@ -299,7 +299,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
       title: item.title,
       collection: item.collection,
       options: optionPayload([...checkedIds], item.photoId),
-    });
+    }, { userInitiated: true });
     changedCount += 1;
   });
 
@@ -430,7 +430,7 @@ const renderLiked = () => {
   });
 
   const syncItemOptions = (itemIndex) => {
-    syncLikedSelectionToBasket(itemIndex, { render: true });
+    syncLikedSelectionToBasket(itemIndex, { render: true, userInitiated: true });
   };
 
   const selectPrintProduct = (itemIndex, optionId) => {

@@ -109,24 +109,47 @@
     return normalized;
   };
 
-  const add = (item) => {
+  let selectionChanging = false;
+  /** Count only a durable new option from an explicit UI action, never restoration. */
+  const saveSelection = (items, photoId, before, userInitiated) => {
+    if (selectionChanging) return read();
+    selectionChanging = true;
+    try {
+      const result = write(items);
+      const previousIds = new Set((before.find((item) => item.photoId === photoId)?.options || []).map((option) => option.id));
+      const added = read().find((item) => item.photoId === photoId)?.options?.some((option) => !previousIds.has(option.id));
+      if (userInitiated && added && !window.photosByElieIsPublicHidden?.(photoById(photoId))) {
+        try { window.photosByElieAnalytics?.track?.('basket_add'); } catch { /* Tracking cannot fail a saved selection. */ }
+      }
+      return result;
+    } finally {
+      selectionChanging = false;
+    }
+  };
+
+  const add = (item, { userInitiated = false } = {}) => {
+    if (selectionChanging) return read();
     const options = normalizeOptions(item.options, item.photoId);
     if (!options.length) return read();
-    return write([...read(), { ...item, options }]);
+    const before = read();
+    return saveSelection([...before, { ...item, options }], item.photoId, before, userInitiated);
   };
 
-  const setPhotoOptions = (item) => {
+  const setPhotoOptions = (item, { userInitiated = false } = {}) => {
+    if (selectionChanging) return read();
     const options = normalizeOptions(item.options, item.photoId);
-    const items = read().filter((existing) => existing.photoId !== item.photoId);
-    if (!options.length) return write(items);
-    return write([...items, { ...item, options }]);
+    const before = read();
+    const items = before.filter((existing) => existing.photoId !== item.photoId);
+    return saveSelection(options.length ? [...items, { ...item, options }] : items, item.photoId, before, userInitiated);
   };
 
-  const updateOptions = (index, optionIds) => {
+  const updateOptions = (index, optionIds, { userInitiated = false } = {}) => {
+    if (selectionChanging) return read();
+    const before = read();
     const items = read();
     if (!items[index]) return items;
     items[index].options = normalizeOptions(optionIds.map((option) => typeof option === "string" ? { id: option } : option), items[index].photoId);
-    return write(items);
+    return saveSelection(items, items[index].photoId, before, userInitiated);
   };
 
   const remove = (index) => {

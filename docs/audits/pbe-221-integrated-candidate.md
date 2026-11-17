@@ -23,6 +23,7 @@ test inventory and gained the artifact and WST checks.
 | `e9cb93970ea96504f33e442dcb23cd577c9429cc` | `5a16c2532d5e0f21035d4a38b971b6071bbb8120` |
 | `60c365ca02134b9debad8fa960aa09f63c040ae8` | `f141e7464750694cd095eb953cbf27cfb53508b8` |
 | `25a5ac307096b0ada748ef742216addbbe17ee40` | `a730b095dbd8d03fa55dfea692985705a9a3c4e3` |
+| `735cd1171406a10400b03d5cc144f8f388e9a8d7` | `b7dff318c5c3f192db732b9ced399b6d6cd076a9` |
 
 Additional bounded integration commits contain native assertion maintenance,
 the release identity, deployed WST reconciliation, the native-zoom settings
@@ -131,6 +132,18 @@ Workers API references were checked against current Cloudflare documentation
 and `@cloudflare/workers-types@5.20261117.1`. Service binding RPC uses
 `WorkerEntrypoint` and its environment. [Cloudflare Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)
 
+## PBE-223 offline tool integration
+
+The parent-reviewed source-only tool at `735cd117` was cherry-picked with
+provenance. Its two Python source files are registered in the existing main
+Python test command once. The 24 synthetic report tests add no separate CI
+invocation. Both source paths and representative ignored CSV/JSON report paths
+are explicit negative probes, supplementing the existing forbidden scripts/tmp
+classes. A synthetic CLI export/report fixture under ignored `tmp/search-console/`
+exercises the normal private output path. Its files stay outside the staged site.
+Actual Search Console exports remain PBE-223 owner evidence and carry no new
+PBE-221 acceptance condition.
+
 ## Verification performed
 
 | Check | Observed result |
@@ -171,8 +184,8 @@ Python 3.14 and Python 3.12 passed. A separate diagnostic run at
 sets HTTP metadata from its actual configured address/port. A regression test
 raises on any reverse-DNS call. The original 10-second deadline, split-root
 identity, exact served bytes and tamper rejection remain. The temporary CI
-tracing step was removed after diagnosis. The Python suite now contains 490
-tests. Final CI and repeated gate results are recorded with the source identity.
+tracing step was removed after diagnosis. The DNS regression brought the Python suite to 490 tests. PBE-223 adds 24
+synthetic checks, bringing the integrated total to 514 tests. Final CI and repeated gate results are recorded with the source identity.
 
 ### Browser and local buyer receipts
 

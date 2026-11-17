@@ -4,6 +4,10 @@ import vm from 'node:vm';
 import test from 'node:test';
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
+test('Customer settings constrain height and scroll when native zoom reduces the viewport', () => {
+  assert.match(read('shared.css'), /\.site-settings-dialog\{\s*max-height:calc\(100dvh[^}]+overflow-y:auto;[^}]+overscroll-behavior:contain;/);
+});
+
 function themeHarness({ saved = {}, denied = false, quota = false, dark = false } = {}) {
   const values = new Map(Object.entries(saved));
   const events = new Map();

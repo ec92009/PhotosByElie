@@ -351,6 +351,11 @@ html[data-theme="dark"] .account-entry-action:not(.primary){
   backdrop-filter:blur(var(--glass-heavy-blur));
   -webkit-backdrop-filter:blur(var(--glass-heavy-blur));
 }
+.site-settings-dialog{
+  max-height:calc(100dvh - clamp(24px,4.8vw,56px) - clamp(52px,8dvh,84px));
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
 .site-account-dialog{
   width:min(430px,calc(100dvw - 24px));
   background:color-mix(in srgb,var(--surface) 88%,transparent);

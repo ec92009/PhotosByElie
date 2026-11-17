@@ -37,6 +37,39 @@ production adoption is authorized and verified. Website exclusions also leave
 the public Git repository and its historical copies accessible. Repository
 visibility and removal of historical copies require their own owner decision.
 
+## Manual adoption of an approved CI artifact
+
+`publish-public-customer.yml` is manual-only and runs from `main`. Before its
+first authorized use, change Pages from legacy branch publication to Actions,
+preserving the current domain, HTTPS and DNS, then integrate the approved
+workflow/source into `main`. Do not merge while legacy root publication remains
+active: that would publish the full repository again. Preparing or pushing a
+candidate branch does not authorize this switch or a workflow dispatch.
+
+The operator supplies the successful `public-customer-artifact.yml` run ID,
+full approved source SHA, and SHA-256 of that run's downloaded `receipt.json`.
+Before approval, compare its identity, validation result and every file hash
+with the local authoritative Owner-snapshot release receipt. Keep the local
+receipt and snapshot private. The CI receipt itself does not prove Owner
+eligibility. Record the approved run and both receipt fingerprints privately.
+
+The manual workflow checks run provenance, success and exact commit before
+checking out source. It downloads the named site and receipt from that run,
+checks the approved receipt fingerprint, regenerates only SEO comparison
+sources, and runs the existing exact-file package validator. It uploads the
+unchanged downloaded `site/` only. A separate dependent job receives Pages
+write/OIDC permission; the validation job has read-only permissions. The
+workflow does not rebuild a replacement release or publish on branch pushes.
+An expired/missing artifact or any mismatch stops publication. For rollback,
+select a retained sanitized artifact and its original successful run, source
+commit and approved receipt hash, then perform the same validation.
+
+This static workflow does not migrate or deploy the commerce Worker, enable
+analytics, or perform buyer/provider acceptance. Those remain separate steps
+in the approved rollout. GitHub's documented custom workflow contract is the
+basis for the separated upload/deployment jobs:
+[custom Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
 ## Artifact contents
 
 The artifact includes gallery, detail, basket, liked, order, campaign, policy,

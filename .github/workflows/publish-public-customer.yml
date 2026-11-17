@@ -1,0 +1,125 @@
+name: Publish approved public customer artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: Successful Public customer artifact run approved for publication
+        required: true
+        type: string
+      source_commit:
+        description: Approved full source SHA (must match the run and local Owner gate)
+        required: true
+        type: string
+      receipt_sha256:
+        description: Approved CI receipt SHA-256 after comparison with the local Owner gate
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Verify approved run provenance before checking out its source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_RUN: ${{ inputs.release_run_id }}
+          APPROVED_SHA: ${{ inputs.source_commit }}
+          APPROVED_RECEIPT: ${{ inputs.receipt_sha256 }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          run_id = os.environ['APPROVED_RUN']
+          sha = os.environ['APPROVED_SHA']
+          receipt = os.environ['APPROVED_RECEIPT']
+          if not re.fullmatch(r'[1-9][0-9]*', run_id):
+              raise SystemExit('Invalid run ID')
+          if not re.fullmatch(r'[0-9a-f]{40}', sha) or not re.fullmatch(r'[0-9a-f]{64}', receipt):
+              raise SystemExit('Full lowercase source and receipt hashes are required')
+          repository = 'ec92009/PhotosByElie'
+          if os.environ['GITHUB_REPOSITORY'] != repository:
+              raise SystemExit('Unexpected publishing repository')
+          run = json.loads(subprocess.check_output([
+              'gh', 'api', f'repos/{repository}/actions/runs/{run_id}'
+          ]))
+          if not (
+              run.get('head_sha') == sha
+              and run.get('status') == 'completed'
+              and run.get('conclusion') == 'success'
+              and run.get('event') in {'push', 'workflow_dispatch'}
+              and run.get('path') == '.github/workflows/public-customer-artifact.yml'
+              and (run.get('head_repository') or {}).get('full_name') == repository
+          ):
+              raise SystemExit('Run does not match the approved successful release gate')
+          print(f'Approved source {sha}, release run {run_id}')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: public-customer-${{ inputs.source_commit }}
+          path: tmp/approved-public-release/site
+          run-id: ${{ inputs.release_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: public-customer-receipt-${{ inputs.source_commit }}
+          path: tmp/approved-public-release
+          run-id: ${{ inputs.release_run_id }}
+          github-token: ${{ github.token }}
+      - name: Check the approved receipt fingerprint
+        env:
+          APPROVED_RECEIPT: ${{ inputs.receipt_sha256 }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          receipt = Path('tmp/approved-public-release/receipt.json')
+          if hashlib.sha256(receipt.read_bytes()).hexdigest() != os.environ['APPROVED_RECEIPT']:
+              raise SystemExit('Receipt differs from the owner-approved fingerprint')
+          PY
+      - run: npm ci
+      - name: Regenerate comparison sources and revalidate the downloaded package
+        run: |
+          node scripts/build_public_seo.mjs
+          python -m scripts.validate_public_artifact --output tmp/approved-public-release
+      - name: Upload only the verified site directory
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: tmp/approved-public-release/site
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish the verified artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

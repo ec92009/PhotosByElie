@@ -21,6 +21,9 @@ timelog, and generated Worker catalog. PBE-22's removed review JSON returned
 The new CI workflow builds and uploads the validated customer site and its
 receipt as separate candidate artifacts. It has read-only repository permission.
 All tests and artifact checks must succeed before either upload runs.
+The job uses a standard macOS runner because the existing checkout ZIP-delivery
+rehearsal calls Apple's `sips`. Its Python environment includes the repository's
+existing Pillow image-test dependency.
 
 Production adoption requires an authorized Pages publishing-source change to a
 custom Actions workflow that uploads only the checked `site/` directory and

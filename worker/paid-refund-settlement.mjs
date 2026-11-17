@@ -44,7 +44,7 @@ export function createPaidRefundSettlement({ database, assertReady, now }) {
   return {
     ensurePaidSettlementAuthority: async () => { await read(""); },
     refundOrderFor,
-    async beginPaidFulfillment(order) {
+    async beginPaidFulfillment(order, fence) {
       await read(order.id); // Also verifies migration 0018 before any preparation write.
       const values = identity(order), timestamp = now().toISOString();
       await run(primary().prepare(`INSERT INTO pbe_paid_order_settlements
@@ -56,8 +56,18 @@ export function createPaidRefundSettlement({ database, assertReady, now }) {
         ON CONFLICT(order_id) DO NOTHING`).bind(...values, timestamp, timestamp, order.id, order.id, order.id));
       const row = await read(order.id);
       if (row?.state === "refund") throw refundBlocked();
-      if (!row || row.state !== "preparing" || JSON.stringify(values) !== JSON.stringify([
+      if (!row || JSON.stringify(values) !== JSON.stringify([
         row.order_id,row.checkout_session_id,row.payment_intent_id,row.amount,row.currency])) throw conflict();
+      if (row.state === "ready") {
+        // A failed projection write must not strand a committed settlement. Keep
+        // the ready guard and require the same currently validated lifecycle fence.
+        let ready;
+        try {
+          ready = await primary().prepare(`SELECT fence_digest FROM pbe_lifecycle_fulfillments
+            WHERE order_id=? AND state='ready'`).bind(order.id).first();
+        } catch { throw unavailable(); }
+        if (!/^[a-f0-9]{64}$/.test(fence?.digest || "") || ready?.fence_digest !== fence.digest) throw conflict();
+      }
     },
     async reservePaidRefund(order, expectedRevision = 0) {
       await read(order.id);
@@ -69,15 +79,22 @@ export function createPaidRefundSettlement({ database, assertReady, now }) {
             (state='preparing' AND ?=1) OR (state='refund' AND (
               (json_extract(order_json,'$.refund.status') IN ('failed','canceled')
                 AND ?=json_extract(order_json,'$.refund.attempt')+1)
-              OR (json_extract(order_json,'$.refund.status')='unknown'
+              OR ((json_extract(order_json,'$.refund.status')='unknown'
+                OR (json_extract(order_json,'$.refund.status')='pending'
+                  AND json_extract(order_json,'$.refund.id') IS NULL
+                  AND json_extract(order_json,'$.refund.updatedAt')<=?))
                 AND ?=json_extract(order_json,'$.refund.attempt')
-                AND ?=json_extract(order_json,'$.refund.idempotencyKey')))))
+                AND ?=json_extract(order_json,'$.refund.idempotencyKey')
+                AND ?=json_extract(order_json,'$.refund.requestedAt')
+                AND ?=json_extract(order_json,'$.refund.reason')))))
           AND EXISTS (SELECT 1 FROM pbe_lifecycle_control WHERE control_id='global' AND state='ready' AND schema_version=4)
           AND NOT EXISTS (SELECT 1 FROM pbe_lifecycle_fulfillments WHERE order_id=? AND state='ready')
           AND NOT EXISTS (SELECT 1 FROM pbe_lifecycle_download_capabilities WHERE order_id=?)
           AND NOT EXISTS (SELECT 1 FROM pbe_lifecycle_email_dispatches WHERE order_id=?)`)
         .bind(JSON.stringify(order), now().toISOString(), ...values, expectedRevision,
-          order.refund.attempt, order.refund.attempt, order.refund.attempt, order.refund.idempotencyKey, order.id, order.id, order.id));
+          order.refund.attempt, order.refund.attempt, new Date(now().getTime() - 60_000).toISOString(),
+          order.refund.attempt, order.refund.idempotencyKey, order.refund.requestedAt, order.refund.reason,
+          order.id, order.id, order.id));
       if (Number(result?.meta?.changes) !== 1) throw conflict();
       return refundOrderFor(order.id);
     },

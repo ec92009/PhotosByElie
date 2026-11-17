@@ -6,8 +6,7 @@ import { refundProtectedOrderStore } from "./refund-protected-order-store.mjs";
 import { syntheticOrder, syntheticSession } from "./wst-funnel-fixture.mjs";
 
 /** Real settlement algorithms and disposable SQLite; no provider or real KV. */
-export async function refundAuthority(now = () => new Date()) {
-  const database = new TestD1();
+export async function refundAuthority(now = () => new Date(), database = new TestD1()) {
   const settlement = createD1LifecycleDenyStore({ database, now });
   const members = [{ canonicalAssetId: "asset-test", canonicalMediaId: "synthetic-photo", bindings: [
     { bucket: "public", objectKey: "expo/synthetic-photo_900.jpg" },
@@ -24,10 +23,9 @@ export function deferred() {
 }
 
 /** Deterministic seams around the real D1 reservation/readiness algorithms. */
-export async function refundHarness(t) {
-  const now = () => new Date("2026-11-17T13:00:00Z");
-  const { database, settlement } = await refundAuthority(now);
-  t.after(() => database.sqlite.close());
+export async function refundHarness(t, { now = () => new Date("2026-11-17T13:00:00Z"), database: suppliedDatabase } = {}) {
+  const { database, settlement } = await refundAuthority(now, suppliedDatabase);
+  if (!suppliedDatabase) t.after(() => database.sqlite.close());
   const order = syntheticOrder("synthetic", { items: [{ photoId: "synthetic-photo", products: [{ id: "jpg-1mp" }] }] });
   const session = syntheticSession(order, { payment_status: "paid", status: "complete" });
   const records = new Map([[order.id, structuredClone(order)]]);

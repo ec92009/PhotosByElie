@@ -205,18 +205,24 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time, settlement } =
     if (!settlement?.reservePaidRefund) throw refundAuthorityUnavailable();
     let order = await reconcile(orderId);
     const eligibility = eligibilityFor(order);
-    const unknownAge = now().getTime() - Date.parse(order.refund?.requestedAt || "");
-    // API v1 keys may be pruned after 24h. A stale unknown outcome needs
-    // provider reconciliation, never a potentially new refund under an old key.
-    const replayUnknown = order.refund?.status === "unknown" && unknownAge >= 0 && unknownAge < 23 * 60 * 60 * 1000;
-    if (replayUnknown) reason = order.refund.reason;
-    if (!eligibility.eligible && !replayUnknown) throw paidError(eligibility.reason, 409, "refund_not_allowed", publicRefund(order, eligibility));
+    const timestamp = now();
+    const attemptAge = timestamp.getTime() - Date.parse(order.refund?.requestedAt || "");
+    const handoffAge = timestamp.getTime() - Date.parse(order.refund?.updatedAt || "");
+    // A process may stop after reservation but before provider handoff. Allow
+    // confirmed recovery after a short lease, using exactly the original request.
+    // A still-running request remains safe through provider idempotency and CAS.
+    // API v1 keys may be pruned after 24h; never replay past the 23h safety bound.
+    const replay = attemptAge >= 0 && attemptAge < 23 * 60 * 60 * 1000
+      && (order.refund?.status === "unknown" || (order.refund?.status === "pending"
+        && !order.refund.id && handoffAge >= 60_000));
+    if (replay) reason = order.refund.reason;
+    if (!eligibility.eligible && !replay) throw paidError(eligibility.reason, 409, "refund_not_allowed", publicRefund(order, eligibility));
     const previous = await settlement.refundOrderFor(orderId);
 
     const priorAttempt = Number(order.refund?.attempt || 0);
     const attempt = order.refund?.status === "failed" || order.refund?.status === "canceled" ? priorAttempt + 1 : Math.max(1, priorAttempt);
-    const requestedAt = replayUnknown ? order.refund.requestedAt : now().toISOString();
-    const idempotencyKey = replayUnknown ? order.refund.idempotencyKey : `photosbyelie-refund-${order.id}-attempt-${attempt}`;
+    const requestedAt = replay ? order.refund.requestedAt : now().toISOString();
+    const idempotencyKey = replay ? order.refund.idempotencyKey : `photosbyelie-refund-${order.id}-attempt-${attempt}`;
     const deliveryState = deliveryStateFor(order);
     order = {
       ...order,
@@ -233,15 +239,17 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time, settlement } =
         attempt,
         idempotencyKey,
         requestedAt,
-        updatedAt: requestedAt,
+        updatedAt: timestamp.toISOString(),
         failure: null,
       },
-      updatedAt: requestedAt,
+      updatedAt: timestamp.toISOString(),
     };
     await settlement.reservePaidRefund(order, previous?.revision ?? 0);
-    await putOrder(order);
 
     try {
+      // Mirror failure is an interrupted handoff, not a permanently pending
+      // provider refund. Persist unknown under the same authoritative hold.
+      await putOrder(order);
       const refund = await createRefund({
         paymentIntentId: order.paymentIntentId,
         amount: Number(order.amountPaid),

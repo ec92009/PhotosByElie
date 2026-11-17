@@ -19,8 +19,8 @@ The existing fulfillment table's constrained states remain unchanged.
    preparing authority before any preparation KV write or renderer call.
 2. Before a provider refund request, `reservePaidRefund` atomically changes that
    exact identity from preparing to refund. Concurrent readiness, existing
-   capabilities/email claims, stale revisions, pending/successful refunds and
-   unknown legacy authority refuse reservation. A refused reservation makes no
+   capabilities/email claims, stale revisions, confirmed pending/successful refunds
+   and unknown legacy authority refuse reservation. A refused reservation makes no
    provider refund request.
 3. The existing ready transaction atomically marks the guard ready using D1
    triggers. If refund reserved first, ready insert/update, capability insert
@@ -30,6 +30,12 @@ The existing fulfillment table's constrained states remain unchanged.
    primary-backed query. A refund returns `refund_reserved` regardless of a
    stale KV status. Capabilities/downloads and email claims retain authoritative
    exclusion. Lifecycle restoration cannot revive a held order.
+
+A failed KV write after the ready transaction can resume fulfillment only when
+its validated payment identity and current lifecycle fence exactly match the
+existing ready settlement. The guard remains ready throughout recovery; no
+retry resets it to preparing or reopens pre-delivery refund eligibility. Missing,
+revoked or different-fence settlements refuse recovery.
 
 The new table is needed for a durable reservation before readiness and for
 revisioned refund evidence. The companion table and triggers avoid rebuilding
@@ -55,8 +61,21 @@ No failure releases the exclusion. A definitive provider rejection can retry
 with a new attempt/key. Network errors, 5xx responses and unavailable follow-up
 reads retain an unknown outcome. An explicitly confirmed unknown retry reuses
 the original attempt, key, reason and complete parameters within 23 hours;
-older or future-dated unknown attempts require provider reconciliation and do
-not make another refund request. Stripe API v1 can prune idempotency keys after
+older or future-dated attempts require provider reconciliation and do not make
+another refund request. A caught pre-provider KV mirror failure also records an
+unknown outcome in D1, retaining the hold even if the fallback KV write fails.
+
+A process interrupted after reservation may leave pending authority without a
+provider refund ID. Explicit confirmation can resume that same request after a
+60-second handoff lease, within the original 23-hour key lifetime. The CAS
+reservation validates the original attempt, key, requested time and reason,
+and renews the handoff timestamp without changing the original requested time.
+Confirmed provider-pending refunds are reconciled, never reissued. A long-running
+original request and a recovered request can overlap after the lease; provider
+idempotency with identical parameters and authoritative CAS preserve correctness.
+The lease limits overlapping handoffs; it is not the refund exclusion lock.
+
+ Stripe API v1 can prune idempotency keys after
 24 hours, so reusing a sufficiently old key is not proof of deduplication.
 [Stripe idempotent request contract](https://docs.stripe.com/api/idempotent_requests)
 
@@ -89,15 +108,19 @@ Tilbury dispatch remain intact. No receiver/WST source changes are included.
   ready-first refusal, read reconciliation and stale download/email projections.
 - `paid-refund-outcomes.test.mjs`: simultaneous reservations, pending duplicates,
   webhook/CAS races, terminal/partial monotonicity, rejection/unknown retry keys,
-  expired unknown attempts, legacy/missing authority and PBE-225 readiness.
+  expired attempts, interrupted handoff lease boundaries, failed KV recovery,
+  exact-identity/fence readiness replay, legacy/missing authority and PBE-225 readiness.
 - `paid-refund-runtime.test.mjs`: actual local workerd D1 parses the migration,
-  enforces the triggers against earlier ready SQL and verifies both winners.
+  enforces the triggers against earlier ready SQL, verifies both winners and
+  reproduces recovery after readiness, refund-mirror failure and interruption.
 - `worker-release-runtime.test.mjs`: actual combined class entrypoint preserves
   binding-only commerce/funnel RPCs, blocked unknown authority and Tilbury/PBE.
 
-The combined Worker gate passes 310 Node tests, 55 Python tests and the generated
-API contract check. The affected main Node suite passes 498 tests. Providers,
-KV-shaped stores and email sinks are synthetic; D1/SQLite databases are disposable.
+The v321.9 source passed its registered checks but independent review found two
+recovery regressions. The follow-up adds explicit fault-injection regressions to
+the existing required suites. Consult the parent release receipt for final test
+counts and source identity. Providers, KV-shaped stores and email sinks are
+synthetic; D1/SQLite databases are disposable.
 
 ## Parent rollout and rollback contract
 

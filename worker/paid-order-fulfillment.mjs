@@ -157,7 +157,7 @@ export const createPaidOrderFulfillment = ({
       paidAt,
       updatedAt: paidAt,
     };
-    if (lifecycleFence?.beginPaidFulfillment) await lifecycleFence.beginPaidFulfillment(preparing);
+    if (lifecycleFence?.beginPaidFulfillment) await lifecycleFence.beginPaidFulfillment(preparing, fulfillmentFence);
     else if (!allowUnsettledMock) throw refundAuthorityUnavailable();
     await putOrder(preparing);
 

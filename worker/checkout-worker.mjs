@@ -8,6 +8,7 @@ import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
 import { createPaidOrderFulfillment } from "./paid-order-fulfillment.mjs";
+import { createPaidOrderRefund } from "./paid-order-refund.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -985,6 +986,12 @@ const publicOrder = (order) => ({
       message: order.deliveryEmail.error.message || "Delivery email could not be sent.",
     } : null,
   } : null,
+  refund: order.refund ? {
+    status: order.refund.status || "unknown",
+    amount: Number(order.refund.amount || 0),
+    currency: order.refund.currency || order.currency,
+    updatedAt: order.refund.updatedAt || null,
+  } : null,
   createdAt: order.createdAt,
   paidAt: order.paidAt || null,
   updatedAt: order.updatedAt,
@@ -1463,6 +1470,11 @@ export const createPhotosByElieWorker = ({
   });
   const reconcileFulfillmentSettlement = paidOrderFulfillment.reconcileOrder;
   const markOrderPaidAndFulfill = paidOrderFulfillment.fulfillPaidSession;
+  const paidOrderRefund = createPaidOrderRefund({
+    orderStore: store,
+    stripe,
+    time: { now },
+  });
 
   const recordAnalyticsEvents = async (request) => {
     const payload = await parseJson(request);
@@ -1897,6 +1909,14 @@ export const createPhotosByElieWorker = ({
     } catch (error) {
       return errorJson(400, "invalid_webhook_signature", error.message);
     }
+    if (["refund.created", "refund.updated", "refund.failed"].includes(event.type)) {
+      try {
+        const order = await paidOrderRefund.applyRefundEvent(event.data.object);
+        return json({ received: true, ...(order ? { order: publicOrder(order) } : { ignored: true }) });
+      } catch (error) {
+        return errorJson(error.status || 500, error.code || "refund_webhook_failed", error.message);
+      }
+    }
     if (event.type !== "checkout.session.completed") {
       return json({ received: true, ignored: true, type: event.type });
     }
@@ -1906,6 +1926,19 @@ export const createPhotosByElieWorker = ({
     } catch (error) {
       return errorJson(error.status || 500, error.code || "webhook_failed", error.message);
     }
+  };
+
+  const previewOwnerOrderRefund = async (request, orderId) => {
+    await requireActiveBackstageDeviceSession(request);
+    const refund = await paidOrderRefund.preview(orderId);
+    return credentialedJson(request, { refund });
+  };
+
+  const requestOwnerOrderRefund = async (request, orderId) => {
+    await requireActiveBackstageDeviceSession(request);
+    const payload = await parseJson(request);
+    const refund = await paidOrderRefund.requestRefund(orderId, payload);
+    return credentialedJson(request, { refund });
   };
 
   const mockPay = async (request) => {
@@ -4149,6 +4182,9 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const resendEmailMatch = path.match(/^\/orders\/([^/]+)\/resend-email$/);
       if (request.method === "POST" && resendEmailMatch) return await resendReadyEmail(request, decodeURIComponent(resendEmailMatch[1]));
+      const ownerRefundMatch = path.match(/^\/owner\/orders\/([^/]+)\/refund$/);
+      if (request.method === "GET" && ownerRefundMatch) return await previewOwnerOrderRefund(request, decodeURIComponent(ownerRefundMatch[1]));
+      if (request.method === "POST" && ownerRefundMatch) return await requestOwnerOrderRefund(request, decodeURIComponent(ownerRefundMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);
       if (request.method === "GET" && orderMatch) return await getOrder(request, decodeURIComponent(orderMatch[1]));
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);

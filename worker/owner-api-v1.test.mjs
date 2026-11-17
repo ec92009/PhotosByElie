@@ -29,6 +29,10 @@ test("Owner API v1 exposes explicit compatibility routes", () => {
     "/api/owner/devices/max%20backstage/revoke"
   );
   assert.equal(
+    resolveOwnerApiV1Route("/api/v1/orders/PBE-TEST/refund"),
+    "/api/owner/orders/PBE-TEST/refund"
+  );
+  assert.equal(
     resolveOwnerApiV1Route("/api/v1/pbe-owner/sessions/session%201/close"),
     "/api/owner/pbe-sessions/session%201/close"
   );

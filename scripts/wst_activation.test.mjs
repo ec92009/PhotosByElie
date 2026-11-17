@@ -28,6 +28,43 @@ test('approved storefront loads action map before sessionless beacon', () => {
 test('local, foreign, preview, GPC and DNT send nothing', () => {
   for (const config of [{ origin: 'http://127.0.0.1:8099' }, { origin: 'https://example.com' }, { preview: true }, { gpc: true }, { dnt: '1' }]) assert.equal(run(config).scripts.length, 0);
 });
+
+test('the retained social fallback creates no session or traffic while disabled', () => {
+  const social = ({ origin = 'https://photos-by-elie.com', preview = false, gpc = false, dnt = '' } = {}) => {
+    const payloads = [];
+    const sessions = new Map();
+    const window = {
+      location: new URL('/social.html', origin), photosByElieMonitoringPreview: preview,
+      photosByElieMediaConfig: { analyticsWorkerBaseUrl: 'https://worker.example.test' },
+      addEventListener() {},
+    };
+    const document = { body: { hasAttribute: () => false }, querySelector: () => null, addEventListener() {} };
+    vm.runInNewContext(code, {
+      window, document, URL, URLSearchParams, Set,
+      navigator: { globalPrivacyControl: gpc, doNotTrack: dnt, sendBeacon: (url, body) => { payloads.push({ url, body }); return true; } },
+      sessionStorage: { getItem: key => sessions.get(key), setItem: (key, value) => sessions.set(key, value) },
+      crypto: { randomUUID: () => 'retained-native-session' },
+      Blob: class { constructor(parts) { this.text = parts.join(''); } },
+    });
+    window.photosByElieAnalytics.track('basket_change');
+    return { window, sessions, payloads };
+  };
+  for (const config of [
+    { origin: 'http://localhost:8000' }, { origin: 'http://127.0.0.1:8000' },
+    { origin: 'http://[::1]:8931' }, { preview: true }, { gpc: true }, { dnt: '1' },
+  ]) {
+    const result = social(config);
+    assert.equal(result.window.photosByElieAnalytics.enabled(), false);
+    assert.equal(result.sessions.size, 0);
+    assert.equal(result.payloads.length, 0);
+  }
+  const deployed = social();
+  assert.equal(deployed.window.photosByElieAnalytics.enabled(), true);
+  assert.equal(deployed.sessions.size, 1);
+  assert.equal(deployed.payloads.length, 2);
+  assert.equal(JSON.parse(deployed.payloads[0].body.text).events[0].event, 'page_view');
+  assert.equal(JSON.parse(deployed.payloads[1].body.text).events[0].event, 'basket_change');
+});
 test('order URLs expose no query or payment identifiers in configuration', () => {
   const { scripts } = run({ pathname: '/order.html' });
   scripts[0].onload();

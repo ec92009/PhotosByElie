@@ -23,7 +23,7 @@
     document.body.append(actions);
     return;
   }
-  const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+  const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
   const OWNER_PATHS = /\/(?:owner|owner-review)\.html$/i;
   const CALLBACK_PATHS = /\/(?:etsy|instagram)-callback\.html$/i;
   const MAX_EVENTS = 20;
@@ -44,6 +44,7 @@
 
   const shouldDisable = () => (
     isLocal()
+    || window.photosByElieMonitoringPreview
     || OWNER_PATHS.test(window.location.pathname)
     || CALLBACK_PATHS.test(window.location.pathname)
     || document.body?.hasAttribute("data-real-estate")
@@ -122,7 +123,10 @@
     }).catch(() => {});
   };
 
-  const track = (name, data = {}) => postEvents([normalizeEvent(name, data)]);
+  const track = (name, data = {}) => {
+    if (!enabled()) return;
+    postEvents([normalizeEvent(name, data)]);
+  };
 
   const number = (value) => {
     const parsed = Number(value);

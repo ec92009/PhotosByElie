@@ -220,6 +220,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
             )
             bootstrap_path = root / "host-bootstrap.json"
             process: subprocess.Popen[str] | None = None
+            host_output = tempfile.TemporaryFile(mode="w+t", encoding="utf-8")
             try:
                 verification = materialize_runtime(repo_root, runtime_root, "HEAD")
                 identity = checkout_identity(runtime_root)
@@ -251,16 +252,20 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     cwd=data_root,
                     env=environment,
                     text=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=host_output,
+                    stderr=subprocess.STDOUT,
                 )
                 deadline = time.monotonic() + 10
                 while not bootstrap_path.exists() and time.monotonic() < deadline:
                     if process.poll() is not None:
-                        stdout, stderr = process.communicate(timeout=1)
-                        self.fail(f"Split-root host stopped early: {stderr or stdout}")
+                        host_output.seek(0)
+                        self.fail(f"Split-root host stopped early: {host_output.read()}")
                     time.sleep(0.05)
-                self.assertTrue(bootstrap_path.exists(), "Split-root host did not publish readiness")
+                host_output.seek(0)
+                self.assertTrue(
+                    bootstrap_path.exists(),
+                    f"Split-root host did not publish readiness: {host_output.read()}",
+                )
                 descriptor = json.loads(bootstrap_path.read_text(encoding="utf-8"))
                 self.assertEqual(descriptor["checkoutIdentity"], identity)
                 with urlopen(
@@ -289,6 +294,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait(timeout=5)
+                host_output.close()
                 if runtime_root.exists():
                     for path in sorted(
                         [runtime_root, *runtime_root.rglob("*")],

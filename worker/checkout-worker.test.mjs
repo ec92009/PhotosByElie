@@ -3628,6 +3628,74 @@ test("authoritative fulfillment settlement repairs a ready KV projection after a
   assert.equal(retained.deliveryError.lifecycleCode, "paid_asset_revoked");
 });
 
+test("buyer recovery, email resend and paid replay respect authoritative settlement holds", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const emailClient = createFakeEmailClient();
+  const delivery = createPerFileTestDelivery();
+  let settlementState = null;
+  let deliveryCalls = 0;
+  const worker = createPhotosByElieWorker({
+    catalog, randomUUID, store, stripe, emailClient,
+    lifecycleDenyStore: {
+      ...allowLifecycleFor(),
+      fulfillmentFor: async () => {
+        if (settlementState === "unavailable") {
+          throw Object.assign(new Error("Lifecycle authority unavailable"), { status: 503, code: "lifecycle_authority_unavailable" });
+        }
+        return settlementState && { state: settlementState, lifecycleOperationId: "op-held" };
+      },
+    },
+    delivery: {
+      ...delivery,
+      createDelivery: async (order) => {
+        deliveryCalls += 1;
+        return delivery.createDelivery(order);
+      },
+    },
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId: firstDeliverablePhotoId(catalog), options: [{ id: "full" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+  const event = stripe.paidEventForSession(checkout.checkout.sessionId);
+  const replay = () => worker.fetch(jsonRequest("https://worker.test/stripe-webhook", event, {
+    "x-mock-stripe-signature": stripe.signatureForPayload(),
+  }));
+  assert.equal((await replay()).status, 200);
+  const ready = await store.getOrder(checkout.order.id);
+  assert.equal(emailClient.sent.length, 1);
+
+  for (const state of ["blocked_pending_lifecycle", "unavailable"]) {
+    settlementState = state;
+    const responses = [
+      await worker.fetch(new Request(`https://worker.test/orders/${ready.id}?email=buyer%40example.com`)),
+      await worker.fetch(new Request(`https://worker.test/orders/by-session/${checkout.checkout.sessionId}?email=buyer%40example.com`)),
+      await worker.fetch(jsonRequest(`https://worker.test/orders/${ready.id}/resend-email`, { email: "buyer@example.com" })),
+      await replay(),
+    ];
+    for (const response of responses) {
+      assert.equal(response.status, state === "unavailable" ? 503 : 409);
+      const body = await response.json();
+      assert.equal(body.error.code, state === "unavailable" ? "lifecycle_authority_unavailable" : "paid_asset_lifecycle_pending");
+      assert.equal(body.order, undefined);
+    }
+    assert.equal(deliveryCalls, 1);
+    assert.equal(emailClient.sent.length, 1);
+    assert.deepEqual(await store.getOrder(ready.id), ready, "a reversible hold must not rewrite the ready projection");
+  }
+  settlementState = null;
+  const resumed = await replay();
+  assert.equal(resumed.status, 200);
+  assert.equal((await resumed.json()).order.status, "ready");
+  assert.equal(deliveryCalls, 1);
+  assert.equal(emailClient.sent.length, 1);
+});
+
 test("paid checkout sends per-purchased-item delivery email links", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();

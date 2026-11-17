@@ -35,19 +35,23 @@ const paidSession = (overrides = {}) => ({
   ...overrides,
 });
 
-const harness = ({ order = pendingOrder(), delivery, lifecycleFence = {} } = {}) => {
+const harness = ({ order = pendingOrder(), delivery, lifecycleFence = {}, onPutOrder, onPutDownload, onEmail } = {}) => {
   const orders = new Map([[order.id, structuredClone(order)]]);
+  const writes = [];
   const downloads = [];
   const emails = [];
   const analytics = [];
   const orderStore = {
     getOrder: async (id) => structuredClone(orders.get(id) || null),
     putOrder: async (next) => {
+      writes.push(structuredClone(next));
       orders.set(next.id, structuredClone(next));
+      await onPutOrder?.(next);
       return next;
     },
     putDownload: async (record) => {
       downloads.push(structuredClone(record));
+      await onPutDownload?.(record);
       return record;
     },
   };
@@ -67,13 +71,14 @@ const harness = ({ order = pendingOrder(), delivery, lifecycleFence = {} } = {})
       readyAt: fixedNow().toISOString(),
     }),
   };
-  const fulfillment = createPaidOrderFulfillment({
+  const dependencies = {
     orderStore,
     deliveryRenderer,
     lifecycleFence,
     email: {
       sendReady: async (ready) => {
         emails.push(ready.id);
+        await onEmail?.(ready);
         return ready;
       },
     },
@@ -82,8 +87,9 @@ const harness = ({ order = pendingOrder(), delivery, lifecycleFence = {} } = {})
     downloadPolicy: () => ({ expiresAt: "2026-10-04T19:00:00.000Z", downloadLimit: 100 }),
     applyDownloadPolicy: (file, policy) => ({ ...file, ...policy }),
     mediaIdsForOrder: (target) => target.items.map((item) => item.photoId),
-  });
-  return { fulfillment, orders, downloads, emails, analytics };
+  };
+  const fulfillment = createPaidOrderFulfillment(dependencies);
+  return { fulfillment, dependencies, orders, writes, downloads, emails, analytics };
 };
 
 test("ready paid-session replay is idempotent", async () => {
@@ -180,6 +186,203 @@ test("replaying the same paid session recovers delivery_failed to ready without 
   assert.equal(recovered.deliveryError, undefined);
   assert.equal(orders.get(recovered.id).status, "ready");
   assert.equal(analytics.filter((event) => event.event === "payment_completed").length, 1);
+});
+
+test("invalid paid-session identity, status, amount and currency have no fulfillment side effects", async (t) => {
+  const cases = [
+    [{ metadata: {} }, "missing_order_id", 400],
+    [{ metadata: { order_id: "other-order" } }, "unknown_order", 404],
+    [{ id: "other-session" }, "checkout_session_mismatch", 409],
+    [{ payment_status: "unpaid" }, "payment_not_paid", 409],
+    [{ amount_total: 1599 }, "amount_mismatch", 409],
+    [{ amount_total: "not-a-number" }, "amount_mismatch", 409],
+    [{ currency: "eur" }, "amount_mismatch", 409],
+  ];
+  for (const [overrides, code, status] of cases) {
+    await t.test(code + ": " + JSON.stringify(overrides), async () => {
+      const h = harness({
+        delivery: { createDelivery: async () => assert.fail("invalid session must not render") },
+        lifecycleFence: { fulfillmentFor: async () => assert.fail("invalid session must not reach settlement") },
+      });
+      await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession(overrides)), { code, status });
+      assert.deepEqual(h.orders.get("PBE-TEST-ORDER"), pendingOrder());
+      for (const records of [h.writes, h.downloads, h.emails, h.analytics]) assert.deepEqual(records, []);
+    });
+  }
+});
+
+test("ready replay still validates the paid amount before the email handoff", async () => {
+  const h = harness({ order: pendingOrder({ status: "ready" }) });
+  await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession({ amount_total: 9999 })), { code: "amount_mismatch" });
+  assert.deepEqual(h.emails, []);
+  assert.deepEqual(h.writes, []);
+});
+
+test("client-reference fallback and uppercase Stripe currency preserve the stored buyer when email is absent", async () => {
+  const h = harness();
+  const ready = await h.fulfillment.fulfillPaidSession(paidSession({
+    metadata: {}, client_reference_id: "PBE-TEST-ORDER", currency: "USD", customer_details: {},
+  }));
+  assert.equal(ready.status, "ready");
+  assert.equal(ready.buyerEmail, "buyer@example.com");
+  assert.equal(ready.amountPaid, 1600);
+});
+
+test("settlement holds and unavailable authority stop pending and ready replays without writes", async (t) => {
+  for (const orderStatus of ["pending_payment", "ready"]) {
+    for (const unavailable of [false, true]) {
+      await t.test(`${orderStatus}, unavailable=${unavailable}`, async () => {
+        const order = pendingOrder({ status: orderStatus });
+        const h = harness({
+          order,
+          delivery: { createDelivery: async () => assert.fail("held order must not render") },
+          lifecycleFence: { fulfillmentFor: async () => {
+            if (unavailable) throw Object.assign(new Error("Authority unavailable"), { status: 503, code: "lifecycle_authority_unavailable" });
+            return { state: "blocked_pending_lifecycle", lifecycleOperationId: "op-held" };
+          } },
+        });
+        await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), {
+          code: unavailable ? "lifecycle_authority_unavailable" : "paid_asset_lifecycle_pending",
+          status: unavailable ? 503 : 409,
+        });
+        assert.deepEqual(h.orders.get(order.id), order);
+        for (const records of [h.writes, h.downloads, h.emails, h.analytics]) assert.deepEqual(records, []);
+      });
+    }
+  }
+});
+
+test("authoritative refund review repairs a stale ready projection and remains idempotent", async () => {
+  const h = harness({
+    order: pendingOrder({ status: "ready", delivery: { files: [{ token: "old-token" }] } }),
+    lifecycleFence: { fulfillmentFor: async () => ({ state: "manual_refund_review", lifecycleOperationId: "op-revoked" }) },
+  });
+  for (let replay = 0; replay < 2; replay += 1) {
+    await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), { code: "paid_asset_revoked", status: 409 });
+  }
+  const blocked = h.orders.get("PBE-TEST-ORDER");
+  assert.equal(blocked.status, "manual_refund_review");
+  assert.equal(blocked.delivery, null);
+  assert.equal(h.writes.length, 1);
+  assert.deepEqual(h.downloads, []);
+  assert.deepEqual(h.emails, []);
+  assert.deepEqual(h.analytics, []);
+});
+
+test("render and commit fence changes cannot mint capabilities or notify the buyer", async (t) => {
+  for (const phase of ["fulfillment:after-render", "fulfillment:before-ready-commit", "commit"]) {
+    await t.test(phase, async () => {
+      const fence = { digest: "original-fence" };
+      const changed = () => { throw Object.assign(new Error("Lifecycle revision changed"), { code: "lifecycle_fence_changed" }); };
+      const h = harness({ lifecycleFence: {
+        assertAllowed: async (ids, context, expectedFence) => {
+          assert.deepEqual(ids, ["001-photo"]);
+          if (context !== "fulfillment:before-prepare") assert.equal(expectedFence, fence);
+          if (context === phase) changed();
+          return fence;
+        },
+        commitFulfillmentReady: async ({ mediaIds, fence: committedFence }) => {
+          assert.deepEqual(mediaIds, ["001-photo"]);
+          assert.equal(committedFence, fence);
+          if (phase === "commit") changed();
+          else assert.fail("revocation must precede commit");
+        },
+      } });
+      await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), { code: "paid_asset_revoked", status: 409 });
+      assert.equal(h.orders.get("PBE-TEST-ORDER").status, "manual_refund_review");
+      assert.equal(h.orders.get("PBE-TEST-ORDER").delivery, null);
+      assert.deepEqual(h.downloads, []);
+      assert.deepEqual(h.emails, []);
+      assert.deepEqual(h.analytics, []);
+    });
+  }
+});
+
+test("a deny armed during the ready projection preserves the hold without capabilities", async () => {
+  let state = null;
+  const h = harness({
+    lifecycleFence: {
+      assertAllowed: async () => ({ digest: "fence" }),
+      commitFulfillmentReady: async () => { state = "ready"; },
+      fulfillmentFor: async () => state && ({ state }),
+      authorizeDownloadCapability: async () => assert.fail("held settlement must not authorize"),
+    },
+    onPutOrder: async (order) => {
+      if (order.lifecycleSettlementBound) state = "blocked_pending_lifecycle";
+    },
+  });
+  await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), { code: "paid_asset_lifecycle_pending" });
+  const held = h.orders.get("PBE-TEST-ORDER");
+  assert.equal(held.status, "preparing");
+  assert.equal(held.delivery, null);
+  assert.deepEqual(h.downloads, []);
+  assert.deepEqual(h.emails, []);
+});
+
+test("revocation between per-file writes stops later capabilities and buyer notification", async () => {
+  let state = null;
+  const authorized = [];
+  const h = harness({
+    delivery: { createDelivery: async () => ({ files: ["first", "second"].map((token) => ({ token, photoId: "001-photo" })) }) },
+    lifecycleFence: {
+      assertAllowed: async () => ({ digest: "fence" }),
+      commitFulfillmentReady: async () => { state = "ready"; },
+      fulfillmentFor: async () => state && ({ state }),
+      authorizeDownloadCapability: async ({ token }) => authorized.push(token),
+    },
+    onPutDownload: async () => { state = "manual_refund_review"; },
+  });
+  await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), { code: "paid_asset_revoked" });
+  assert.deepEqual(authorized, ["first"]);
+  assert.deepEqual(h.downloads.map((record) => record.token), ["first"]);
+  assert.equal(h.orders.get("PBE-TEST-ORDER").status, "manual_refund_review");
+  assert.equal(h.orders.get("PBE-TEST-ORDER").delivery, null);
+  assert.deepEqual(h.emails, []);
+  assert.deepEqual(h.analytics, []);
+});
+
+test("post-email settlement revocation cannot return ready or record payment-completed analytics", async () => {
+  let state = null;
+  const h = harness({
+    lifecycleFence: {
+      assertAllowed: async () => ({ digest: "fence" }),
+      commitFulfillmentReady: async () => { state = "ready"; },
+      fulfillmentFor: async () => state && ({ state }),
+      authorizeDownloadCapability: async () => {},
+    },
+    onEmail: async () => { state = "manual_refund_review"; },
+  });
+  await assert.rejects(h.fulfillment.fulfillPaidSession(paidSession()), { code: "paid_asset_revoked" });
+  assert.equal(h.emails.length, 1, "an already-claimed provider handoff cannot be recalled");
+  assert.equal(h.orders.get("PBE-TEST-ORDER").status, "manual_refund_review");
+  assert.deepEqual(h.analytics, []);
+});
+
+test("legacy archive capabilities keep the same canonical media and download policy", async () => {
+  const h = harness({ delivery: { createDelivery: async () => ({
+    token: "archive-token", zipKey: "private/order.zip", downloadUrl: "/download/archive-token", items: [],
+  }) } });
+  const ready = await h.fulfillment.fulfillPaidSession(paidSession());
+  assert.equal(ready.delivery.downloadUrl, "/download/archive-token");
+  assert.equal(h.downloads.length, 1);
+  assert.deepEqual(h.downloads[0].canonicalMediaIds, ["001-photo"]);
+  assert.equal(h.downloads[0].expiresAt, "2026-10-04T19:00:00.000Z");
+  assert.equal(h.downloads[0].downloadLimit, 100);
+});
+
+test("missing mandatory dependencies fail at construction before processing payments", () => {
+  const { dependencies } = harness();
+  const required = [
+    ["orderStore", "getOrder"], ["orderStore", "putOrder"], ["orderStore", "putDownload"],
+    ["deliveryRenderer", "createDelivery"], ["email", "sendReady"], ["analytics", "record"], ["time", "now"],
+    ["downloadPolicy"], ["applyDownloadPolicy"], ["mediaIdsForOrder"],
+  ];
+  for (const [name, method] of required) {
+    const incomplete = { ...dependencies, [name]: method ? { ...dependencies[name], [method]: null } : null };
+    assert.throws(() => createPaidOrderFulfillment(incomplete), {
+      name: "TypeError", message: `createPaidOrderFulfillment requires ${name}${method ? "." + method : ""}.`,
+    });
+  }
 });
 
 test("revenue module stays within its explicit dependency and transport boundaries", () => {

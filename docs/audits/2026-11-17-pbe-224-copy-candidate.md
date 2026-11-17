@@ -103,3 +103,7 @@ Browser rendering, mobile geometry, settings persistence in an actual browser,
 email-client launch, and deployed purchase behavior require parent acceptance.
 The synthetic source checks supply local implementation evidence. The parent
 owns the integrated version, release checks, deployment, and public receipts.
+
+## Parent review clarification
+
+French and Spanish explicitly describe the right to print and use the photo personally, rather than saying printing itself is included. This preserves the existing license and avoids implying a physical print service. The parent reran the same 61-test focused suite after this clarification.

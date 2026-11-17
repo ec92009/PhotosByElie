@@ -425,8 +425,8 @@ test("the download offer renders all languages and preserves purchase and permis
   vm.runInContext(`${languageHandler}\nglobalThis.renderLanguage = setLanguage;`, context);
   const facts = {
     en: [/USD 8/, /file sizes available/, /After payment/, /Personal print and personal web use/, /printing yourself/, /written approval/],
-    fr: [/8 USD/, /tailles de fichier disponibles/, /Après paiement/, /à titre personnel/, /vous-même l’impression/, /autorisation écrite/],
-    es: [/8 USD/, /tamaños de archivo disponibles/, /Tras el pago/, /uso web personales/, /Tú organizas/, /por escrito/],
+    fr: [/8 USD/, /tailles de fichier disponibles/, /Après paiement/, /Le droit d’imprimer la photo/, /à titre personnel/, /vous-même l’impression/, /autorisation écrite/],
+    es: [/8 USD/, /tamaños de archivo disponibles/, /Tras el pago/, /el derecho a imprimir la foto/, /con fines personales/, /Tú organizas/, /por escrito/],
   };
   for (const language of ["fr", "es", "en", "fr"]) {
     context.renderLanguage(language);

@@ -1,3 +1,5 @@
+import { preparePublicPreviewRegistration } from "./public-preview-registration-plan.mjs";
+
 const SCHEMA_VERSION = 4;
 const CONTROL_ID = "global";
 const MAX_BATCH = 100;
@@ -364,6 +366,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
   };
 
   const reconcileManifest = async ({
+    prepareOnly = false,
     repairId,
     actorId,
     previousActivationId,
@@ -378,6 +381,16 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     seedDigest,
     items,
   }) => {
+    if (typeof prepareOnly !== "boolean") {
+      throw lifecycleError("lifecycle_reconciliation_invalid", "prepareOnly must be a boolean.", 400);
+    }
+    if (prepareOnly) {
+      return preparePublicPreviewRegistration({ repairId, actorId, items }, {
+        database, normalizeMembers, manifestRows: durableManifestRows,
+        summarizeRows: manifestSummaryForRows, memberRows: manifestRowsForMembers,
+        digest: canonicalDigestFor,
+      });
+    }
     const control = await database.prepare(
       "SELECT control_id, schema_version, state, fencing_epoch FROM pbe_lifecycle_control WHERE control_id = ?"
     ).bind(CONTROL_ID).first();
@@ -532,8 +545,13 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     const previousEpoch = Number(control.fencing_epoch);
     const newEpoch = previousEpoch + 1;
     const statements = [
-      database.prepare(`UPDATE pbe_lifecycle_control SET state = 'blocked', fencing_epoch = ?, updated_at = ?
-        WHERE control_id = ? AND state = 'ready' AND fencing_epoch = ?`).bind(newEpoch, timestamp, CONTROL_ID, previousEpoch),
+      // A lost compare-and-swap must abort the entire D1 transaction, not merely
+      // affect zero rows while the later INSERTs still commit. NOT NULL is the
+      // atomic assertion; D1 batch rolls every statement back on its violation.
+      database.prepare(`UPDATE pbe_lifecycle_control SET state = CASE
+          WHEN state = 'ready' AND fencing_epoch = ? THEN 'blocked' ELSE NULL END,
+        fencing_epoch = ?, updated_at = ? WHERE control_id = ?`)
+        .bind(previousEpoch, newEpoch, timestamp, CONTROL_ID),
     ];
     if (!existingSeed) {
       statements.push(database.prepare(`INSERT INTO pbe_lifecycle_seed_batches

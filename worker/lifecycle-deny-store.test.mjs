@@ -123,6 +123,91 @@ const publicMember = (suffix = "one") => ({ ...member(suffix), bindings: [
   { bucket: "public", objectKey: `expo/${suffix}_1800.jpg` },
 ] });
 
+const registrationMember = (suffix = "new") => ({ ...publicMember(suffix), canonicalMediaId: suffix });
+
+test("connector preparation is read-only, hides unrelated bindings and recovers an applied envelope", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database, [{ ...member(), bindings: [
+    ...member().bindings, { bucket: "private", objectKey: "masters/secret.jpg" },
+  ] }]);
+  const input = { prepareOnly: true, actorId: "connector", repairId: "native-run-one", items: [registrationMember()] };
+  const before = database.sqlite.prepare("SELECT total_changes() n").get().n;
+  const plan = await store.reconcileManifest(input);
+  assert.equal(plan.readOnly, true);
+  assert.equal(plan.state, "prepared");
+  assert.doesNotMatch(JSON.stringify(plan), /secret|masters|gallery\/one/);
+  assert.equal(database.sqlite.prepare("SELECT total_changes() n").get().n, before);
+  assert.deepEqual(await store.reconcileManifest(input), plan);
+  const receipt = await store.reconcileManifest({ ...plan.envelope, actorId: "connector" });
+  assert.equal(receipt.state, "applied");
+  const replay = await store.reconcileManifest(input);
+  assert.equal(replay.state, "applied");
+  assert.deepEqual(replay.envelope, plan.envelope);
+  assert.deepEqual(await store.reconcileManifest({ ...replay.envelope, actorId: "connector" }), receipt);
+  assert.equal((await store.verifyPublicPreviews({ items: input.items })).items[0].allowed, true);
+  await assert.rejects(store.reconcileManifest({ ...input, items: [registrationMember("different")] }),
+    { code: "public_preview_registration_conflict" });
+});
+
+test("preparation rejects private, oversized, aliased, owned and denied registration", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database, [registrationMember("old")]);
+  const input = { prepareOnly: true, actorId: "connector", repairId: "bounded", items: [registrationMember()] };
+  for (const changes of [
+    { actorId: "" }, { repairId: "../unsafe" }, { prepareOnly: "true" },
+    { items: [] }, { items: Array.from({length:21}, (_, n) => registrationMember(String(n))) },
+    { items: [null] }, { items: [{ ...registrationMember(), canonicalAssetId: 123 }] },
+    { items: [{ ...registrationMember(), bindings: [null] }] },
+    { items: [{ ...registrationMember(), bindings: [{bucket:"private",objectKey:"masters/new.jpg"}] }] },
+    { items: [{ ...registrationMember(), bindings: registrationMember("other").bindings }] },
+    { items: [{ ...registrationMember(), canonicalAssetId: "asset-old" }] },
+    { items: [registrationMember("old")] },
+  ]) await assert.rejects(store.reconcileManifest({ ...input, ...changes }));
+  await store.armBatch({ operationId: "deny-old", operation: "x", denied: true, items: [registrationMember("old")] });
+  await assert.rejects(store.reconcileManifest({ ...input, items: [{ ...registrationMember(), canonicalAssetId: "asset-old" }] }));
+  assert.equal(database.count("pbe_lifecycle_manifest_reconciliations"), 0);
+});
+
+test("a recovered registration receipt never reopens a later denied photo", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const input = { prepareOnly: true, actorId: "connector", repairId: "then-denied", items: [registrationMember()] };
+  const plan = await store.reconcileManifest(input);
+  await store.reconcileManifest({ ...plan.envelope, actorId: "connector" });
+  await store.armBatch({ operationId: "deny-new", operation: "x", denied: true, items: input.items });
+  const before = database.sqlite.prepare("SELECT total_changes() n").get().n;
+  const recovered = await store.reconcileManifest(input);
+  await store.reconcileManifest({ ...recovered.envelope, actorId: "connector" });
+  assert.equal(database.sqlite.prepare("SELECT total_changes() n").get().n, before);
+  assert.equal((await store.verifyPublicPreviews({ items: input.items })).items[0].allowed, false);
+});
+
+test("stale registration plans and response-loss retries never create another identity", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const prepare = (id) => store.reconcileManifest({ prepareOnly: true, actorId:"connector", repairId:id, items:[registrationMember(id)] });
+  const first = await prepare("first"), stale = await prepare("stale");
+  await store.reconcileManifest({ ...first.envelope, actorId:"connector" });
+  const count = database.count("pbe_lifecycle_media_identity");
+  await assert.rejects(store.reconcileManifest({ ...stale.envelope, actorId:"connector" }), {code:"lifecycle_reconciliation_conflict"});
+  assert.equal(database.count("pbe_lifecycle_media_identity"), count);
+  const refreshed = await prepare("stale");
+  await store.reconcileManifest({ ...refreshed.envelope, actorId:"connector" });
+  assert.deepEqual((await prepare("first")).envelope, first.envelope);
+});
+
+test("registration rolls back if the authority fence changes just before the transaction", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const plan = await store.reconcileManifest({ prepareOnly:true, actorId:"connector",repairId:"race",items:[registrationMember()] });
+  const before = database.count("pbe_lifecycle_media_identity");
+  database.beforeBatch = (sqlite) => sqlite.prepare("UPDATE pbe_lifecycle_control SET fencing_epoch=fencing_epoch+1").run();
+  await assert.rejects(store.reconcileManifest({ ...plan.envelope, actorId:"connector" }));
+  assert.equal(database.count("pbe_lifecycle_media_identity"), before);
+  assert.equal(database.count("pbe_lifecycle_manifest_reconciliations"), 0);
+  assert.equal(database.sqlite.prepare("SELECT state FROM pbe_lifecycle_control").get().state, "ready");
+});
+
 test("public preview observations bind exact identities and keys without writes or private leakage", async () => {
   const database = new TransactionalD1();
   const source = publicMember();

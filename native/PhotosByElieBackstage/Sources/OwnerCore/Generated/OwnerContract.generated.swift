@@ -2,8 +2,8 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.3.0"
-    public static let specSHA256 = "652194de4ab6e772a689267200a0d7354479da707ffb1f682ccb1db733ab82fb"
+    public static let openAPIVersion = "1.4.0"
+    public static let specSHA256 = "c3aad07add0897d6ed48566ec067a371b4e6c30fc030b852822b080ab64639c7"
     public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
@@ -41,6 +41,7 @@ public enum OwnerContract {
         case logout = "logout"
         case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
+        case reconcileLifecycleManifest = "reconcileLifecycleManifest"
         case revokeOwnerDevice = "revokeOwnerDevice"
         case saveDeliverable = "saveDeliverable"
         case saveGroup = "saveGroup"
@@ -96,6 +97,7 @@ public enum OwnerContract {
         .logout: Endpoint(method: "POST", path: "/auth/logout"),
         .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
+        .reconcileLifecycleManifest: Endpoint(method: "POST", path: "/lifecycle/reconcile"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),
         .saveDeliverable: Endpoint(method: "POST", path: "/deliverables"),
         .saveGroup: Endpoint(method: "POST", path: "/acs/groups"),

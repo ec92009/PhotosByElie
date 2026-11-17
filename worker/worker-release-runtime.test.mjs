@@ -26,6 +26,11 @@ test("combined workerd entrypoint retains private WST RPC, Tilbury and PBE deleg
       serviceBindings: { PBE: "pbe-combined", UNCONFIGURED: "pbe-unconfigured" },
       script: `export default { async fetch(request, env) {
         if (new URL(request.url).pathname === '/private-rpc') return Response.json(await env.PBE.wstCommerceSnapshot());
+        if (new URL(request.url).pathname === '/private-funnel') return Response.json(await env.PBE.wstFunnelSnapshot());
+        if (new URL(request.url).pathname === '/unconfigured-funnel') {
+          try { await env.UNCONFIGURED.wstFunnelSnapshot(); }
+          catch { return Response.json({blocked:true}, {status:503}); }
+        }
         if (new URL(request.url).pathname === '/unconfigured-rpc') {
           try { await env.UNCONFIGURED.wstCommerceSnapshot(); }
           catch { return Response.json({blocked:true}, {status:503}); }
@@ -46,9 +51,16 @@ test("combined workerd entrypoint retains private WST RPC, Tilbury and PBE deleg
     assert.equal(snapshot.status, 200);
     assert.deepEqual((await snapshot.json()).days, []);
     assert.equal(stripeRequests.length, 1);
+    const funnel = await mf.dispatchFetch("https://worker.test/private-funnel");
+    assert.equal(funnel.status, 200);
+    const funnelData = await funnel.json();
+    assert.equal(funnelData.schema_version, "wst.pbe-funnel.v1");
+    assert.deepEqual(funnelData.days, []);
+    assert.equal(stripeRequests.length, 1, "empty retained orders do not trigger provider reads");
+    assert.equal((await mf.dispatchFetch("https://worker.test/unconfigured-funnel")).status, 503);
     const blocked = await mf.dispatchFetch("https://worker.test/unconfigured-rpc");
     assert.equal(blocked.status, 503);
-    for (const route of ["/wstCommerceSnapshot", "/api/v1/wstCommerceSnapshot", "/wst-commerce-snapshot"]) {
+    for (const route of ["/wstCommerceSnapshot", "/api/v1/wstCommerceSnapshot", "/wst-commerce-snapshot", "/wstFunnelSnapshot", "/api/v1/wstFunnelSnapshot", "/wst-funnel-snapshot"]) {
       assert.equal((await mf.dispatchFetch("https://worker.test" + route)).status, 404);
     }
     const catalog = await mf.dispatchFetch("https://worker.test/tilbury/catalog");

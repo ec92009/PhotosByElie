@@ -200,7 +200,7 @@ export async function handleTilbury(request,env){
  if(!path.startsWith('/tilbury/')&&path!=='/stripe-webhook')return null;
  if(path==='/stripe-webhook'){
   const copy=await request.clone().text();let parsed;try{parsed=JSON.parse(copy)}catch{return null}
-  if(parsed.data?.object?.metadata?.tilbury!=='v1')return null;
+  if(parsed?.data?.object?.metadata?.tilbury!=='v1')return null;
   try{const stripe=client(env);await stripe.webhooks.constructEventAsync(copy,request.headers.get('stripe-signature'),env.STRIPE_WEBHOOK_SECRET,300,Stripe.createSubtleCryptoProvider());return json({received:true,namespace:'tilbury'})}catch{return json({error:'Invalid signature'},400)}
  }
  try{

@@ -7,7 +7,7 @@ construction remain in `worker/checkout-worker.mjs`.
 
 ## Explicit dependency allowlist
 
-The module may depend only on these injected seams, also enforced by
+External services use only these injected seams, also enforced by
 `PAID_ORDER_FULFILLMENT_DEPENDENCIES` and its focused test:
 
 - `orderStore`: order lookup/persistence and download-capability persistence
@@ -23,6 +23,8 @@ The module may depend only on these injected seams, also enforced by
 
 The module must not own Worker `Request`/`Response` objects, route paths, fetch
 calls, Stripe client construction, or webhook signature verification.
+Its only source import is the pure `refundBlocksFulfillment` predicate from
+`paid-order-refund.mjs`; refund provider orchestration stays in that module.
 
 ## Inputs, authority and failure contract
 
@@ -48,6 +50,13 @@ retains email/account ownership checks, private/no-store response shaping,
 refund-based download denial, redemption counters and Real Estate asset
 verification. Internal bucket/object/ZIP keys must not reach a buyer through
 the module's internal return value; the Worker applies `publicOrder` first.
+
+The restored refund guard fresh-reads the order before settlement and the ready
+commit. Any retained refund status blocks fulfillment, including failed attempts
+that still require explicit refund recovery. With `throwOnRevocation`, this is
+`refund_blocks_fulfillment` (409); otherwise reconciliation returns the current
+blocked projection. Refund initiation during rendering cannot publish download
+capabilities. These source checks do not prove a provider refund was completed.
 
 | Seam | Required contract |
 | --- | --- |

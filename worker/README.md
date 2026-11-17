@@ -33,7 +33,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /checkout/guest` | Buyer chooses guest checkout | Validates selected private R2 files, then creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
 | `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
-| `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
+| `POST /stripe-webhook` | Stripe/mocked Stripe reports checkout or refund state | Verifies payment/refund facts, prepares delivery, or applies a monotonic refund receipt |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a direct Google OAuth or legacy Access session exists |
 | `GET /auth/google/login` | Browser starts direct Google OAuth | Redirects to Google with `prompt=select_account`; falls back to `/auth/login` when direct OAuth secrets are not configured |
@@ -53,11 +53,21 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /real-estate/deliverables/:id/view` | Real Estate client opens a completed cloud PDF/video product | Requires the signed session cookie and streams the private output inline |
 | `GET /real-estate/deliverables/:id/download` | Real Estate client downloads a completed cloud PDF/video product | Requires the signed session cookie and streams the private output as an attachment |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
+| `GET /api/v1/orders/:orderId/refund` | Enrolled Backstage checks a support refund | Reconciles the exact order/session/payment/refund state with Stripe |
+| `POST /api/v1/orders/:orderId/refund` | Enrolled Backstage confirms a full pre-delivery refund | Requires the exact order ID and reason, then persists an idempotent Stripe refund attempt |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
 `worker/local-server.mjs` binds to loopback and serves local ZIPs only through the shared `/download/:token` authorization, expiry, lifecycle and download-limit checks. Order-ID fallback downloads are retired. After restarting the in-memory mock Worker, run a new mock checkout to obtain a valid delivery capability; existing ZIP files on disk do not grant download access.
 
 ## Public Checkout
+
+`npm run worker:release-check` validates the reconciled checkout, fulfillment,
+refund, lifecycle, native-video, Tilbury, private WST RPC and publisher contracts
+offline. The Wrangler custom build runs this gate before an ordinary bundle or
+upload. Existing `npm test`/CI also includes the restored regressions. Tests do
+not establish current deployed behavior or authorize provider actions. See
+[the source reconciliation](../docs/audits/pbe-221-worker-source-reconciliation.md)
+for provenance and remaining parent release gates.
 
 `worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public checkout. It uses durable Cloudflare bindings:
 

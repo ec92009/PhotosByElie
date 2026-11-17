@@ -59,7 +59,7 @@ test("Tilbury falls through without configuration or I/O for all PBE namespaces"
     "/download/token", "/wstCommerceSnapshot", "/tilbury", "/tilbury-other/catalog"]) {
     assert.equal(await handleTilbury(new Request(BACKEND + route), {}), null);
   }
-  for (const value of [{ type: "checkout.session.completed", data: { object: { metadata: { order_id: "PBE-synthetic" } } } }, {}]) {
+  for (const value of [{ type: "checkout.session.completed", data: { object: { metadata: { order_id: "PBE-synthetic" } } } }, {}, null, 42, "text", []]) {
     const request = post("/stripe-webhook", value);
     assert.equal(await handleTilbury(request, {}), null);
     assert.deepEqual(await request.json(), value, "namespace inspection must preserve the PBE signature body");

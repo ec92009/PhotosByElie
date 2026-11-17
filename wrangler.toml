@@ -4,6 +4,11 @@ compatibility_date = "2026-07-10"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+# Fail before bundling/upload if an accepted commerce contract has regressed.
+[build]
+command = "npm run worker:release-check"
+watch_dir = ["worker", "scripts/public_worker_origin_policy.test.mjs", "basket.js", "order.js"]
+
 [vars]
 PUBLIC_SITE_URL = "https://photos-by-elie.com"
 MOCK_STRIPE_ENABLED = "true"
@@ -20,6 +25,11 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
+# Historical be75ca8c source defaults; verify current authority before release.
+# Every package still requires exact photo readiness and approved derivative binding.
+CAMPAIGN_VIDEO_HOST_ENABLED = "true"
+# Publisher recovery can be enabled independently while video delivery stays off.
+PUBLIC_CATALOG_AUTHORITY_ENABLED = "true"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 # Optional legacy Google-backed Cloudflare Access login:
@@ -70,6 +80,8 @@ custom_domain = true
 [[routes]]
 pattern = "auth.photos-by-elie.com"
 custom_domain = true
+
+# PBE-215 reuses download.photos-by-elie.com above. No apex route, DNS or proxy change.
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"

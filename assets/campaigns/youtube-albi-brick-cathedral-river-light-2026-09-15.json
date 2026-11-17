@@ -1,0 +1,34 @@
+{
+  "id": "youtube-albi-brick-cathedral-river-light-2026-09-15",
+  "source": "YouTube",
+  "public": true,
+  "title": "Albi: Brick Cathedral and River Light",
+  "eyebrow": "France · Photographs",
+  "description": "Twelve photographs explore Albi’s red-brick cathedral, the Tarn River, old-town streets and autumn fountains. Explore the still photographs behind the film. Music: \"Gypsy Soul, Accordion Heart\" by ridvan-selli via Pixabay.",
+  "heroPhotoId": "96fc9a76-ce05-42cb-ad16-50c025f935c6-001-adrgx24tbnph6x3rvs3itxuvdvtf-c43e5d9a0f",
+  "primaryPhotoIds": [
+    "96fc9a76-ce05-42cb-ad16-50c025f935c6-001-adrgx24tbnph6x3rvs3itxuvdvtf-c43e5d9a0f",
+    "016ca76d-93c7-440d-b2f3-fa5ef7621c73-001-avgzbhuo5okvacwjbwfgsymzrwqf-a79f7b06d9",
+    "3e020f53-1ee0-4476-aa6b-3db764aa00bb-001-auuj5eb9spnni0fu7tl0prx3vrne-ffe6f2293b",
+    "bf7508cd-e706-48cf-b4a7-77190cbf6372-001-ayevhfnxylxlf0emnzlzxn4wphi2-ea1bb99022",
+    "53881bd5-04ee-45a3-8da7-7885f5e21505-001-afsnpigb4eyvqohebmxyagy5wtfo-23e60ea007",
+    "f7f2393c-0543-413d-b271-9b4f44e253aa-001-ayincqx0jlhcouktkkorkmoimgvt-ae8372a4c5",
+    "c97753c0-eab8-4b5d-94b8-192e5cb2076a-001-az9x9nldseropce2gkzgdnezve4v-fd23b312d2",
+    "e419c8d0-e51d-4254-9138-5784c83a2bad-001-axnxdqxlzxvv3gwnhghkqaunmxew-1d7fff4386",
+    "ir51h8ljjct7hv-86407d7544",
+    "8128075a-d963-46ee-8023-ecf0e31ef577-001-arez0dlru0w-cmehfixkulewkmff-0c11fe4a0b",
+    "df8f4676-80ae-4ab0-8ec2-c3e5ee218898-001-abdugkrv71bvz-b7nepcxfo0qlws-d04709b2d1",
+    "e7505053-c9bc-4129-9032-0794e150fdbc-001-affvpmvzpv3bsh4y-gg6sjqwtizv-b22219d34d"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "I6YatF8udyM",
+    "shortId": "klZ6QlKM-n0",
+    "title": "Albi: Red Brick, Cathedral & Tarn River | Photos By Elie",
+    "durationSeconds": 40,
+    "visibility": "public",
+    "portraitMp4": "./assets/campaign-media/albi-2026-09-19-6bb73f6e.mp4",
+    "musicCredit": "Music: \"Gypsy Soul, Accordion Heart\" by ridvan-selli via Pixabay"
+  }
+}

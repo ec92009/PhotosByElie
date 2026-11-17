@@ -79,6 +79,7 @@ PUBLIC_SUFFIXES = {
     ".jpg",
     ".webp",
     ".mp3",
+    ".mp4",
     ".webmanifest",
     ".xml",
     ".txt",

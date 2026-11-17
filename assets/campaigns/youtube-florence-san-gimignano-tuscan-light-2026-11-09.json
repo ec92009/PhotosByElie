@@ -1,0 +1,30 @@
+{
+  "id": "youtube-florence-san-gimignano-tuscan-light-2026-11-09",
+  "source": "YouTube",
+  "public": true,
+  "title": "Florence to San Gimignano: Tuscan Light",
+  "eyebrow": "Italy · Photographs",
+  "description": "Florence begins beside the Arno, where Ponte Vecchio stretches between warm-toned buildings and small kayaks cross the water. Beyond the city, the view opens into the Tuscan countryside: olive trees, cypress-lined paths and the distant towers of San Gimignano. This sequence follows that change of pace, from the river and its architecture to open valleys and a quiet terrace above the hills. Eight original photographs by Elie Cohen invite a closer look at the light, texture and space of Tuscany. Music: \"Bella Italia (Eigenkomposition)\" by Bernhard Schürmann via Pixabay",
+  "heroPhotoId": "001-75a4112640",
+  "primaryPhotoIds": [
+    "001-75a4112640",
+    "001-efc2e6948d",
+    "001-3d3b3bc14f",
+    "001-2ea16d6120",
+    "001-d4962c996c",
+    "001-075147a42a",
+    "001-e21a95131c",
+    "001-f94162e3fa"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "cDW1aZBN144",
+    "shortId": "fZ5dRyl3Vug",
+    "title": "Florence to San Gimignano: Tuscany in Eight Photographs | Photo Film",
+    "durationSeconds": 40,
+    "visibility": "public",
+    "portraitMp4": "https://download.photos-by-elie.com/assets/campaign-media/native-6ca32d080de4452fb5d34befb048d7bd.mp4",
+    "musicCredit": "Music: \"Bella Italia (Eigenkomposition)\" by Bernhard Schürmann via Pixabay"
+  }
+}

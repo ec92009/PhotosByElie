@@ -332,8 +332,11 @@ const translations = {
     'basket.checkout_needs_asset': 'Checkout needs at least one digital asset in the basket.',
     'basket.enter_email': 'Enter a buyer email before starting checkout.',
     'basket.checking_delivery': 'Checking delivery files before opening Stripe...',
+    'basket.checkout_started': 'Checkout started · Step 1 of 3: validating your basket...',
+    'basket.checking_purchases': 'Step 2 of 3: checking recent purchases...',
     'basket.unavailable_removed_review': 'Unavailable delivery choices were removed. Review the updated basket, then choose Buy Now again.',
-    'basket.creating_checkout': 'Preparing secure Stripe checkout...',
+    'basket.creating_checkout': 'Step 3 of 3: preparing secure Stripe checkout...',
+    'basket.checkout_still_working': 'Still working · {step} Keep this tab open; this attempt stops safely after 25 seconds.',
     'basket.opening_stripe': 'Opening Stripe Checkout...',
     'basket.mock_ready': 'Mock Checkout Session ready. Simulate Stripe payment to generate the ZIP.',
     'basket.simulating_payment': 'Simulating Stripe payment and generating the delivery ZIP...',
@@ -985,8 +988,11 @@ const translations = {
     'basket.checkout_needs_asset': 'Le checkout demande au moins un fichier numerique dans le panier.',
     'basket.enter_email': 'Saisissez un email acheteur avant de lancer le checkout.',
     'basket.checking_delivery': 'Verification des fichiers de livraison avant ouverture de Stripe...',
+    'basket.checkout_started': 'Checkout lance · Etape 1 sur 3 : validation du panier...',
+    'basket.checking_purchases': 'Etape 2 sur 3 : verification des achats recents...',
     'basket.unavailable_removed_review': 'Les choix de livraison indisponibles ont ete retires. Verifiez le panier mis a jour, puis choisissez Acheter.',
-    'basket.creating_checkout': 'Preparation du checkout Stripe securise...',
+    'basket.creating_checkout': 'Etape 3 sur 3 : preparation du checkout Stripe securise...',
+    'basket.checkout_still_working': 'Toujours en cours · {step} Gardez cet onglet ouvert ; cette tentative s arrete en toute securite apres 25 secondes.',
     'basket.opening_stripe': 'Ouverture de Stripe Checkout...',
     'basket.mock_ready': 'Session Checkout mock prete. Simulez le paiement Stripe pour generer le ZIP.',
     'basket.simulating_payment': 'Simulation du paiement Stripe et generation du ZIP de livraison...',
@@ -1632,8 +1638,11 @@ const translations = {
     'basket.checkout_needs_asset': 'Checkout necesita al menos un archivo digital en la cesta.',
     'basket.enter_email': 'Introduce un email de comprador antes de iniciar checkout.',
     'basket.checking_delivery': 'Comprobando archivos de entrega antes de abrir Stripe...',
+    'basket.checkout_started': 'Checkout iniciado · Paso 1 de 3: validando la cesta...',
+    'basket.checking_purchases': 'Paso 2 de 3: comprobando compras recientes...',
     'basket.unavailable_removed_review': 'Se retiraron opciones de entrega no disponibles. Revisa la cesta actualizada y elige Comprar ahora de nuevo.',
-    'basket.creating_checkout': 'Preparando checkout seguro de Stripe...',
+    'basket.creating_checkout': 'Paso 3 de 3: preparando checkout seguro de Stripe...',
+    'basket.checkout_still_working': 'Seguimos trabajando · {step} Mantén esta pestaña abierta; este intento se detiene de forma segura después de 25 segundos.',
     'basket.opening_stripe': 'Abriendo Stripe Checkout...',
     'basket.mock_ready': 'Sesion Checkout mock lista. Simula el pago Stripe para generar el ZIP.',
     'basket.simulating_payment': 'Simulando pago Stripe y generando el ZIP de entrega...',
@@ -3073,11 +3082,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
         returnFocus.focus({ preventScroll: true });
       }
     };
-    const openAdjacent = (delta) => {
+    const openAdjacent = (delta, { wrap = wrapNavigation } = {}) => {
       if (previewItems.length < 2) return false;
       const candidateIndex = currentIndex + delta;
-      if (!wrapNavigation && (candidateIndex < 0 || candidateIndex >= previewItems.length)) return false;
-      const nextIndex = wrapNavigation
+      if (!wrap && (candidateIndex < 0 || candidateIndex >= previewItems.length)) return false;
+      const nextIndex = wrap
         ? (candidateIndex + previewItems.length) % previewItems.length
         : candidateIndex;
       const nextPhoto = previewItems[nextIndex];
@@ -3090,6 +3099,9 @@ window.photosByElieVideoDurationLabel = (photo) => (
       });
       return true;
     };
+    const navigationColumns = Number.isInteger(Number(options.navigationColumns))
+      ? Math.max(1, Number(options.navigationColumns))
+      : 0;
     const centerPanoStage = () => {
       if (!stage || !modal.classList.contains("is-pano-scroll")) return;
       stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
@@ -3138,9 +3150,14 @@ window.photosByElieVideoDurationLabel = (photo) => (
     };
     async function onKeydown(event) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) revealKeyLegend();
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
         if (event.target instanceof HTMLElement && event.target.closest("video")) return;
-        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
+        const vertical = event.key === "ArrowUp" || event.key === "ArrowDown";
+        if (!navigationColumns && vertical) {
+          event.preventDefault();
+          return;
+        }
+        if (!vertical && isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
           panoPan?.stopAutoPan?.({ user: true });
           stage?.scrollBy?.({
             left: (event.key === "ArrowRight" ? 1 : -1) * Math.max(80, (stage.clientWidth || 0) * 0.14),
@@ -3149,7 +3166,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
           event.preventDefault();
           return;
         }
-        if (openAdjacent(event.key === "ArrowRight" ? 1 : -1)) event.preventDefault();
+        const delta = event.key === "ArrowRight" ? 1
+          : event.key === "ArrowLeft" ? -1
+            : event.key === "ArrowDown" ? navigationColumns : -navigationColumns;
+        const moved = openAdjacent(delta, { wrap: vertical ? false : wrapNavigation });
+        if (moved || vertical) event.preventDefault();
         return;
       }
       if (event.key.toLowerCase() === "f") {
@@ -4217,6 +4238,94 @@ const headerUtilityControls = (topbar) => {
   return utilities;
 };
 
+const galleryCheckpointStorageKey = 'photosbyelie-gallery-checkpoints-v1';
+const maxGalleryCheckpoints = 24;
+
+const normalizeGalleryCheckpoint = (checkpoint = {}) => {
+  const collectionKey = String(checkpoint.collectionKey || "").trim().toLowerCase();
+  const photoId = String(checkpoint.photoId || "").trim();
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(collectionKey) || !photoId || photoId.length > 240) return null;
+  const windowStart = Math.max(0, Math.min(1_000_000, Math.floor(Number(checkpoint.windowStart) || 0)));
+  const requestedEnd = Math.max(windowStart + 1, Math.floor(Number(checkpoint.windowEnd) || windowStart + 24));
+  const windowEnd = Math.min(1_000_000, windowStart + Math.min(192, requestedEnd - windowStart));
+  const filterState = checkpoint.filterState && typeof checkpoint.filterState === "object"
+    ? checkpoint.filterState
+    : {};
+  const dateValue = (value) => /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(String(value || "")) ? String(value) : "";
+  const orientation = ["all", "pano", "landscape", "portrait", "square"].includes(String(filterState.orientation || ""))
+    ? String(filterState.orientation)
+    : "all";
+  const sort = ["newest", "oldest", "collection", "title", "megapixels-desc", "megapixels-asc", "price-desc", "price-asc"]
+    .includes(String(filterState.sort || ""))
+    ? String(filterState.sort)
+    : "newest";
+  const updatedAt = new Date(checkpoint.updatedAt || 0);
+  if (!Number.isFinite(updatedAt.getTime())) return null;
+  return {
+    collectionKey,
+    photoId,
+    filterState: {
+      query: String(filterState.query || "").slice(0, 160),
+      orientation,
+      sort,
+      dateFrom: dateValue(filterState.dateFrom),
+      dateTo: dateValue(filterState.dateTo),
+    },
+    windowStart,
+    windowEnd,
+    anchorOffset: Math.max(-10_000, Math.min(10_000, Number(checkpoint.anchorOffset) || 0)),
+    updatedAt: updatedAt.toISOString(),
+  };
+};
+
+const mergeGalleryCheckpoints = (...groups) => {
+  const byCollection = new Map();
+  groups.flat().forEach((candidate) => {
+    const checkpoint = normalizeGalleryCheckpoint(candidate);
+    if (!checkpoint) return;
+    const existing = byCollection.get(checkpoint.collectionKey);
+    if (!existing || Date.parse(checkpoint.updatedAt) >= Date.parse(existing.updatedAt)) {
+      byCollection.set(checkpoint.collectionKey, checkpoint);
+    }
+  });
+  return [...byCollection.values()]
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .slice(0, maxGalleryCheckpoints);
+};
+
+const readGalleryCheckpoints = () => {
+  try {
+    return mergeGalleryCheckpoints(JSON.parse(localStorage.getItem(galleryCheckpointStorageKey) || "[]"));
+  } catch {
+    return [];
+  }
+};
+
+const storeGalleryCheckpoints = (checkpoints, { notify = true } = {}) => {
+  const normalized = mergeGalleryCheckpoints(checkpoints);
+  try {
+    localStorage.setItem(galleryCheckpointStorageKey, JSON.stringify(normalized));
+  } catch {
+    return normalized;
+  }
+  if (notify) {
+    window.dispatchEvent(new CustomEvent("photosbyelie:gallerycheckpointschange", {
+      detail: { checkpoints: normalized },
+    }));
+  }
+  return normalized;
+};
+
+window.photosByElieGalleryCheckpoints = {
+  read: readGalleryCheckpoints,
+  merge(...groups) {
+    return storeGalleryCheckpoints(mergeGalleryCheckpoints(readGalleryCheckpoints(), ...groups));
+  },
+  write(checkpoint) {
+    return storeGalleryCheckpoints(mergeGalleryCheckpoints(readGalleryCheckpoints(), [checkpoint]));
+  },
+};
+
 const accountPreferenceKey = 'photosbyelie-account-preference';
 
 const normalizedAccountWorkerBase = (value) => {
@@ -4285,7 +4394,7 @@ const ensureSiteAccount = () => {
     realEstateClients: [],
     profileLoading: false,
     profileLoaded: false,
-    profile: { liked: [], basket: [], language: "", theme: "" },
+    profile: { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] },
     orders: [],
     sharedGalleryChecked: false,
     sharedGalleryLoading: false,
@@ -4445,7 +4554,7 @@ const ensureSiteAccount = () => {
     }
     state.profileLoading = false;
     state.profileLoaded = false;
-    state.profile = { liked: [], basket: [], language: "", theme: "" };
+    state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
     state.orders = [];
     renderAccountMemory();
     window.dispatchEvent(new CustomEvent("photosbyelie:accountdatacleared"));
@@ -4464,6 +4573,7 @@ const ensureSiteAccount = () => {
     basket: accountStoresAvailable() ? window.photosByElieBasket.read() : (state.profile?.basket || []),
     language: root.dataset.language || preferenceStorage.getItem(activeLanguagePreferenceKey) || preferenceStorage.getItem(languageKey) || "en",
     theme: root.dataset.theme === "dark" ? "dark" : "light",
+    galleryCheckpoints: readGalleryCheckpoints(),
   });
 
   const mergeLikedItems = (...groups) => {
@@ -4631,6 +4741,9 @@ const ensureSiteAccount = () => {
       }
       if (profile.language) setLanguage(profile.language);
       if (profile.theme && window.photosByElieTheme.preference() !== "system") setTheme(profile.theme);
+      storeGalleryCheckpoints(
+        mergeGalleryCheckpoints(readGalleryCheckpoints(), profile.galleryCheckpoints || []),
+      );
     } finally {
       applyingAccountProfile = false;
     }
@@ -4669,7 +4782,7 @@ const ensureSiteAccount = () => {
     if (!quiet) setMessage(translate('account.profile_syncing'));
     try {
       let payload = await accountApiFetch("/account/profile");
-      let profile = payload.profile || { liked: [], basket: [], language: "", theme: "" };
+      let profile = payload.profile || { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       if (mergeLocal) {
         if (accountStoresAvailable()) await waitForAccountCatalog();
         const local = readLocalAccountState();
@@ -4678,6 +4791,7 @@ const ensureSiteAccount = () => {
           basket: mergeBasketItems(profile.basket || [], local.basket || []),
           language: profile.language || local.language || "en",
           theme: profile.theme || local.theme || "light",
+          galleryCheckpoints: mergeGalleryCheckpoints(profile.galleryCheckpoints || [], local.galleryCheckpoints || []),
         };
         payload = await accountApiFetch("/account/profile", {
           method: "PUT",
@@ -4781,7 +4895,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [], language: "", theme: "" };
+      state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       state.orders = [];
       state.sharedGalleryChecked = true;
       state.sharedGalleryLoading = false;
@@ -4808,7 +4922,7 @@ const ensureSiteAccount = () => {
       else if (!state.scopedAuthenticated) activateLanguagePreference("");
       if (!state.authenticated) {
         state.profileLoaded = false;
-        state.profile = { liked: [], basket: [], language: "", theme: "" };
+        state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
         state.orders = [];
         state.sharedGalleryChecked = true;
         state.sharedPhotoCount = 0;
@@ -4842,7 +4956,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [], language: "", theme: "" };
+      state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       state.orders = [];
       state.sharedGalleryChecked = true;
       state.sharedGalleryLoading = false;
@@ -4997,6 +5111,7 @@ const ensureSiteAccount = () => {
   window.addEventListener('photosbyelie:themechange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:likedchange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:basketchange', scheduleAccountProfileSave);
+  window.addEventListener('photosbyelie:gallerycheckpointschange', scheduleAccountProfileSave);
   window.photosByElieAccount = {
     get state() {
       return {

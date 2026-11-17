@@ -15,6 +15,33 @@ test('Gallery action-label settings use the existing EN/FR/ES translation contra
   }
 });
 
+test('Account profile restoration preserves System while restoring durable gallery checkpoints', () => {
+  const source = read('photos.js');
+  const start = source.indexOf('  const applyAccountProfileToStores =');
+  const end = source.indexOf('\n  const saveAccountProfile =', start);
+  assert.ok(start > 0 && end > start);
+  const incoming = [{ collectionKey: 'france', photoId: 'restored', updatedAt: '2026-11-17T10:00:00Z' }];
+  const saved = [{ collectionKey: 'spain', photoId: 'saved', updatedAt: '2026-11-16T10:00:00Z' }];
+  for (const preference of ['system', 'light', 'dark']) {
+    const calls = [];
+    const context = {
+      applyingAccountProfile: false,
+      accountStoresAvailable: () => false,
+      window: { photosByElieTheme: { preference: () => preference } },
+      setLanguage: (language) => calls.push(['language', language]),
+      setTheme: (theme) => calls.push(['theme', theme]),
+      readGalleryCheckpoints: () => saved,
+      mergeGalleryCheckpoints: (...groups) => groups.flat(),
+      storeGalleryCheckpoints: (checkpoints) => calls.push(['checkpoints', checkpoints]),
+    };
+    const restore = vm.runInNewContext(source.slice(start, end) + '\napplyAccountProfileToStores;', context);
+    restore({ language: 'fr', theme: 'dark', galleryCheckpoints: incoming });
+    assert.deepEqual(calls.filter(([kind]) => kind === 'theme'), preference === 'system' ? [] : [['theme', 'dark']]);
+    assert.deepEqual(calls.find(([kind]) => kind === 'checkpoints')[1], [...saved, ...incoming]);
+    assert.equal(context.applyingAccountProfile, false);
+  }
+});
+
 function themeHarness({ saved = {}, denied = false, quota = false, dark = false } = {}) {
   const values = new Map(Object.entries(saved));
   const events = new Map();

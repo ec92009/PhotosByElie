@@ -1485,6 +1485,39 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   assert.equal(expiredStatus.status, 401);
 });
 
+test("public preview verification requires enrolled Owner or connector authority and never mutates lifecycle", async () => {
+  let calls = 0;
+  const backstage = backstageOwnerFixture();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(), googleOAuthAuth: backstage.googleOAuthAuth,
+    ownerDeviceAuthStore: backstage.ownerDeviceAuthStore,
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    ownerConnectorAuth: { requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector required"), { status: 401 });
+      }
+      return { connectorId: "max" };
+    } },
+    lifecycleDenyStore: { verifyPublicPreviews: async (payload) => {
+      calls += 1;
+      return { readOnly: true, items: payload.items };
+    } },
+  });
+  const url = "https://worker.test/api/v1/lifecycle/public-previews/verify";
+  const unauthorized = await worker.fetch(jsonRequest(url, { items: [] }));
+  assert.equal(unauthorized.status, 401);
+  assert.equal(calls, 0);
+  for (const headers of [backstage.headers, { authorization: "Bearer connector-secret" }]) {
+    const response = await worker.fetch(jsonRequest(url, { items: [] }, headers));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal((await response.json()).readOnly, true);
+  }
+  const oversized = await worker.fetch(jsonRequest(url, { padding: "x".repeat(65536) }, backstage.headers));
+  assert.equal(oversized.status, 413);
+  assert.equal(calls, 2);
+});
+
 test("background Owner connectors use scoped credentials and report health", async () => {
   const ownerActionStore = createMemoryOwnerActionStore();
   const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);

@@ -2,8 +2,8 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.2.0"
-    public static let specSHA256 = "71ff186b5284f3233c6c173637923e2a35f37eee391f58f57a90757f7ad14e35"
+    public static let openAPIVersion = "1.3.0"
+    public static let specSHA256 = "652194de4ab6e772a689267200a0d7354479da707ffb1f682ccb1db733ab82fb"
     public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
@@ -49,6 +49,7 @@ public enum OwnerContract {
         case transitionAction = "transitionAction"
         case transitionConnectorAction = "transitionConnectorAction"
         case transitionDeliverable = "transitionDeliverable"
+        case verifyPublicPreviews = "verifyPublicPreviews"
     }
 
     public struct Endpoint: Sendable, Equatable {
@@ -103,5 +104,6 @@ public enum OwnerContract {
         .transitionAction: Endpoint(method: "POST", path: "/actions/{actionId}/{transition}"),
         .transitionConnectorAction: Endpoint(method: "POST", path: "/connectors/actions/{actionId}/{transition}"),
         .transitionDeliverable: Endpoint(method: "POST", path: "/deliverables/{deliverableId}/{action}"),
+        .verifyPublicPreviews: Endpoint(method: "POST", path: "/lifecycle/public-previews/verify"),
     ]
 }

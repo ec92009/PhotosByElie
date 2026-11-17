@@ -1,3 +1,4 @@
+const preferenceStorage = window.photosByElieTheme.storage;
 const root = document.documentElement;
 const key = 'byelie-theme';
 let activeThemePreferenceKey = key;
@@ -44,6 +45,7 @@ const translations = {
     'footer.credit_prefix': 'Site creation and ongoing maintenance by',
     'theme.night': 'Night',
     'theme.day': 'Day',
+    'theme.system': 'System',
     'settings.open': 'Settings',
     'settings.title': 'Settings',
     'settings.close': 'Close settings',
@@ -695,6 +697,7 @@ const translations = {
     'footer.credit_prefix': 'Creation et maintenance du site par',
     'theme.night': 'Nuit',
     'theme.day': 'Jour',
+    'theme.system': 'Système',
     'settings.open': 'Reglages',
     'settings.title': 'Reglages',
     'settings.close': 'Fermer les reglages',
@@ -1346,6 +1349,7 @@ const translations = {
     'footer.credit_prefix': 'Creacion y mantenimiento continuo del sitio por',
     'theme.night': 'Noche',
     'theme.day': 'Dia',
+    'theme.system': 'Sistema',
     'settings.open': 'Ajustes',
     'settings.title': 'Ajustes',
     'settings.close': 'Cerrar ajustes',
@@ -2046,7 +2050,7 @@ const normalizeDisplaySettings = (settings = {}) => ({
 });
 const readDisplaySettings = () => {
   try {
-    return normalizeDisplaySettings(JSON.parse(localStorage.getItem(displaySettingsKey) || "{}"));
+    return normalizeDisplaySettings(JSON.parse(preferenceStorage.getItem(displaySettingsKey) || "{}"));
   } catch {
     return { ...displaySettingDefaults };
   }
@@ -2054,7 +2058,7 @@ const readDisplaySettings = () => {
 const saveDisplaySettings = (settings) => {
   const normalized = normalizeDisplaySettings(settings);
   try {
-    localStorage.setItem(displaySettingsKey, JSON.stringify(normalized));
+    preferenceStorage.setItem(displaySettingsKey, JSON.stringify(normalized));
   } catch {
     // Visual preferences are optional when storage is unavailable.
   }
@@ -4455,7 +4459,7 @@ const ensureSiteAccount = () => {
   const readLocalAccountState = () => ({
     liked: accountStoresAvailable() ? window.photosByElieLiked.read() : (state.profile?.liked || []),
     basket: accountStoresAvailable() ? window.photosByElieBasket.read() : (state.profile?.basket || []),
-    language: root.dataset.language || localStorage.getItem(activeLanguagePreferenceKey) || localStorage.getItem(languageKey) || "en",
+    language: root.dataset.language || preferenceStorage.getItem(activeLanguagePreferenceKey) || preferenceStorage.getItem(languageKey) || "en",
     theme: root.dataset.theme === "dark" ? "dark" : "light",
   });
 
@@ -4623,7 +4627,7 @@ const ensureSiteAccount = () => {
         window.photosByElieBasket.write(profile.basket || []);
       }
       if (profile.language) setLanguage(profile.language);
-      if (profile.theme) setTheme(profile.theme);
+      if (profile.theme && window.photosByElieTheme.preference() !== "system") setTheme(profile.theme);
     } finally {
       applyingAccountProfile = false;
     }
@@ -4871,7 +4875,7 @@ const ensureSiteAccount = () => {
       updateAccountView();
       return;
     }
-    localStorage.setItem(accountPreferenceKey, intent);
+    preferenceStorage.setItem(accountPreferenceKey, intent);
     sessionStorage.setItem(accountRouteAfterLoginKey, 'google');
     const loginUrl = new URL(`${workerBase}/auth/google/login`);
     loginUrl.searchParams.set("returnTo", accountReturnUrl());
@@ -4883,7 +4887,7 @@ const ensureSiteAccount = () => {
 
   const beginGoogleLogout = (returnTo = accountReturnUrl()) => {
     const workerBase = accountWorkerBaseUrl();
-    localStorage.setItem(accountPreferenceKey, 'visitor');
+    preferenceStorage.setItem(accountPreferenceKey, 'visitor');
     clearAccountDataFromDevice();
     activateLanguagePreference("");
     setMessage(translate('account.signing_out'));
@@ -5034,7 +5038,7 @@ const ensureSiteAccount = () => {
   applyTranslations();
   const accountReturnMode = consumeAccountReturnFlag();
   if (accountReturnMode) window.setTimeout(() => openAccount(accountReturnMode), 0);
-  else if (accountWorkerBaseUrl() && localStorage.getItem(accountPreferenceKey) !== 'visitor') {
+  else if (accountWorkerBaseUrl() && preferenceStorage.getItem(accountPreferenceKey) !== 'visitor') {
     window.setTimeout(() => {
       refreshAccountSession({ syncProfile: true, mergeLocal: true, quiet: true });
     }, 900);
@@ -5095,7 +5099,29 @@ const ensureSiteSettings = () => {
   const languageSlot = modal.querySelector('[data-settings-language-slot]');
   const themeSlot = modal.querySelector('[data-settings-theme-slot]');
   if (languageBtn && languageSlot) languageSlot.append(languageBtn);
-  if (btn && themeSlot) themeSlot.append(btn);
+  if (btn && themeSlot) {
+    btn.hidden = true;
+    const select = document.createElement('select');
+    select.dataset.themePreference = '';
+    select.dataset.i18nAriaLabel = 'settings.appearance';
+    select.setAttribute('aria-label', translate('settings.appearance'));
+    for (const [value, label] of [['system', 'theme.system'], ['light', 'theme.day'], ['dark', 'theme.night']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.dataset.i18n = label;
+      option.textContent = translate(label);
+      select.append(option);
+    }
+    select.addEventListener('change', () => setTheme(select.value));
+    themeSlot.append(select);
+  }
+  const version = document.querySelector('.site-version-badge')?.textContent?.trim();
+  if (version) {
+    const about = document.createElement('p');
+    about.dataset.settingsVersion = '';
+    about.textContent = version;
+    modal.querySelector('.site-settings-dialog').append(about);
+  }
   document.body.append(modal);
   headerUtilityControls(topbar)?.append(settingsButton);
 
@@ -5121,7 +5147,14 @@ const ensureSiteSettings = () => {
     if (event.target === modal) closeSettings();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !modal.hidden) closeSettings();
+    if (modal.hidden) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeSettings(); }
+    if (event.key === 'Tab') {
+      const controls = [...modal.querySelectorAll('button, select, input, a[href]')].filter((node) => !node.hidden && !node.disabled);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
   });
   modal.querySelectorAll('[data-display-setting]').forEach((input) => {
     input.addEventListener('input', () => {
@@ -5174,13 +5207,19 @@ backToTopButtons.forEach((button) => {
 });
 
 const setTheme = (theme) => {
-  root.dataset.theme = theme === 'dark' ? 'dark' : 'light';
-  localStorage.setItem(activeThemePreferenceKey, root.dataset.theme);
+  const preference = window.photosByElieTheme.set(theme);
+  if (activeThemePreferenceKey !== key) preferenceStorage.setItem(activeThemePreferenceKey, preference);
+  return preference;
+};
+window.photosByElieTheme.subscribe((theme, preference) => {
+  root.dataset.theme = theme;
+  const select = document.querySelector('[data-theme-preference]');
+  if (select) select.value = preference;
   applyDisplaySettings();
   window.dispatchEvent(new CustomEvent('photosbyelie:themechange', {
-    detail: { theme: root.dataset.theme }
+    detail: { theme, preference }
   }));
-};
+});
 
 btn?.addEventListener('click', () => {
   setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
@@ -5191,7 +5230,7 @@ const setLanguage = (language) => {
   root.dataset.language = next.code;
   root.lang = next.code;
   if (languageBtn) languageBtn.textContent = next.label;
-  localStorage.setItem(activeLanguagePreferenceKey, next.code);
+  preferenceStorage.setItem(activeLanguagePreferenceKey, next.code);
   applyTranslations();
   window.dispatchEvent(new CustomEvent('photosbyelie:languagechange', {
     detail: { language: next.code }
@@ -5207,8 +5246,8 @@ const activateLanguagePreference = (identity = "") => {
   const normalizedIdentity = String(identity || "").trim().toLowerCase().replace(/[^a-z0-9@._+-]+/g, "-");
   activeThemePreferenceKey = normalizedIdentity ? `${key}:${normalizedIdentity}` : key;
   activeLanguagePreferenceKey = languagePreferenceKeyFor(identity);
-  const savedTheme = localStorage.getItem(activeThemePreferenceKey) || localStorage.getItem(key) || "light";
-  const saved = localStorage.getItem(activeLanguagePreferenceKey) || localStorage.getItem(languageKey) || "en";
+  const savedTheme = preferenceStorage.getItem(key) || preferenceStorage.getItem(activeThemePreferenceKey) || "system";
+  const saved = preferenceStorage.getItem(activeLanguagePreferenceKey) || preferenceStorage.getItem(languageKey) || "en";
   setTheme(savedTheme);
   setLanguage(saved);
 };
@@ -5237,7 +5276,7 @@ const beepUnavailableLanguage = () => {
 
 if (languageBtn) {
   const ownerEnglishOnly = languageBtn.hasAttribute('data-owner-english-only');
-  const savedLanguage = ownerEnglishOnly ? 'en' : localStorage.getItem(languageKey);
+  const savedLanguage = ownerEnglishOnly ? 'en' : preferenceStorage.getItem(languageKey);
   setLanguage(savedLanguage);
   languageBtn.addEventListener('click', () => {
     if (ownerEnglishOnly) {
@@ -5250,5 +5289,5 @@ if (languageBtn) {
     setLanguage(nextLanguage.code);
   });
 } else {
-  setLanguage(localStorage.getItem(languageKey));
+  setLanguage(preferenceStorage.getItem(languageKey));
 }

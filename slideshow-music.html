@@ -14,14 +14,6 @@
   <link rel="manifest" href="./site.webmanifest?v=241.0"/>
   <meta name="theme-color" content="#7b4d26"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
-  <script>
-    (() => {
-      try {
-        const saved = localStorage.getItem('byelie-theme');
-        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
-      } catch {}
-    })();
-  </script>
   <link rel="stylesheet" href="./shared.css?v=241.0"/>
   <link rel="stylesheet" href="./styles.css?v=241.0"/>
   <link rel="stylesheet" href="./photos.css?v=241.0"/>
@@ -310,7 +302,9 @@
       }
     }
   </style>
-</head>
+<script src="./theme-preference.js?v=241.0"></script>
+    <script>document.documentElement.dataset.theme = window.photosByElieTheme.resolved();</script>
+  </head>
 <body data-fixed-header>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">

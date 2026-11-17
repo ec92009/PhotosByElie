@@ -22,13 +22,15 @@
   <link rel="manifest" href="./site.webmanifest?v=241.0"/>
   <meta name="theme-color" content="#7b4d26"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
-  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
+  <script src="./theme-preference.js?v=241.0"></script>
+  <script>document.documentElement.dataset.theme = window.photosByElieTheme.resolved();</script>
   <link rel="stylesheet" href="./shared.css?v=241.0"/>
   <link rel="stylesheet" href="./styles.css?v=241.0"/>
   <link rel="stylesheet" href="./photos.css?v=241.0"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<noscript><style>[data-customer-recovery] { display: none; }</style></noscript>
 </head>
 <body data-gallery="">
   <div class="gallery-country-background" data-gallery-background aria-hidden="true">
@@ -48,7 +50,17 @@
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
     </div>
   </header>
-  <main id="main-content" class="shell">
+  <main data-customer-state="loading" id="main-content" class="shell">
+    <section class="panel customer-recovery" data-customer-recovery>
+      <p role="status" aria-live="polite" aria-atomic="true">Loading your photos…</p>
+      <button class="btn secondary" type="button" hidden>Try again</button>
+      <a class="btn secondary" href="./#collections">Browse collections</a>
+    </section>
+    <noscript><section class="panel customer-recovery">
+      <p lang="en">Enable JavaScript to load photos and use your basket. <a href="./#collections">Browse collections</a> or <a href="./support.html">contact support</a>.</p>
+      <p lang="fr">Activez JavaScript pour charger les photos et utiliser votre panier. <a href="./#collections">Voir les collections</a> ou <a href="./support.html">contacter l’assistance</a>.</p>
+      <p lang="es">Activa JavaScript para cargar las fotos y usar tu cesta. <a href="./#collections">Ver colecciones</a> o <a href="./support.html">contactar con soporte</a>.</p>
+    </section></noscript>
     <section class="panel gallery-hero" data-gallery-hero>
       <div class="gallery-hero-copy">
         <h1 data-gallery-title data-i18n="nav.gallery">Gallery</h1>
@@ -75,6 +87,7 @@
   </footer>
 
   <script src="./media-config.js?v=241.0"></script>
+  <script src="./customer-recovery.js?v=241.0"></script>
   <script src="./photos.js?v=241.0"></script>
   <script src="./site-version.js?v=241.0"></script>
   <script src="./analytics.js?v=241.0"></script>

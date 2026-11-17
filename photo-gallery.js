@@ -484,7 +484,7 @@ const writeFilterState = () => {
   const persistedState = Object.fromEntries(
     storedFilterKeys.map((key) => [key, filterState[key] ?? defaultFilterState[key]])
   );
-  localStorage.setItem(filterStateKey, JSON.stringify(persistedState));
+  try { localStorage.setItem(filterStateKey, JSON.stringify(persistedState)); } catch {}
 };
 
 const writeDetailSequenceContext = (photos) => {
@@ -2788,6 +2788,7 @@ if (galleryRoot && gallery) {
   });
 window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
 }
+window.photosByElieCustomerRecovery?.ready();
 })().catch((error) => {
   const failedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
   if (failedGalleryKey === "pbe-owner") {
@@ -2795,5 +2796,6 @@ window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
     document.querySelector("[data-gallery-root]")?.setAttribute("hidden", "");
   }
   const status = document.querySelector("[data-gallery-status]");
-  if (status) status.textContent = error?.message || "Could not load gallery.";
+  if (status) status.textContent = "";
+  window.photosByElieCustomerRecovery?.fail();
 }));

@@ -9,6 +9,8 @@
     <link rel="icon" href="../assets/branding/photosbyelie-camera-tripod-logo-512.png">
     <link rel="preload" as="image" href="assets/pano-ronda.jpg">
     <link rel="stylesheet" href="landing.css?v=241.0">
+  <script src="../theme-preference.js?v=241.0"></script>
+    <script>document.documentElement.dataset.theme = window.photosByElieTheme.resolved() === "dark" ? "night" : "day";</script>
   </head>
   <body>
     <a class="skip-link" href="#explore" data-i18n="skipCollection">Skip to the collection</a>
@@ -151,7 +153,8 @@
 
         <fieldset>
           <legend data-i18n="theme">Theme</legend>
-          <label><input type="radio" name="theme" value="night" checked> <span data-i18n="night">Night</span></label>
+          <label><input type="radio" name="theme" value="system" checked> <span data-i18n="system">System</span></label>
+          <label><input type="radio" name="theme" value="night"> <span data-i18n="night">Night</span></label>
           <label><input type="radio" name="theme" value="day"> <span data-i18n="day">Day</span></label>
         </fieldset>
 

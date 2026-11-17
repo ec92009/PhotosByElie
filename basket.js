@@ -1,5 +1,9 @@
 ((async () => {
 await window.photosByElieCatalogReady;
+try { localStorage.getItem("photosbyelie-basket"); } catch {
+  window.photosByElieCustomerRecovery?.fail("storage");
+  return;
+}
 const formatMoney = (value) => {
   const amount = Number(value) || 0;
   return new Intl.NumberFormat("en-US", {
@@ -674,8 +678,13 @@ const syncCheckoutControls = () => {
   if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
 };
 
+let checkoutStarting = false;
+let checkoutRedirecting = false;
 checkoutGuest?.addEventListener("click", async () => {
+  if (checkoutStarting) return;
+  checkoutStarting = true;
   checkoutGuest.disabled = true;
+  setBasketStatus(t("basket.creating_checkout"), { checkout: true });
   try {
     const accountEmail = signedInAccountEmail();
     if (checkoutEmail && accountEmail && !checkoutEmail.value) checkoutEmail.value = accountEmail;
@@ -739,6 +748,7 @@ checkoutGuest?.addEventListener("click", async () => {
     if (body.checkout?.provider === "stripe" && body.checkout?.url) {
       setBasketStatus(t("basket.opening_stripe"));
       window.location.assign(body.checkout.url);
+      checkoutRedirecting = true;
       return;
     }
     setBasketStatus(t("basket.mock_ready"));
@@ -751,7 +761,10 @@ checkoutGuest?.addEventListener("click", async () => {
     }
     setBasketStatus(error?.message || "Checkout could not start.", { checkout: true });
   } finally {
-    checkoutGuest.disabled = false;
+    if (!checkoutRedirecting) {
+      checkoutStarting = false;
+      checkoutGuest.disabled = false;
+    }
   }
 });
 
@@ -1038,7 +1051,9 @@ window.addEventListener("photosbyelie:accountdatacleared", () => {
   renderBasket();
   syncCheckoutControls();
 });
+window.photosByElieCustomerRecovery?.ready();
 })().catch((error) => {
   const status = document.querySelector("[data-basket-status]");
-  if (status) status.textContent = error?.message || "Could not load basket.";
+  if (status) status.textContent = "";
+  window.photosByElieCustomerRecovery?.fail();
 }));

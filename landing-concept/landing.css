@@ -1015,3 +1015,9 @@ input { font: inherit; }
   .country-links a { transition: none; }
   .hero-slide img { will-change: auto; }
 }
+
+/* Keep the settings gear reachable when translated account labels need two rows. */
+@media (max-width: 420px) {
+  .site-header { height: auto; min-height: var(--header-height); flex-wrap: wrap; gap: .5rem; }
+  .primary-nav { margin-left: auto; }
+}

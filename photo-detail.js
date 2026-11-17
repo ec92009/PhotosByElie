@@ -1184,6 +1184,7 @@ if (!ownerDetailPurchaseHidden) {
   updateTotal();
 }
 }
+window.photosByElieCustomerRecovery?.ready();
 })()).catch((error) => {
   const requestedCollectionKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
   const isPBEOwnerFailure = requestedCollectionKey === "pbe-owner";
@@ -1191,15 +1192,9 @@ if (!ownerDetailPurchaseHidden) {
   document.querySelector("[data-photo-preview]")?.setAttribute("hidden", "");
   document.querySelector(".purchase-panel")?.setAttribute("hidden", "");
   document.querySelector("[data-detail-shortcut-hint]")?.setAttribute("hidden", "");
-  const message = error?.message || (isPBEOwnerFailure ? "PBE Owner session is unavailable." : "Could not load photo.");
+  window.photosByElieCustomerRecovery?.fail();
   const meta = document.querySelector("[data-photo-meta]");
-  if (meta) {
-    meta.removeAttribute("data-i18n");
-    meta.textContent = isPBEOwnerFailure ? "PBE Owner unavailable" : "Photo unavailable";
-  }
   const title = document.querySelector("[data-photo-title]");
-  if (title) {
-    title.removeAttribute("data-i18n");
-    title.textContent = message;
-  }
+  if (meta) meta.textContent = "";
+  if (title) title.textContent = "";
 });

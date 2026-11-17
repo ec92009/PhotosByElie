@@ -38,10 +38,11 @@ About and version pill on November 17. The prepared checkout inherited v241.0.
 The canonical calendar SOP yields day 321 for this date. Branch/ref inspection
 found no existing 321.x identity when the first candidate v321.0 was assigned.
 That candidate produced a validated local artifact at `08162814`. Subsequent
-localization changes advance the final candidate to v321.1.
+localization changes produced v321.1. The source-backed local-host startup
+fix advances the final candidate to v321.2.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill agree on v321.1. Packaging checks their
+README together. About and pill agree on v321.2. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -60,7 +61,7 @@ The private package and gate receipts live at `tmp/public-release/receipt.json`
 and `tmp/pbe-221-evidence/authoritative-release.log`. The release package is
 generated after this source receipt is committed so its identity can bind the
 clean committed tree. The previous v321.0 package is retained separately at
-`tmp/public-release-v321.0/`. Inspect its `identity` and `releaseChecks` for the exact
+`tmp/public-release-v321.0/` and `tmp/public-release-v321.1/`. Inspect its `identity` and `releaseChecks` for the exact
 artifact source SHA and gate result.
 
 ## Owner input review
@@ -83,6 +84,22 @@ the public catalog and the existing frozen snapshot received zero writes.
 The direct policy validator passed against that input. A validator invocation
 without an authority input failed closed as expected. Parent retains production
 approval and acceptance of the resulting release receipts.
+
+## Verified production landing baseline
+
+Read-only browser fetches confirmed exact SHA-256 parity with
+`c00ef4d538b4908c012ff6b3a0945c85ef74bdbe` for `index.html`,
+`landing-concept/landing.js`, `landing-concept/landing.css`, `social.html`,
+`campaign.js`, `campaigns.js`, `campaign-video.js` and
+`campaign-collection.js`. Private hash receipts live in the evidence directory.
+
+The integrated landing source starts from prepared `618f9da2` and PBE-219
+settings at `7710d7f5` / integrated `044d996d`. Production adds revised
+usage-guide markup/copy/assets, social-directory navigation, story-card
+contrast and later campaign behavior. Their broader baseline adoption remains
+a parent-reviewed release dependency. PBE-224 can use the exact production
+commit above for its separate offer candidate. Prices/licenses and the new
+PBE-224 copy candidate received no changes here.
 
 ## Deployed WST reconciliation
 
@@ -147,13 +164,15 @@ received real authority despite intending to omit it. Fixture environments now
 explicitly control the authority input. The same test also checks the supported
 environment-input success path. Production validation remains fail-closed.
 
-The first GitHub CI run at `08162814` failed only the split-root host fixture
-readiness deadline while the child remained running. The same fixture passed
-locally under Python 3.14 and CI-matching Python 3.12. Its output now goes to a
-temporary file, removing unread-pipe backpressure and preserving startup
-diagnostics. The 10-second deadline, split-root identity, exact served bytes
-and tamper rejection are retained. Final CI and repeated gate results are
-recorded with the final source identity.
+GitHub CI repeatedly failed the split-root host readiness fixture while local
+Python 3.14 and Python 3.12 passed. A separate diagnostic run at
+`b86bcc7d` captured the child blocked in Python `socket.getfqdn` called from
+`HTTPServer.server_bind`. The local server now binds through `TCPServer` and
+sets HTTP metadata from its actual configured address/port. A regression test
+raises on any reverse-DNS call. The original 10-second deadline, split-root
+identity, exact served bytes and tamper rejection remain. The temporary CI
+tracing step was removed after diagnosis. The Python suite now contains 490
+tests. Final CI and repeated gate results are recorded with the source identity.
 
 ### Browser and local buyer receipts
 
@@ -208,6 +227,9 @@ API configuration overrides recorded separately from release output.
   active origin, deployed identity and whole-artifact rollback proof remain
   production work. PBE-216's parent-reported legacy exposure persists until
   authorized publishing-source adoption.
+- Public website publication requires parent-reviewed adoption of the deployed
+  landing/social/campaign baseline described above. The prepared landing
+  content has a verified source drift boundary.
 - Worker publication requires reconciliation of additional deployed-source
   refund orchestration and account gallery-checkpoint behavior absent from the
   prepared baseline. The public artifact excludes Worker source. The WST RPC

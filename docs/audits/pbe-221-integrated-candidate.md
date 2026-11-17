@@ -40,10 +40,11 @@ The canonical calendar SOP yields day 321 for this date. Branch/ref inspection
 found no existing 321.x identity when the first candidate v321.0 was assigned.
 That candidate produced a validated local artifact at `08162814`. Subsequent
 localization changes produced v321.1. The source-backed local-host startup
-fix advances the final candidate to v321.2.
+fix produced v321.2, whose CI passed at `afe381ad`. Integration of the reviewed
+offline tool advances the final complete candidate to v321.3.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill agree on v321.2. Packaging checks their
+README together. About and pill agree on v321.3. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -62,7 +63,8 @@ The private package and gate receipts live at `tmp/public-release/receipt.json`
 and `tmp/pbe-221-evidence/authoritative-release.log`. The release package is
 generated after this source receipt is committed so its identity can bind the
 clean committed tree. The previous v321.0 package is retained separately at
-`tmp/public-release-v321.0/` and `tmp/public-release-v321.1/`. Inspect its `identity` and `releaseChecks` for the exact
+`tmp/public-release-v321.0/`, `tmp/public-release-v321.1/` and
+`tmp/public-release-v321.2/`. Inspect its `identity` and `releaseChecks` for the exact
 artifact source SHA and gate result.
 
 ## Owner input review

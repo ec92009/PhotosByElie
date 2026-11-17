@@ -306,8 +306,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit")', app)
         self.assertIn("navigationSidebarVisible", app)
         self.assertIn("selectedSectionPreferenceKey", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
+        self.assertIn(
+            'static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"',
+            persistence,
+        )
+        self.assertIn(
+            'static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"',
+            persistence,
+        )
         self.assertIn("quickLookFrameAutosaveName", adapter)
         self.assertIn("setFrameUsingName", adapter)
         self.assertIn("setFrameAutosaveName", persistence)
@@ -2016,8 +2024,8 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("var isPreviewPanelVisible: Bool", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn("Collapse the Gallery or Review preview inspector", root)

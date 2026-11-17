@@ -8,6 +8,13 @@ test('Customer settings constrain height and scroll when native zoom reduces the
   assert.match(read('shared.css'), /\.site-settings-dialog\{\s*max-height:calc\(100dvh[^}]+overflow-y:auto;[^}]+overscroll-behavior:contain;/);
 });
 
+test('Gallery action-label settings use the existing EN/FR/ES translation contract', () => {
+  assert.match(read('photo-gallery.js'), /data-i18n="settings.action_labels"/);
+  for (const label of ['Show action labels', 'Afficher les libellés des actions', 'Mostrar etiquetas de acciones']) {
+    assert.ok(read('photos.js').includes(`'settings.action_labels': '${label}'`));
+  }
+});
+
 function themeHarness({ saved = {}, denied = false, quota = false, dark = false } = {}) {
   const values = new Map(Object.entries(saved));
   const events = new Map();

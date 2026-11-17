@@ -2099,7 +2099,7 @@ const ensureActionLabelSetting = () => {
   label.className = "site-settings-check gallery-action-label-setting";
   label.innerHTML = `
     <input type="checkbox" data-gallery-action-label-setting${readActionLabelSetting() ? " checked" : ""}>
-    <span>Show action labels</span>
+    <span data-i18n="settings.action_labels">${escapeHtml(t("settings.action_labels"))}</span>
   `;
   label.querySelector("input")?.addEventListener("change", (event) => {
     const enabled = Boolean(event.target.checked);

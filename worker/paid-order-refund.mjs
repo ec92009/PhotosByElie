@@ -1,3 +1,5 @@
+import { refundProtectedOrderStore, refundAuthorityUnavailable } from "./refund-protected-order-store.mjs";
+
 const ELIGIBLE_DELIVERY_STATES = new Set([
   "preparing",
   "delivery_failed",
@@ -10,7 +12,7 @@ const refundOrderStatus = (status) => {
   if (status === "failed" || status === "canceled") return "refund_failed";
   return "refund_pending";
 };
-const refundStatusRank = (status) => ({ pending: 1, requires_action: 1, failed: 2, canceled: 2, partial: 2, succeeded: 3 })[status] || 0;
+const refundStatusRank = (status) => ({ unknown: 1, pending: 1, requires_action: 1, failed: 2, canceled: 2, partial: 3, succeeded: 4 })[status] || 0;
 
 const paidError = (message, status, code, details) => Object.assign(new Error(message), {
   status,
@@ -89,7 +91,9 @@ export const refundBlocksFulfillment = (order) => {
   return Boolean(status);
 };
 
-export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
+export const createPaidOrderRefund = ({ orderStore, stripe, time, settlement } = {}) => {
+  for (const name of ["getOrder", "putOrder"]) requireFunction(orderStore?.[name], `orderStore.${name}`);
+  orderStore = refundProtectedOrderStore(orderStore, settlement);
   const getOrder = requireFunction(orderStore?.getOrder?.bind(orderStore), "orderStore.getOrder");
   const putOrder = requireFunction(orderStore?.putOrder?.bind(orderStore), "orderStore.putOrder");
   const retrieveCheckoutSession = requireFunction(stripe?.retrieveCheckoutSession?.bind(stripe), "stripe.retrieveCheckoutSession");
@@ -97,15 +101,20 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
   const createRefund = requireFunction(stripe?.createRefund?.bind(stripe), "stripe.createRefund");
   const now = requireFunction(time?.now, "time.now");
 
-  const persistStripeRefund = async (order, refund, fallback = {}) => {
+  const persistStripeRefund = async (order, refund, fallback = {}, retries = 0) => {
+    if (!settlement?.savePaidRefund) throw refundAuthorityUnavailable();
+    const durable = await settlement.refundOrderFor(order.id);
+    order = durable?.order || order;
     const updatedAt = now().toISOString();
     const rawStatus = String(refund?.status || fallback.status || "pending");
     const refundAmount = Number(refund?.amount || order.refund?.amount || order.amountPaid || 0);
     const status = rawStatus === "succeeded" && refundAmount !== Number(order.amountPaid)
       ? "partial"
       : rawStatus;
-    const incomingAttempt = Number(refund?.metadata?.refund_attempt || fallback.attempt || order.refund?.attempt || 1);
+    let incomingAttempt = Number(refund?.metadata?.refund_attempt || fallback.attempt || order.refund?.attempt || 1);
     const existingAttempt = Number(order.refund?.attempt || 0);
+    if (order.refund?.status === "succeeded") return order;
+    if (status === "succeeded") incomingAttempt = Math.max(incomingAttempt, existingAttempt);
     if (order.refund && (
       incomingAttempt < existingAttempt
       || (incomingAttempt === existingAttempt && refundStatusRank(status) < refundStatusRank(order.refund.status))
@@ -136,11 +145,15 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
       },
       updatedAt,
     };
-    await putOrder(next);
-    return next;
+    if (!await settlement.savePaidRefund(next, durable?.revision ?? null, Boolean(refund))) {
+      if (retries >= 7) throw refundAuthorityUnavailable();
+      return persistStripeRefund(order, refund, fallback, retries + 1);
+    }
+    return putOrder(next);
   };
 
   const reconcile = async (orderId) => {
+    if (!settlement?.refundOrderFor) throw refundAuthorityUnavailable();
     let order = await getOrder(orderId);
     if (!order) throw paidError(`No order exists for ${orderId}.`, 404, "unknown_order");
     if (!order.checkoutSessionId || !order.paymentIntentId) return order;
@@ -186,17 +199,24 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
     if (confirmationOrderId !== orderId) {
       throw paidError("Type the exact order id to confirm this refund.", 400, "refund_confirmation_mismatch");
     }
-    const reason = cleanReason(payload.reason);
+    let reason = cleanReason(payload.reason);
     if (!reason) throw paidError("A support reason is required.", 400, "refund_reason_required");
 
+    if (!settlement?.reservePaidRefund) throw refundAuthorityUnavailable();
     let order = await reconcile(orderId);
     const eligibility = eligibilityFor(order);
-    if (!eligibility.eligible) throw paidError(eligibility.reason, 409, "refund_not_allowed", publicRefund(order, eligibility));
+    const unknownAge = now().getTime() - Date.parse(order.refund?.requestedAt || "");
+    // API v1 keys may be pruned after 24h. A stale unknown outcome needs
+    // provider reconciliation, never a potentially new refund under an old key.
+    const replayUnknown = order.refund?.status === "unknown" && unknownAge >= 0 && unknownAge < 23 * 60 * 60 * 1000;
+    if (replayUnknown) reason = order.refund.reason;
+    if (!eligibility.eligible && !replayUnknown) throw paidError(eligibility.reason, 409, "refund_not_allowed", publicRefund(order, eligibility));
+    const previous = await settlement.refundOrderFor(orderId);
 
     const priorAttempt = Number(order.refund?.attempt || 0);
     const attempt = order.refund?.status === "failed" || order.refund?.status === "canceled" ? priorAttempt + 1 : Math.max(1, priorAttempt);
-    const requestedAt = now().toISOString();
-    const idempotencyKey = `photosbyelie-refund-${order.id}-attempt-${attempt}`;
+    const requestedAt = replayUnknown ? order.refund.requestedAt : now().toISOString();
+    const idempotencyKey = replayUnknown ? order.refund.idempotencyKey : `photosbyelie-refund-${order.id}-attempt-${attempt}`;
     const deliveryState = deliveryStateFor(order);
     order = {
       ...order,
@@ -218,6 +238,7 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
       },
       updatedAt: requestedAt,
     };
+    await settlement.reservePaidRefund(order, previous?.revision ?? 0);
     await putOrder(order);
 
     try {
@@ -238,8 +259,10 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
         order = await persistStripeRefund(order, matching[0]);
         return publicRefund(order, eligibilityFor(order));
       }
+      const rejected = Number(error?.details?.stripeStatus) >= 400 && Number(error?.details?.stripeStatus) < 500
+        && ![409, 429].includes(Number(error?.details?.stripeStatus));
       order = await persistStripeRefund(order, null, {
-        status: "failed",
+        status: rejected ? "failed" : "unknown",
         deliveryState,
         reason,
         attempt,
@@ -250,7 +273,8 @@ export const createPaidOrderRefund = ({ orderStore, stripe, time } = {}) => {
           message: error?.message || "Stripe did not accept the refund request.",
         },
       });
-      throw paidError(order.refund.failure.message, 502, "stripe_refund_failed", publicRefund(order, eligibilityFor(order)));
+      throw paidError(order.refund.failure?.message || "Refund outcome is unknown; the delivery exclusion is retained.", 502,
+        rejected ? "stripe_refund_failed" : "stripe_refund_unknown", publicRefund(order, eligibilityFor(order)));
     }
   };
 

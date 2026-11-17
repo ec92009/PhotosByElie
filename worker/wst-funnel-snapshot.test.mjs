@@ -99,6 +99,14 @@ test('provider failures, mismatches and malformed retained evidence reject the e
   }
 });
 
+test('an empty retained cohort never masks missing settlement authority', async () => {
+  const h = funnelFixture([]);
+  h.lifecycle.ensurePaidSettlementAuthority = async () => { throw Error('settlement unavailable'); };
+  await assert.rejects(buildWstFunnelSnapshot(h), /settlement unavailable/);
+  delete h.lifecycle.ensurePaidSettlementAuthority;
+  await assert.rejects(buildWstFunnelSnapshot(h), /readers unavailable/);
+});
+
 test('complete provider reads are bounded and never substitute a partial legacy list', async () => {
   const h = funnelFixture(Array.from({ length: 109 }, (_, i) => syntheticOrder(`s${String(i).padStart(3, '0')}`)));
   let active = 0, peak = 0;
@@ -120,6 +128,7 @@ test('real fulfillment replay and render failure preserve stage boundaries witho
     const native = [];
     let clock = paidAt;
     const fulfillment = createPaidOrderFulfillment({
+      allowUnsettledMock: true,
       orderStore: { getOrder: async (id) => structuredClone(h.records.get(id)), putOrder: async (value) => h.records.set(value.id, structuredClone(value)), putDownload: async () => {} },
       deliveryRenderer: { createDelivery: async () => { if (failRender) throw Error('renderer failed'); clock = readyAt; return syntheticDelivery(); } },
       lifecycleFence: { assertAllowed: async () => true }, email: { sendReady: async (value) => value }, analytics: { record: async (value) => native.push(value) },

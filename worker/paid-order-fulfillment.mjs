@@ -1,4 +1,5 @@
 import { refundBlocksFulfillment } from "./paid-order-refund.mjs";
+import { refundProtectedOrderStore, refundAuthorityUnavailable } from "./refund-protected-order-store.mjs";
 
 const REVOCATION_CODES = new Set(["asset_lifecycle_denied", "lifecycle_fence_changed"]);
 
@@ -33,7 +34,10 @@ export const createPaidOrderFulfillment = ({
   downloadPolicy,
   applyDownloadPolicy,
   mediaIdsForOrder,
+  allowUnsettledMock = false,
 } = {}) => {
+  for (const name of ["getOrder", "putOrder", "putDownload"]) requireFunction(orderStore?.[name], `orderStore.${name}`);
+  orderStore = refundProtectedOrderStore(orderStore, lifecycleFence, { allowUnsettledMock });
   const getOrder = requireFunction(orderStore?.getOrder?.bind(orderStore), "orderStore.getOrder");
   const putOrder = requireFunction(orderStore?.putOrder?.bind(orderStore), "orderStore.putOrder");
   const putDownload = requireFunction(orderStore?.putDownload?.bind(orderStore), "orderStore.putDownload");
@@ -79,8 +83,19 @@ export const createPaidOrderFulfillment = ({
       }
       return current || order;
     }
-    if (!order || !lifecycleFence?.fulfillmentFor) return order;
+    if (!order) return order;
+    if (!lifecycleFence?.fulfillmentFor) {
+      if (!allowUnsettledMock) throw refundAuthorityUnavailable();
+      return order;
+    }
     const settlement = await lifecycleFence.fulfillmentFor(order.id);
+    if (settlement?.state === "refund_reserved") {
+      if (throwOnRevocation) throw paidError("Refund settlement excludes paid fulfillment.", 409, "refund_blocks_fulfillment");
+      const refunded = await getOrder(order.id);
+      if (!refunded?.refund) throw refundAuthorityUnavailable();
+      return refunded;
+    }
+    if (!settlement && order.status === "ready" && order.checkoutSessionId && !allowUnsettledMock) throw refundAuthorityUnavailable();
     if (settlement?.state === "blocked_pending_lifecycle") {
       throw Object.assign(new Error("Paid fulfillment is held behind an armed lifecycle operation."), {
         status: 409,
@@ -142,6 +157,8 @@ export const createPaidOrderFulfillment = ({
       paidAt,
       updatedAt: paidAt,
     };
+    if (lifecycleFence?.beginPaidFulfillment) await lifecycleFence.beginPaidFulfillment(preparing);
+    else if (!allowUnsettledMock) throw refundAuthorityUnavailable();
     await putOrder(preparing);
 
     let deliveryResult;

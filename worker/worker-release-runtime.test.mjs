@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { build } from "esbuild";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
+import fs from "node:fs";
+import { createD1LifecycleDenyStore, summarizeLifecycleManifest } from "./lifecycle-deny-store.mjs";
 
 /** Compile the real class entrypoint; every external request is intercepted. */
 test("combined workerd entrypoint retains private WST RPC, Tilbury and PBE delegation", async () => {
@@ -26,7 +28,10 @@ test("combined workerd entrypoint retains private WST RPC, Tilbury and PBE deleg
       serviceBindings: { PBE: "pbe-combined", UNCONFIGURED: "pbe-unconfigured" },
       script: `export default { async fetch(request, env) {
         if (new URL(request.url).pathname === '/private-rpc') return Response.json(await env.PBE.wstCommerceSnapshot());
-        if (new URL(request.url).pathname === '/private-funnel') return Response.json(await env.PBE.wstFunnelSnapshot());
+        if (new URL(request.url).pathname === '/private-funnel') {
+          try { return Response.json(await env.PBE.wstFunnelSnapshot()); }
+          catch { return Response.json({blocked:true}, {status:503}); }
+        }
         if (new URL(request.url).pathname === '/unconfigured-funnel') {
           try { await env.UNCONFIGURED.wstFunnelSnapshot(); }
           catch { return Response.json({blocked:true}, {status:503}); }
@@ -51,6 +56,17 @@ test("combined workerd entrypoint retains private WST RPC, Tilbury and PBE deleg
     assert.equal(snapshot.status, 200);
     assert.deepEqual((await snapshot.json()).days, []);
     assert.equal(stripeRequests.length, 1);
+    assert.equal((await mf.dispatchFetch("https://worker.test/private-funnel")).status, 503, "empty KV cannot mask unavailable D1 schema");
+    const database = await mf.getD1Database("ACCESS_DB", "pbe-combined");
+    for (const file of ["0012_lifecycle_deny_plane.sql", "0013_lifecycle_manifest_reconciliation.sql", "0018_paid_refund_settlement.sql"]) {
+      await database.exec(fs.readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8").replace(/^--.*$/gm, "").replace(/\s+/g, " "));
+    }
+    const lifecycle = createD1LifecycleDenyStore({ database });
+    const members = [{ canonicalAssetId: "synthetic-asset", canonicalMediaId: "synthetic-photo", bindings: [
+      { bucket: "public", objectKey: "expo/synthetic-photo_900.jpg" },
+    ] }];
+    await lifecycle.seedVisibleBatch({ seedId: "runtime-rpc-test", items: members });
+    await lifecycle.activate({ activationId: "runtime-rpc-test", ...await summarizeLifecycleManifest(members) });
     const funnel = await mf.dispatchFetch("https://worker.test/private-funnel");
     assert.equal(funnel.status, 200);
     const funnelData = await funnel.json();

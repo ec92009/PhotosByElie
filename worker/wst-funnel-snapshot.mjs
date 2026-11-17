@@ -31,6 +31,13 @@ function checkoutEvidence(order, session, observedAt) {
   return { createdAt, paidAt, paymentId, currency: order.currency.toUpperCase(), live: session.livemode };
 }
 
+function validateSettlement(settlement, order) {
+  if (settlement !== null && (!record(settlement) || settlement.orderId !== order.id
+    || !['ready', 'manual_refund_review', 'blocked_pending_lifecycle', 'refund_reserved'].includes(settlement.state)
+    || (settlement.state === 'ready' && !/^[a-f0-9]{64}$/.test(settlement.fenceDigest)))) throw evidenceError('fulfillment settlement');
+  if (order.lifecycleSettlementBound && !settlement) throw evidenceError('fulfillment settlement missing');
+}
+
 /** Ready is retained fulfillment, never an assertion about a download or email delivery. */
 async function deliveryReady(order, lifecycle, paidAt, observedAt) {
   if (order.delivery != null && !record(order.delivery)) throw evidenceError('delivery record');
@@ -65,10 +72,7 @@ async function deliveryReady(order, lifecycle, paidAt, observedAt) {
   }
   if (products.size) throw evidenceError('incomplete delivery files');
   const settlement = await lifecycle.fulfillmentFor(order.id);
-  if (settlement !== null && (!record(settlement) || settlement.orderId !== order.id
-    || !['ready', 'manual_refund_review', 'blocked_pending_lifecycle'].includes(settlement.state)
-    || (settlement.state === 'ready' && !/^[a-f0-9]{64}$/.test(settlement.fenceDigest)))) throw evidenceError('fulfillment settlement');
-  if (order.lifecycleSettlementBound && !settlement) throw evidenceError('fulfillment settlement missing');
+  validateSettlement(settlement, order);
   if (settlement && settlement.state !== 'ready') return { readyAt, count: 0 };
   try {
     const fence = await lifecycle.assertAllowed([...mediaIds], 'wst-funnel:delivery-ready');
@@ -80,17 +84,22 @@ async function deliveryReady(order, lifecycle, paidAt, observedAt) {
     if (!deniedCodes.has(error?.code)) throw error;
     return { readyAt, count: 0 };
   }
+  const after = await lifecycle.fulfillmentFor(order.id);
+  validateSettlement(after, order);
+  if (after && after.state !== 'ready') return { readyAt, count: 0 };
+  if (settlement?.fenceDigest !== after?.fenceDigest) throw evidenceError('fulfillment settlement changed');
   return { readyAt, count: 1 };
 }
 
 /** Complete replacement projection of supported retained Stripe orders, with no private dimensions. */
 export async function buildWstFunnelSnapshot({ namespace, prefix = 'pbe', stripe, lifecycle, now = () => new Date() } = {}) {
   if (typeof stripe?.retrieveCheckoutSession !== 'function' || typeof lifecycle?.fulfillmentFor !== 'function'
-    || typeof lifecycle?.assertAllowed !== 'function') throw evidenceError('provider or lifecycle readers unavailable');
+    || typeof lifecycle?.assertAllowed !== 'function' || typeof lifecycle?.ensurePaidSettlementAuthority !== 'function') throw evidenceError('provider or lifecycle readers unavailable');
   // Observe at read start so a slower old read cannot masquerade as a newer snapshot.
   const observedAt = now().toISOString();
   const observedMs = Date.parse(observedAt);
   utcTimestamp(observedAt, observedMs);
+  await lifecycle.ensurePaidSettlementAuthority();
   const orders = await readWstFunnelOrders(namespace, prefix);
   const supported = orders.filter((order) => {
     if (order.type === 'real_estate_originals' || /^cs_mock_/.test(order.checkoutSessionId || '')) return false;

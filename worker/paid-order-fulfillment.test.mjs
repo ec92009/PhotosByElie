@@ -72,6 +72,7 @@ const harness = ({ order = pendingOrder(), delivery, lifecycleFence = {}, onPutO
     }),
   };
   const dependencies = {
+    allowUnsettledMock: true, // Isolated unit seam; authority races use real D1 in paid-refund-race.test.mjs.
     orderStore,
     deliveryRenderer,
     lifecycleFence,

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { afterEach } from "node:test";
+import { refundAuthority } from "./paid-refund-test-support.mjs";
+const databases = [];
+afterEach(() => { for (const db of databases.splice(0)) db.sqlite.close(); });
 
 import { createPaidOrderRefund } from "./paid-order-refund.mjs";
 
@@ -19,7 +22,11 @@ const paidOrder = (overrides = {}) => ({
   ...overrides,
 });
 
-const harness = ({ order = paidOrder(), refundStatus = "succeeded", createFailure = null } = {}) => {
+const harness = async ({ order = paidOrder(), refundStatus = "succeeded", createFailure = null } = {}) => {
+  const { database, settlement } = await refundAuthority(fixedNow);
+  databases.push(database);
+  await settlement.beginPaidFulfillment(order);
+  if (order.refund) await settlement.savePaidRefund(order, null, true);
   const orders = new Map([[order.id, structuredClone(order)]]);
   const refunds = [];
   const createCalls = [];
@@ -57,7 +64,7 @@ const harness = ({ order = paidOrder(), refundStatus = "succeeded", createFailur
     },
   };
   return {
-    refund: createPaidOrderRefund({ orderStore, stripe, time: { now: fixedNow } }),
+    refund: createPaidOrderRefund({ settlement, orderStore, stripe, time: { now: fixedNow } }),
     orders,
     refunds,
     createCalls,
@@ -65,7 +72,7 @@ const harness = ({ order = paidOrder(), refundStatus = "succeeded", createFailur
 };
 
 test("preview reconciles Stripe and allows only paid pre-delivery orders", async () => {
-  const { refund } = harness();
+  const { refund } = await harness();
   const preview = await refund.preview("PBE-20260904-REFUND");
   assert.equal(preview.eligible, true);
   assert.equal(preview.amount, 1600);
@@ -74,7 +81,7 @@ test("preview reconciles Stripe and allows only paid pre-delivery orders", async
 });
 
 test("explicit confirmation persists a full Stripe refund and permanent delivery block", async () => {
-  const { refund, orders, createCalls } = harness();
+  const { refund, orders, createCalls } = await harness();
   const result = await refund.requestRefund("PBE-20260904-REFUND", {
     confirmationOrderId: "PBE-20260904-REFUND",
     reason: "Buyer requested cancellation before delivery.",
@@ -88,10 +95,10 @@ test("explicit confirmation persists a full Stripe refund and permanent delivery
 });
 
 test("issued and used download entitlements independently fail closed", async () => {
-  const issued = harness({ order: paidOrder({ status: "ready", delivery: { downloadUrl: "/download/token" } }) });
+  const issued = await harness({ order: paidOrder({ status: "ready", delivery: { downloadUrl: "/download/token" } }) });
   assert.equal((await issued.refund.preview("PBE-20260904-REFUND")).ineligibleReason, "Download access has already been issued.");
 
-  const used = harness({ order: paidOrder({ downloadEvents: [{ token: "token" }] }) });
+  const used = await harness({ order: paidOrder({ downloadEvents: [{ token: "token" }] }) });
   assert.equal((await used.refund.preview("PBE-20260904-REFUND")).ineligibleReason, "A download entitlement has already been used.");
 });
 
@@ -107,7 +114,7 @@ test("failed attempts remain visible and retry with a new attempt-stable idempot
       paymentIntentId: "pi_refund",
     },
   });
-  const { refund, createCalls } = harness({ order: failed });
+  const { refund, createCalls } = await harness({ order: failed });
   const result = await refund.requestRefund(failed.id, {
     confirmationOrderId: failed.id,
     reason: "Retry after confirmed provider failure.",
@@ -128,7 +135,7 @@ test("out-of-order succeeded webhook is monotonic and blocks duplicate refund cr
       paymentIntentId: "pi_refund",
     },
   });
-  const { refund, orders, createCalls } = harness({ order: pending });
+  const { refund, orders, createCalls } = await harness({ order: pending });
   await refund.applyRefundEvent({
     id: "re_late_success",
     payment_intent: "pi_refund",
@@ -155,7 +162,7 @@ test("out-of-order succeeded webhook is monotonic and blocks duplicate refund cr
 });
 
 test("partial Stripe refunds are surfaced for manual completion instead of over-refunding", async () => {
-  const { refund, refunds } = harness();
+  const { refund, refunds } = await harness();
   refunds.push({
     id: "re_partial",
     payment_intent: "pi_refund",

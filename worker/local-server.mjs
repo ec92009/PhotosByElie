@@ -378,6 +378,7 @@ const realEstateDeliverables = realEstatePrivateBucket
   : null;
 
 const worker = createPhotosByElieWorker({
+  allowUnsettledMock: !stripe || stripe.provider === "mock-stripe", // Local mock only; real Stripe needs D1.
   catalog: loadCatalog(),
   store,
   delivery,

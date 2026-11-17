@@ -28,6 +28,7 @@ class TransactionalD1 {
     this.lastBatchExecuted = 0;
     this.sqlite.exec(readFileSync(new URL("../migrations/0012_lifecycle_deny_plane.sql", import.meta.url), "utf8"));
     this.sqlite.exec(readFileSync(new URL("../migrations/0013_lifecycle_manifest_reconciliation.sql", import.meta.url), "utf8"));
+    this.sqlite.exec(readFileSync(new URL("../migrations/0018_paid_refund_settlement.sql", import.meta.url), "utf8"));
     if (includeIdentityMigration) {
       this.sqlite.exec(readFileSync(new URL("../migrations/0017_legacy_identity_reconciliation.sql", import.meta.url), "utf8"));
     }

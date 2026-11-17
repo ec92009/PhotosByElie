@@ -1,5 +1,6 @@
 import { preparePublicPreviewRegistration } from "./public-preview-registration-plan.mjs";
 import { reconcileLegacyIdentity } from "./legacy-identity-reconciliation.mjs";
+import { createPaidRefundSettlement, refundBlocked } from "./paid-refund-settlement.mjs";
 
 const SCHEMA_VERSION = 4;
 const CONTROL_ID = "global";
@@ -181,6 +182,14 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     const row = await controlRow();
     if (row.state !== "ready") throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle authority is not ready; access is denied.");
     return row;
+  };
+  const refundSettlement = createPaidRefundSettlement({ database, assertReady, now });
+  const refundGuarded = async (id, operation) => {
+    try { return await operation(); }
+    catch (error) {
+      if (await refundSettlement.refundOrderFor(id)) throw refundBlocked();
+      throw error;
+    }
   };
 
   const seedVisibleBatch = async ({ seedId, items }) => {
@@ -622,9 +631,20 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     await assertReady();
     const id = clean(orderId);
     if (!id) throw lifecycleError("lifecycle_fulfillment_invalid", "A stable order ID is required.", 400);
-    const row = await database.prepare(`SELECT order_id, fence_digest, state, lifecycle_operation_id,
-      created_at, updated_at FROM pbe_lifecycle_fulfillments WHERE order_id = ?`).bind(id).first();
-    if (!row) return null;
+    let row;
+    try {
+      const primary = database.withSession ? database.withSession("first-primary") : database;
+      row = await primary.prepare(`SELECT fulfillment.*, guard.state AS refund_state,
+        json_extract(guard.order_json,'$.refund.status') AS refund_status
+        FROM (SELECT ? AS id) requested
+        LEFT JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id=requested.id
+        LEFT JOIN pbe_paid_order_settlements guard ON guard.order_id=requested.id`).bind(id).first();
+    } catch { throw lifecycleError("refund_authority_unavailable", "Paid settlement authority is unavailable.", 503); }
+    if (row?.refund_state === "refund") {
+      if (!row.refund_status) throw lifecycleError("refund_authority_unavailable", "Refund projection is unavailable.", 503);
+      return { orderId: id, state: "refund_reserved", refundStatus: row.refund_status };
+    }
+    if (!row?.order_id) return null;
     return {
       orderId: clean(row.order_id),
       fenceDigest: clean(row.fence_digest),
@@ -655,6 +675,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
       throw lifecycleError("lifecycle_fulfillment_invalid", "Fulfillment requires an exact current lifecycle fence.", 400);
     }
     const existing = await fulfillmentFor(id);
+    if (existing?.state === "refund_reserved") throw refundBlocked();
     if (existing) {
       if (existing.fenceDigest !== fenceDigest) {
         throw lifecycleError("lifecycle_fulfillment_conflict", "Order fulfillment was already settled against a different lifecycle fence.", 409);
@@ -685,7 +706,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
           || clean(item.receipt_id) !== fenceMedia[index].receiptId)) {
       throw lifecycleError("lifecycle_fulfillment_conflict", "Order fulfillment intent conflicts with its exact lifecycle fence.", 409);
     }
-    await database.batch([
+    await refundGuarded(id, () => database.batch([
       database.prepare(`INSERT INTO pbe_lifecycle_fulfillments
         (order_id, fence_digest, state, lifecycle_operation_id, created_at, updated_at)
         SELECT intent.order_id, intent.fence_digest, 'ready', '', ?, ?
@@ -714,7 +735,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
           SELECT 1 FROM pbe_lifecycle_fulfillments fulfillment
           WHERE fulfillment.order_id = member.order_id AND fulfillment.fence_digest = ? AND fulfillment.state = 'ready'
         ) ON CONFLICT(order_id, canonical_media_id) DO NOTHING`).bind(id, fenceDigest),
-    ]);
+    ]));
     const durable = await fulfillmentFor(id);
     const members = await rowsFrom(database.prepare(`SELECT canonical_media_id, revision, receipt_id
       FROM pbe_lifecycle_fulfillment_media WHERE order_id = ? ORDER BY canonical_media_id`).bind(id));
@@ -735,7 +756,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     if (!id || !rawToken) throw lifecycleError("lifecycle_download_capability_invalid", "Download capability identity is incomplete.", 400);
     const tokenDigest = await digestText(rawToken);
     const timestamp = now().toISOString();
-    await database.batch([database.prepare(`INSERT INTO pbe_lifecycle_download_capabilities
+    await refundGuarded(id, () => database.batch([database.prepare(`INSERT INTO pbe_lifecycle_download_capabilities
       (token_digest, order_id, fence_digest, created_at)
       SELECT ?, fulfillment.order_id, fulfillment.fence_digest, ?
       FROM pbe_lifecycle_fulfillments fulfillment
@@ -745,7 +766,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
           JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = media.canonical_media_id
           WHERE media.order_id = fulfillment.order_id
         )
-      ON CONFLICT(token_digest) DO NOTHING`).bind(tokenDigest, timestamp, id)]);
+      ON CONFLICT(token_digest) DO NOTHING`).bind(tokenDigest, timestamp, id)]));
     const row = await database.prepare(`SELECT capability.order_id, capability.fence_digest, fulfillment.state
       FROM pbe_lifecycle_download_capabilities capability
       JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id = capability.order_id
@@ -761,6 +782,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     const id = clean(orderId);
     const rawToken = clean(token);
     if (!id || !rawToken) throw lifecycleError("lifecycle_download_capability_denied", "Download capability identity is incomplete.", 410);
+    if (await refundSettlement.refundOrderFor(id)) throw refundBlocked();
     const tokenDigest = await digestText(rawToken);
     const row = await database.prepare(`SELECT capability.order_id, fulfillment.state
       FROM pbe_lifecycle_download_capabilities capability
@@ -779,7 +801,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     if (!id || !key) throw lifecycleError("lifecycle_email_dispatch_invalid", "Email dispatch identity is incomplete.", 400);
     const dispatchDigest = await digestText(key);
     const timestamp = now().toISOString();
-    await database.batch([database.prepare(`INSERT INTO pbe_lifecycle_email_dispatches
+    await refundGuarded(id, () => database.batch([database.prepare(`INSERT INTO pbe_lifecycle_email_dispatches
       (dispatch_digest, order_id, fence_digest, state, provider_message_id, created_at, updated_at)
       SELECT ?, fulfillment.order_id, fulfillment.fence_digest, 'claimed', '', ?, ?
       FROM pbe_lifecycle_fulfillments fulfillment
@@ -788,7 +810,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
           SELECT 1 FROM pbe_lifecycle_fulfillment_media media
           JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = media.canonical_media_id
           WHERE media.order_id = fulfillment.order_id
-        ) ON CONFLICT(dispatch_digest) DO NOTHING`).bind(dispatchDigest, timestamp, timestamp, id)]);
+        ) ON CONFLICT(dispatch_digest) DO NOTHING`).bind(dispatchDigest, timestamp, timestamp, id)]));
     const row = await database.prepare(`SELECT dispatch.order_id, dispatch.fence_digest, dispatch.state, fulfillment.state AS fulfillment_state
       FROM pbe_lifecycle_email_dispatches dispatch
       JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id = dispatch.order_id
@@ -1369,6 +1391,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
   };
 
   return {
+    ...refundSettlement,
     ensureSchema: assertReady,
     seedVisibleBatch,
     activate,

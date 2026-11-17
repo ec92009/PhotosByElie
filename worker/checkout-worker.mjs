@@ -9,6 +9,7 @@ import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
 import { createPaidOrderFulfillment } from "./paid-order-fulfillment.mjs";
 import { createPaidOrderRefund } from "./paid-order-refund.mjs";
+import { refundProtectedOrderStore } from "./refund-protected-order-store.mjs";
 import { readReconciliationRequest } from "./lifecycle-reconciliation-request.mjs";
 
 const ORDER_CURRENCY = "usd";
@@ -1439,6 +1440,7 @@ export const createPhotosByElieWorker = ({
   accessAuth = null,
   accessUserRegistry = createMemoryAccessUserRegistry(),
   lifecycleDenyStore = null,
+  allowUnsettledMock = false,
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
   ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now }),
@@ -1456,6 +1458,7 @@ export const createPhotosByElieWorker = ({
   analytics = null,
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
+  store = refundProtectedOrderStore(store, lifecycleDenyStore, { allowUnsettledMock });
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
   const stripeProvider = stripe.provider || "stripe";
   const discountDefinitions = discountDefinitionsByCode(discountCodes);
@@ -1509,6 +1512,7 @@ export const createPhotosByElieWorker = ({
     };
   };
   const paidOrderFulfillment = createPaidOrderFulfillment({
+    allowUnsettledMock,
     orderStore: store,
     deliveryRenderer: deliveryClient,
     lifecycleFence: lifecycleDenyStore || {},
@@ -1522,6 +1526,7 @@ export const createPhotosByElieWorker = ({
   const reconcileFulfillmentSettlement = paidOrderFulfillment.reconcileOrder;
   const markOrderPaidAndFulfill = paidOrderFulfillment.fulfillPaidSession;
   const paidOrderRefund = createPaidOrderRefund({
+    settlement: lifecycleDenyStore,
     orderStore: store,
     stripe,
     time: { now },
@@ -1597,7 +1602,7 @@ export const createPhotosByElieWorker = ({
       await store.putOrder(sent);
       return reconcileFulfillmentSettlement(sent, { throwOnRevocation: true });
     } catch (error) {
-      if (["paid_asset_revoked", "paid_asset_lifecycle_pending"].includes(error?.code)) throw error;
+      if (["paid_asset_revoked", "paid_asset_lifecycle_pending", "refund_blocks_fulfillment", "refund_authority_unavailable"].includes(error?.code)) throw error;
       const failedAt = now().toISOString();
       if (order.lifecycleSettlementBound && lifecycleDenyStore?.completeEmailDispatch) {
         try {
@@ -2070,6 +2075,8 @@ export const createPhotosByElieWorker = ({
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return noStore(errorJson(404, "unknown_download", "Download link was not found."));
     const order = downloadRecord.orderId ? await store.getOrder(downloadRecord.orderId) : null;
+    const refundExcludesDownload = async () => Boolean(downloadRecord.orderId
+      && lifecycleDenyStore?.refundOrderFor && await lifecycleDenyStore.refundOrderFor(downloadRecord.orderId));
     if (order?.refund) {
       return noStore(errorJson(410, "order_refunded", "This order's download access was stopped by its refund workflow."));
     }
@@ -2093,6 +2100,7 @@ export const createPhotosByElieWorker = ({
       return noStore(errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order."));
     }
     let response;
+    if (await refundExcludesDownload()) return noStore(errorJson(410, "order_refunded", "Refund settlement has stopped download access."));
     if (downloadRecord.realEstateDeliverableId) {
       if (typeof realEstateDeliverables?.getDeliveryAsset !== "function") {
         return noStore(errorJson(503, "real_estate_delivery_links_unavailable", "Product output verification is unavailable."));
@@ -2111,6 +2119,10 @@ export const createPhotosByElieWorker = ({
       });
     }
     await assertLifecycleAllowed(downloadAssetIds, downloadRecord.photoId ? "download-token:before-read" : "download-archive:before-read");
+    if (await refundExcludesDownload()) {
+      await response.body?.cancel();
+      return noStore(errorJson(410, "order_refunded", "Refund settlement has stopped download access."));
+    }
     if (response.status < 400) {
       const downloadedAt = nowDate.toISOString();
       const updatedDownload = await store.recordDownload(token, downloadedAt);

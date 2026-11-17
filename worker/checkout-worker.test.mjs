@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
-import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createCatalogIndex, createPhotosByElieWorker as createWorker } from "./checkout-worker.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import deployedWorker, { realEstateGalleriesFor } from "./deployed-worker.mjs";
 import { createMemoryGoogleOAuthTransactionStore } from "./google-oauth-transaction-store.mjs";
@@ -47,6 +47,7 @@ const loadCatalog = () => {
     storefrontPolicy: catalogWindow.photosByElieStorefrontPolicy,
   });
 };
+const createPhotosByElieWorker = (options) => createWorker({ allowUnsettledMock: true, ...options });
 
 const deterministicIds = () => {
   let count = 0;
@@ -89,6 +90,7 @@ class TestD1 {
   constructor() {
     this.sqlite = new DatabaseSync(":memory:");
     this.sqlite.exec(fs.readFileSync(new URL("../migrations/0012_lifecycle_deny_plane.sql", import.meta.url), "utf8"));
+    this.sqlite.exec(fs.readFileSync(new URL("../migrations/0018_paid_refund_settlement.sql", import.meta.url), "utf8"));
     this.sqlite.exec(fs.readFileSync(new URL("../migrations/0014_owner_enrollment_handoffs.sql", import.meta.url), "utf8"));
   }
   prepare(sql) { return new TestD1Statement(this.sqlite, sql); }
@@ -4143,7 +4145,9 @@ test("enrolled Backstage can explicitly refund a paid delivery failure before do
   const store = createMemoryStore();
   const stripe = createMockStripeClient({ randomUUID });
   const photoId = firstDeliverablePhotoId(catalog);
+  const database = await readyLifecycleD1([photoId]);
   const worker = createPhotosByElieWorker({
+    lifecycleDenyStore: createD1LifecycleDenyStore({ database }),
     catalog,
     store,
     stripe,

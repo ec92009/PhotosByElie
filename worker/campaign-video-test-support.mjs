@@ -36,7 +36,7 @@ class Statement {
 export class TestD1 {
   constructor() {
     this.sqlite = new DatabaseSync(":memory:");
-    for (const file of ["0012_lifecycle_deny_plane.sql", "0013_lifecycle_manifest_reconciliation.sql", "0016_campaign_videos.sql"]) {
+    for (const file of ["0012_lifecycle_deny_plane.sql", "0013_lifecycle_manifest_reconciliation.sql", "0016_campaign_videos.sql", "0018_paid_refund_settlement.sql"]) {
       this.sqlite.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
     }
     this.sessions = [];

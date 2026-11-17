@@ -34,6 +34,7 @@ export function funnelFixture(orders = [syntheticOrder()]) {
   };
   const stripe = { async retrieveCheckoutSession(id) { calls.provider.push(id); return structuredClone(sessions.get(id)); } };
   const lifecycle = {
+    async ensurePaidSettlementAuthority() {},
     async fulfillmentFor(id) { calls.settlement.push(id); return { orderId: id, state: 'ready', fenceDigest: 'a'.repeat(64) }; },
     async assertAllowed(ids) { calls.allowed.push(ids); return { digest: 'a'.repeat(64), media: ids.map((canonicalMediaId) => ({ canonicalMediaId })) }; },
   };

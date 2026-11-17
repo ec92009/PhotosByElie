@@ -402,6 +402,7 @@ test("the download offer renders all languages and preserves purchase and permis
   const purchaseUrl = new URL(elementFor("buyAction").href, "https://photos-by-elie.com/");
   assert.equal(purchaseUrl.pathname, "/gallery.html");
   assert.equal(purchaseUrl.searchParams.get("gallery"), "selection");
+  assert.equal(purchaseUrl.searchParams.get("v"), productionVersion);
   assert.ok(fs.existsSync(path.join(root, purchaseUrl.pathname.slice(1))));
   const permissionUrl = new URL(elementFor("permissionAction").href, purchaseUrl);
   assert.equal(permissionUrl.protocol, "mailto:");

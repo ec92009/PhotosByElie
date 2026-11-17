@@ -24,6 +24,8 @@ test inventory and gained the artifact and WST checks.
 | `60c365ca02134b9debad8fa960aa09f63c040ae8` | `f141e7464750694cd095eb953cbf27cfb53508b8` |
 | `25a5ac307096b0ada748ef742216addbbe17ee40` | `a730b095dbd8d03fa55dfea692985705a9a3c4e3` |
 | `735cd1171406a10400b03d5cc144f8f388e9a8d7` | `b7dff318c5c3f192db732b9ced399b6d6cd076a9` |
+| `74076e3df88ee70ae797deedea4e598159b6fe09` | `4e51249bcdf82f82690f33d0e64572720fbb805c` |
+| `b84a1703ffca5746e99cbde04d4fb896771b6eae` | `88faa63501099ffb51e6d65c6086940266f89905` |
 
 Additional bounded integration commits contain native assertion maintenance,
 the release identity, deployed WST reconciliation, the native-zoom settings
@@ -41,10 +43,12 @@ found no existing 321.x identity when the first candidate v321.0 was assigned.
 That candidate produced a validated local artifact at `08162814`. Subsequent
 localization changes produced v321.1. The source-backed local-host startup
 fix produced v321.2, whose CI passed at `afe381ad`. Integration of the reviewed
-offline tool advances the final complete candidate to v321.3.
+offline tool produced v321.3. The live landing reconciliation and approved
+PBE-224 offer were browser-checked in a private v321.4 staging build. After
+interruption, fresh preparation advances the final candidate to v321.5.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill agree on v321.3. Packaging checks their
+README together. About and pill use v321.5, including the new purchase-link query. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -96,13 +100,31 @@ Read-only browser fetches confirmed exact SHA-256 parity with
 `campaign.js`, `campaigns.js`, `campaign-video.js` and
 `campaign-collection.js`. Private hash receipts live in the evidence directory.
 
-The integrated landing source starts from prepared `618f9da2` and PBE-219
-settings at `7710d7f5` / integrated `044d996d`. Production adds revised
-usage-guide markup/copy/assets, social-directory navigation, story-card
-contrast and later campaign behavior. Their broader baseline adoption remains
-a parent-reviewed release dependency. PBE-224 can use the exact production
-commit above for its separate offer candidate. Prices/licenses and the new
-PBE-224 copy candidate received no changes here.
+Commit `20f697beab543157f61d15c684f9a78b7c06c1c6` reconciles the verified live
+landing through three-way merges of existing files. It carries the wide usage
+composition, two deployed images, social navigation, story-card contrast,
+public directory scripts, public campaign manifests and three approved
+promotional MP4s. Every selected public path is individually allowlisted.
+Existing settings, early System-theme bootstrap, SEO and WST changes remain.
+The account-profile conflict preserves both the System-theme guard and durable
+gallery checkpoint restoration. A focused executed profile test covers both.
+
+The selected campaign tests cover public membership, private/draft exclusion,
+video URL rejection and directory rendering. The public video test adaptation
+keeps all runtime URL rejection cases. Assertions coupling it to a newer native
+Owner API schema belong to the separate native contract and were omitted from
+this selected import. Existing native contracts remain independently checked.
+The browser-exposed black-on-black video failure message received a bounded
+foreground-color fix at `211016e8`. External video playback was restricted by
+the local fixture CSP, which exercised the visible YouTube fallback.
+
+The two parent-reviewed PBE-224 copy commits follow this reconciliation.
+EN/FR/ES describe digital downloads from USD 8, photo-dependent file sizes,
+private order-page links, personal print rights and customer-arranged printing.
+The direct permission link uses the existing order email address. Price and
+license policy bytes retain their prior fingerprints. PBE-14 and PBE-16 remain
+parked. PBE-225 can build on this exact landing/copy history and the WST
+reconciliation below.
 
 ## Deployed WST reconciliation
 
@@ -118,7 +140,9 @@ Stripe reader prerequisites. The four Worker runtime files match the deployed
 source commit. New tests exercise aggregate-only output, live-configuration
 gating, HTTP delegation and bounded mocked Stripe GET readers.
 
-Generated photo/gallery families enter the existing sessionless handoff.
+The integrated producer baseline is
+`6ae5f7195f7159e1f9e501f0335e8b3acc8b8545`. Generated photo/gallery families
+enter the existing sessionless handoff.
 Their transmitted paths normalize to `/photo.html` and `/gallery.html`.
 Existing semantic action IDs cover generated links and the customer settings
 gear. The WST assets inherit the initiating analytics script's version query.
@@ -159,6 +183,8 @@ PBE-221 acceptance condition.
 | Full suite with WST and zoom fix | 32 pretests, 26 artifact Python tests, four generation tests, 298 main Node tests and 489 main Python tests passed |
 | Swift API contract | Current, 41 operations and 14 schemas |
 | Authority environment fixture isolation | Reproduced inherited-authority failure, then all three fixture tests passed with a real authority variable present, including explicit environment-input success |
+| Final combined landing/campaign/settings/startup/SEO/WST/fulfillment check | 147 passed |
+| Social video failure foreground regression | Four existing directory tests passed |
 | Syntax and whitespace | Changed/shipped scripts checked by the artifact gate, `git diff --check` passed |
 
 The authoritative gate repeats the required and full suites from the committed
@@ -186,8 +212,10 @@ Python 3.14 and Python 3.12 passed. A separate diagnostic run at
 sets HTTP metadata from its actual configured address/port. A regression test
 raises on any reverse-DNS call. The original 10-second deadline, split-root
 identity, exact served bytes and tamper rejection remain. The temporary CI
-tracing step was removed after diagnosis. The DNS regression brought the Python suite to 490 tests. PBE-223 adds 24
-synthetic checks, bringing the integrated total to 514 tests. Final CI and repeated gate results are recorded with the source identity.
+tracing step was removed after diagnosis. The DNS regression brought the Python
+suite to 490 tests. PBE-223 adds 24 synthetic checks, bringing the integrated
+total to 514 tests. Final gate and CI results bind the exact committed source
+identity in the private receipt and handback.
 
 ### Browser and local buyer receipts
 
@@ -229,6 +257,26 @@ existing public hero image through the local mock media route.
   `javaScriptEnabled:false` confirmed engine-level disabled scripting and an
   ordinary support-link navigation.
 
+The integrated v321.4 browser pass additionally exercised the PBE-224 offer
+in EN/FR/ES at 320px and 390px. Purchase navigation reached the retained
+search-first selection page, where “Paris” rendered 24 of 840 media items.
+The permission href resolved to `mailto:orders@photos-by-elie.com`. Night and
+Spanish survived reload. Keyboard open/Escape returned focus. About and pill
+matched. The final-shell generated France page rendered 24 cards and the photo
+shell hydrated `001-e74a43b7bf` with its generated canonical. Selecting Full
+resolution through its actual checkbox stored USD 65. Both catalog network
+abort and lifecycle HTTP 503 retained those exact basket bytes and recovered
+through Try again with URL query/hash preserved. Reentrant checkout activation
+produced one local mock POST and released the button after the mock 503.
+
+The same browser pass rendered 130 public social collections. Fixture CSP
+blocked hosted films and exercised their fallback. A transient local socket
+failure on the basket page recovered through its existing Try again control.
+Native Chrome 200% zoom produced a 640×450 CSS viewport, with offer links inside
+the viewport and the settings dialog constrained to 412px high with internal
+scrolling. These checks use desktop Chrome mobile viewports. Physical-device
+and provider outcomes retain the acceptance boundaries below.
+
 Screenshots, browser result JSON, network counts, fixture controls, zoom and
 engine-disabled receipts remain private under `tmp/pbe-221-evidence/`. Staged
 artifact checks use the same exact customer bytes, with fixture-only media and
@@ -242,14 +290,16 @@ API configuration overrides recorded separately from release output.
   active origin, deployed identity and whole-artifact rollback proof remain
   production work. PBE-216's parent-reported legacy exposure persists until
   authorized publishing-source adoption.
-- Public website publication requires parent-reviewed adoption of the deployed
-  landing/social/campaign baseline described above. The prepared landing
-  content has a verified source drift boundary.
-- Worker publication requires reconciliation of additional deployed-source
-  refund orchestration and account gallery-checkpoint behavior absent from the
-  prepared baseline. The public artifact excludes Worker source. The WST RPC
-  prerequisites are integrated, while broader Worker release acceptance remains
-  a parent dependency.
+- Worker publication requires parent reconciliation of the broader deployed
+  runtime. `cloud-worker.mjs`, `stripe-client.mjs`, `wst-commerce-snapshot.mjs`
+  and `kv-store.mjs` match `01cc3ef32b17b9602f52ca2f4a50b42fe109d0fa`.
+  The prepared checkout/fulfillment path includes the PBE-220 extraction, while
+  later source at `c00ef4d5` also has refund orchestration, bounded lifecycle
+  reconciliation and public-preview verification, native video publication
+  APIs, and Tilbury routing. Account gallery-checkpoint normalization in that
+  later Worker also needs reconciliation. These were inspected as release
+  dependencies. This candidate is unsuitable for an entire Worker publish.
+  Its public static artifact excludes Worker source.
 - Real Stripe sandbox/payment and email delivery receipts, physical-phone
   cold/warm timing, mobile installation/share and production lifecycle behavior
   retain their separate acceptance boundaries. Browser receipts above use

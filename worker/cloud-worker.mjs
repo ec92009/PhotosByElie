@@ -5,6 +5,8 @@ import { waitForCloudRenderCompletion } from "./cloud-render-browser.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { buildWstCommerceSnapshot } from "./wst-commerce-snapshot.mjs";
+import { buildWstFunnelSnapshot } from "./wst-funnel-snapshot.mjs";
+import { createD1LifecycleDenyStore } from "./lifecycle-deny-store.mjs";
 import worker, {
   realEstateClientContextFor,
   realEstateDeliverablesFor,
@@ -90,5 +92,25 @@ export default class PhotosByElieWorker extends WorkerEntrypoint {
       apiVersion: this.env.STRIPE_API_VERSION,
     });
     return buildWstCommerceSnapshot({ store, stripe });
+  }
+
+  /** Private service-binding RPC only; HTTP remains delegated to the existing handler. */
+  wstFunnelSnapshot() {
+    if (!this.env.STRIPE_SECRET_KEY || !this.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error("Live Stripe is unavailable for the WST funnel snapshot.");
+    }
+    return buildWstFunnelSnapshot({
+      namespace: this.env.ORDERS_KV,
+      prefix: this.env.KV_PREFIX || "pbe",
+      stripe: createStripeClient({
+        secretKey: this.env.STRIPE_SECRET_KEY,
+        webhookSecret: this.env.STRIPE_WEBHOOK_SECRET,
+        apiVersion: this.env.STRIPE_API_VERSION,
+      }),
+      lifecycle: createD1LifecycleDenyStore({ database: this.env.ACCESS_DB }),
+    }).catch(() => {
+      // Provider/KV/D1 error details can contain private references. Never export them.
+      throw new Error("WST funnel snapshot is unavailable or incomplete.");
+    });
   }
 }

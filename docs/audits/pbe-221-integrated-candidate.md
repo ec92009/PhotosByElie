@@ -26,7 +26,8 @@ test inventory and gained the artifact and WST checks.
 
 Additional bounded integration commits contain native assertion maintenance,
 the release identity, deployed WST reconciliation, the native-zoom settings
-fix and authority-test environment isolation. Their history follows the
+fix, authority-test environment isolation, translated action labels and host
+fixture diagnostics. Their history follows the
 `photosbyelie:` prefix.
 
 ## Release identity and retained inputs
@@ -35,10 +36,12 @@ Remote main at `c00ef4d538b4908c012ff6b3a0945c85ef74bdbe` carries v314.0.
 A read-only T3 browser visit independently observed v314.0 in production's
 About and version pill on November 17. The prepared checkout inherited v241.0.
 The canonical calendar SOP yields day 321 for this date. Branch/ref inspection
-found no existing 321.x identity when v321.0 was assigned.
+found no existing 321.x identity when the first candidate v321.0 was assigned.
+That candidate produced a validated local artifact at `08162814`. Subsequent
+localization changes advance the final candidate to v321.1.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill agree on v321.0. Packaging checks their
+README together. About and pill agree on v321.1. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -56,7 +59,8 @@ canonical resolution, version references and per-file bytes.
 The private package and gate receipts live at `tmp/public-release/receipt.json`
 and `tmp/pbe-221-evidence/authoritative-release.log`. The release package is
 generated after this source receipt is committed so its identity can bind the
-clean committed tree. Inspect its `identity` and `releaseChecks` for the exact
+clean committed tree. The previous v321.0 package is retained separately at
+`tmp/public-release-v321.0/`. Inspect its `identity` and `releaseChecks` for the exact
 artifact source SHA and gate result.
 
 ## Owner input review
@@ -117,7 +121,7 @@ and `@cloudflare/workers-types@5.20261117.1`. Service binding RPC uses
 | First combined catalog/SEO/settings/fulfillment suite | 283 passed |
 | Initial full suite | 32 pretests, 288 main Node tests passed, two baseline failures among 489 Python tests |
 | Native maintenance | 68 Python parity tests and the existing Swift independent-preview relaunch behavior test passed |
-| Integrated required startup/SEO/resilience/fulfillment/customer-boundary checks | 70 passed |
+| Integrated required startup/SEO/resilience/fulfillment/customer-boundary checks | 71 passed |
 | Artifact regression suite | 26 Python and four catalog-generation tests passed |
 | WST/commerce/checkout/fulfillment/analytics/origin suite | 141 passed |
 | Full suite with WST and zoom fix | 32 pretests, 26 artifact Python tests, four generation tests, 298 main Node tests and 489 main Python tests passed |
@@ -143,6 +147,14 @@ received real authority despite intending to omit it. Fixture environments now
 explicitly control the authority input. The same test also checks the supported
 environment-input success path. Production validation remains fail-closed.
 
+The first GitHub CI run at `08162814` failed only the split-root host fixture
+readiness deadline while the child remained running. The same fixture passed
+locally under Python 3.14 and CI-matching Python 3.12. Its output now goes to a
+temporary file, removing unread-pipe backpressure and preserving startup
+diagnostics. The 10-second deadline, split-root identity, exact served bytes
+and tamper rejection are retained. Final CI and repeated gate results are
+recorded with the final source identity.
+
 ### Browser and local buyer receipts
 
 T3 preview was the primary browser. A private IPv6 loopback fixture exercised
@@ -156,7 +168,8 @@ existing public hero image through the local mock media route.
   photo and canonical. The duplicate gallery attribute fix remains present.
 - Gear, About/pill agreement, System/Day/Night, OS appearance changes,
   reload/cross-page theme persistence, EN/FR/ES controls, 320px and 390×844
-  viewports were exercised. Keyboard open, Tab wrap, Escape, outside dismissal
+  viewports were exercised. The legacy gallery action-label checkbox now uses
+  the same EN/FR/ES translation contract. Keyboard open, Tab wrap, Escape, outside dismissal
   and focus return were exercised.
 - Settings text contrast at transparency/blur extremes was at least 14.54:1
   on the landing dialog, 15.51:1 on the light customer dialog and 15.03:1 on the

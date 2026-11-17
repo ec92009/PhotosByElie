@@ -35,6 +35,7 @@ test("verified portraits use inline native controls with no eager video download
   assert.match(directory, /credit\.textContent = video\.musicCredit/);
   assert.doesNotMatch(directory, /player\.autoplay\s*=/);
   assert.match(css, /\.campaign-directory-video video/);
+  assert.match(css, /\.campaign-directory-video\s*\{[^}]*background: #111; color: #fff;/);
 });
 
 test("the actual directory renderer preserves playback, credit and failure links", () => {

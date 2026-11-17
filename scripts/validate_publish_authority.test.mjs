@@ -10,10 +10,13 @@ const repoRoot = path.resolve(import.meta.dirname, "..");
 const validator = path.join(repoRoot, "scripts", "validate_publish.js");
 const catalog = path.join(repoRoot, "assets", "catalog", "photosbyelie.sqlite");
 
-const runValidator = (args = []) => childProcess.spawnSync(
+const runValidator = (args = [], environment = {}) => childProcess.spawnSync(
   process.execPath,
   [validator, "--external-media", ...args],
-  { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  {
+    cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, PHOTOSBYELIE_OWNER_DB: "", ...environment },
+  },
 );
 
 const combinedOutput = (result) => `${result.stdout || ""}${result.stderr || ""}`;
@@ -87,6 +90,9 @@ test("publication validation accepts and fingerprints reviewed Owner authority",
     assert.match(output, new RegExp(`Owner DB SHA-256: ${ownerHash}`));
     assert.match(output, new RegExp(`Catalog DB SHA-256: ${catalogHash}`));
     assert.match(output, /Validation OK/);
+    const environmentResult = runValidator([], { PHOTOSBYELIE_OWNER_DB: ownerDb });
+    assert.equal(environmentResult.status, 0, combinedOutput(environmentResult));
+    assert.match(combinedOutput(environmentResult), new RegExp(`Owner DB SHA-256: ${ownerHash}`));
     assert.equal(sha256(ownerDb), ownerHash);
     assert.equal(afterStat.size, beforeStat.size);
     assert.equal(afterStat.mtimeNs, beforeStat.mtimeNs);

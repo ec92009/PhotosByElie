@@ -54,38 +54,10 @@ After recovery, run fresh whole-subject readiness. Only then may the separately
 authorized exact MP4 host/campaign workflow proceed. Neither tests, deployment,
 applied repair nor connected credentials mean a video or campaign is live.
 
-## Scoped release verification — 29 September 2026
+## Local runtime validation
 
-The new suite has 21 passing cases, including multi-item late rollback and a
-paid-fulfillment intent arriving immediately before the transaction. The full
-suite passed 985 checks before four additional race checks were added and passed
-separately. The generated API 1.6.0 contract covers 49 operations/19 schemas.
-Wrangler's release-check build and dry run passed without deployment.
-
-One historical recovery fixture now explicitly clears preview byte counts only
-in its disposable catalog. It must model missing metadata independently of the
-real catalog photo having been successfully repaired. No production recovery
-logic changes with that fixture correction.
-
-Live preflight found unrelated migration `0015_google_oauth_transactions.sql`
-still pending. Do not blanket-apply migrations. Use a temporary migration-only
-config with the existing D1 ID and default ledger, containing only the exact
-reviewed 0017 file (SHA-256
-`8ffb11bf9a01ff90828807933aaf2e57df454807318fe65a7a1e96976dba8072`).
-The pending plan must contain only that file. Deploy only with the full existing
-Worker config and `--keep-vars`; preserve both existing custom domains, bindings,
-secrets and enabled catalog-authority/video guards. The pre-release rollback
-Worker version is `fd084bc0-5148-4a8d-bc41-e0eb1b79b4f8`; fresh-check it before
-use and retain the additive receipt table. Deployment alone changes no identity.
-
-Actual deployment, exact per-photo apply and readback belong in the dated
-Córdoba operational receipt. This source verification is not a live receipt.
-
-### D1 runtime correction
-
-The first live read-only plan exposed D1's compound-SELECT limit in the combined
-refusal query. No identity was changed. A new real local D1 regression reproduced
-that exact failure; replacing the UNION chain with independent EXISTS predicates
-preserves all six refusals. The real D1 test now prepares, applies and replays six
-synthetic identities and confirms all private bindings remain unchanged. It is
-included in both the normal test suite and mandatory Worker release gate.
+The source includes the D1 compound-query limit correction from `f9ea66fd`.
+`worker/legacy-identity-runtime.test.mjs` uses real local D1 to prepare, apply
+and replay six synthetic mappings without reading or writing production state.
+Source and mock/runtime checks do not establish production migration or grant
+permission to correct any real identity.

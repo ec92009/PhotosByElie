@@ -66,7 +66,7 @@ test("landing French and Spanish copy covers all visible and accessible strings"
   }
   assert.deepEqual(Object.keys(translations.fr).sort(), Object.keys(translations.en).sort());
   assert.deepEqual(Object.keys(translations.es).sort(), Object.keys(translations.en).sort());
-  assert.match(translations.fr.introBody, /habités/);
+  assert.match(translations.fr.introBody, /téléchargement privés/);
   assert.match(translations.es.usageIntro, /lugar/);
   assert.match(js, /\[data-i18n-aria-label\]/);
   assert.match(js, /\[data-i18n-alt\]/);
@@ -348,7 +348,7 @@ test("the production landing opens on the Louvre and presents the browse/use blo
   assert.match(js, /usageTitle: "Browse at your leisure\."/);
   assert.match(js, /usageIntro: "Find the image that fits by place, time, keywords, or the photographer’s own note\."/);
   assert.match(js, /wallArtTitle: "Enjoy it"/);
-  assert.match(js, /licensingTitle: "Work with it"/);
+  assert.match(js, /licensingTitle: "Project permissions"/);
   assert.match(js, /provenanceTitle: "Remember it"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
@@ -380,4 +380,90 @@ test("the production footer and settings keep required public controls", () => {
   assert.match(productionHtml, /id="translucency-range"/);
   assert.match(productionHtml, /class="version-pill site-version-badge"/);
   assert.match(css, /--glass-blur/);
+});
+
+test("the download offer renders all languages and preserves purchase and permission links", () => {
+  const offer = productionHtml.match(/<section class="collection-intro"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(offer);
+  const elements = [...offer.matchAll(/<(?:h2|p|a|nav)\b([^>]*)>([^<]*)/g)].map((match) => ({
+    dataset: {
+      i18n: match[1].match(/data-i18n="([^"]+)"/)?.[1],
+      i18nAriaLabel: match[1].match(/data-i18n-aria-label="([^"]+)"/)?.[1],
+    },
+    textContent: match[2],
+    href: match[1].match(/href="([^"]+)"/)?.[1]?.replaceAll("&amp;", "&"),
+    setAttribute(name, value) { this[name] = value; },
+  }));
+  const elementFor = (key) => elements.find((element) => element.dataset.i18n === key);
+  for (const element of elements.filter((item) => item.dataset.i18n)) {
+    assert.equal(element.textContent, translations.en[element.dataset.i18n], "English survives without JavaScript");
+  }
+
+  const purchaseUrl = new URL(elementFor("buyAction").href, "https://photos-by-elie.com/");
+  assert.equal(purchaseUrl.pathname, "/gallery.html");
+  assert.equal(purchaseUrl.searchParams.get("gallery"), "selection");
+  assert.ok(fs.existsSync(path.join(root, purchaseUrl.pathname.slice(1))));
+  const permissionUrl = new URL(elementFor("permissionAction").href, purchaseUrl);
+  assert.equal(permissionUrl.protocol, "mailto:");
+  const customerJs = fs.readFileSync(path.join(root, "photos.js"), "utf8");
+  const supportAddress = customerJs.match(/const supportEmailAddress = '([^']+)'/)?.[1];
+  assert.ok(supportAddress);
+  assert.equal(permissionUrl.pathname, supportAddress);
+
+  const document = {
+    documentElement: {},
+    querySelector: () => null,
+    querySelectorAll: (selector) => elements.filter((element) => selector === "[data-i18n]"
+      ? element.dataset.i18n
+      : selector === "[data-i18n-aria-label]" && element.dataset.i18nAriaLabel),
+  };
+  const context = vm.createContext({
+    translations, document, productionLanding: true, activeIndex: 0,
+    showSlide() {}, syncPauseButton() {}, languageSelect: {},
+  });
+  const languageHandler = js.slice(js.indexOf("  const setLanguage = "), js.indexOf("\n  const readPreferences = "));
+  vm.runInContext(`${languageHandler}\nglobalThis.renderLanguage = setLanguage;`, context);
+  const facts = {
+    en: [/USD 8/, /file sizes available/, /After payment/, /Personal print and personal web use/, /printing yourself/, /written approval/],
+    fr: [/8 USD/, /tailles de fichier disponibles/, /Après paiement/, /à titre personnel/, /vous-même l’impression/, /autorisation écrite/],
+    es: [/8 USD/, /tamaños de archivo disponibles/, /Tras el pago/, /uso web personales/, /Tú organizas/, /por escrito/],
+  };
+  for (const language of ["fr", "es", "en", "fr"]) {
+    context.renderLanguage(language);
+    assert.equal(document.documentElement.lang, language);
+    const copy = elements.map((element) => element.textContent).join(" ");
+    for (const fact of facts[language]) assert.match(copy, fact);
+    assert.equal(elementFor("buyAction").textContent, translations[language].buyAction);
+    assert.equal(elementFor("permissionAction").textContent, translations[language].permissionAction);
+    assert.equal(new URL(elementFor("buyAction").href, purchaseUrl).href, purchaseUrl.href);
+    assert.equal(new URL(elementFor("permissionAction").href, purchaseUrl).href, permissionUrl.href);
+  }
+  assert.equal(context.renderLanguage("unsupported"), "en");
+});
+
+test("the offer price and product presentation agree with retained pricing and license facts", () => {
+  const pricing = JSON.parse(fs.readFileSync(path.join(root, "assets/catalog/product-pricing.json"), "utf8"));
+  const digitalPrices = pricing.products.filter((product) => product.type === "digital").map((product) => product.prices.original);
+  assert.deepEqual(digitalPrices.sort((a, b) => a - b), [8, 16, 28, 65]);
+  assert.equal(pricing.currency, "usd");
+  assert.equal(pricing.podAutomation.storefrontEnabled, false);
+  assert.ok(translations.en.introTitle.includes(`USD ${Math.min(...digitalPrices)}`));
+
+  const customerJs = fs.readFileSync(path.join(root, "photos.js"), "utf8");
+  const customerTranslations = customerJs.slice(customerJs.indexOf("const translations = "), customerJs.indexOf("\nconst translate = "));
+  const translateFunction = customerJs.slice(customerJs.indexOf("const translate = "), customerJs.indexOf("\nconst applyTranslations = "));
+  const basketJs = fs.readFileSync(path.join(root, "basket.js"), "utf8");
+  const productDetailFunction = basketJs.slice(basketJs.indexOf("const productDetail = "), basketJs.indexOf("\nconst productLabel = "));
+  const rootElement = { dataset: {} };
+  const context = vm.createContext({ root: rootElement });
+  vm.runInContext(`${customerTranslations}\n${translateFunction}\nconst t = translate;\n${productDetailFunction}\nglobalThis.renderDetail = productDetail;\nglobalThis.translate = translate;`, context);
+  for (const language of ["en", "fr", "es"]) {
+    rootElement.dataset.language = language;
+    const detail = context.renderDetail({}, { id: "jpg-3mp", type: "digital" });
+    assert.match(detail, /3 MP/);
+    assert.match(detail, /JPEG/);
+    assert.doesNotMatch(detail, /listing|listado|portfolio|editorial/i);
+    assert.match(context.translate("support.license_1"), /personal|personnel/);
+    assert.match(context.translate("support.license_2"), /written approval|autorisation ecrite|aprobacion escrita/);
+  }
 });

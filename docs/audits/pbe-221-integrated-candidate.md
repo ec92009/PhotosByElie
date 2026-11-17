@@ -47,10 +47,13 @@ offline tool produced v321.3. The live landing reconciliation and approved
 PBE-224 offer were browser-checked in a private v321.4 staging build. After
 interruption, fresh preparation produced v321.5, whose complete local release gate passed.
 A final browser check exposed legacy social analytics creating a local IPv6
-session. The bounded privacy correction advances the final candidate to v321.6.
+session. The bounded privacy correction produced v321.6. Its local gate and CI passed,
+with all 5,653 public file hashes matching. A final no-script mobile screenshot
+exposed inactive header controls overlapping the version. A small CSS fallback
+adjustment in photo/gallery/basket advances the final candidate to v321.7.
 
 The existing version advancement helper updated the linked HTML surfaces and
-README together. About and pill use v321.6, including the new purchase-link query. Packaging checks their
+README together. About and pill use v321.7, including the new purchase-link query. Packaging checks their
 agreement and binds the source commit in `release.json`. The package-manager
 version retains its existing separate package identity.
 
@@ -283,6 +286,12 @@ Native Chrome 200% zoom produced a 640×450 CSS viewport, with offer links insid
 the viewport and the settings dialog constrained to 412px high with internal
 scrolling. These checks use desktop Chrome mobile viewports. Physical-device
 and provider outcomes retain the acceptance boundaries below.
+
+The no-script header correction at `4d582c42` hides inactive language/theme
+controls in the three customer fallback shells, removes the header’s backdrop
+containing block so its fixed version pill uses the viewport, and gives fallback
+identity/guidance an opaque readable background. Script-enabled settings retain
+their existing styles.
 
 Screenshots, browser result JSON, network counts, fixture controls, zoom and
 engine-disabled receipts remain private under `tmp/pbe-221-evidence/`. Staged

@@ -139,11 +139,13 @@ test('RPC is private by binding, checks configuration and leaves existing HTTP a
   const h = funnelFixture([]), env = { ORDERS_KV: h.namespace, ACCESS_DB: {}, STRIPE_SECRET_KEY: 'synthetic', STRIPE_WEBHOOK_SECRET: 'synthetic' };
   const Worker = vm.runInNewContext(source.slice(start).replace('export default class', 'class') + '\nPhotosByElieWorker;', {
     WorkerEntrypoint: class { constructor(value) { this.env = value; } }, worker: { fetch: () => 'unchanged HTTP' },
+    handleTilbury: async (request) => new URL(request.url).pathname.startsWith('/tilbury/') ? 'unchanged Tilbury' : null,
     createStripeClient: () => h.stripe, createD1LifecycleDenyStore: ({ database }) => { assert.equal(database, env.ACCESS_DB); return h.lifecycle; },
     buildWstFunnelSnapshot: (options) => buildWstFunnelSnapshot({ ...options, now: h.now }),
   });
   assert.throws(() => new Worker({}).wstFunnelSnapshot(), /Live Stripe is unavailable/);
-  assert.equal(new Worker(env).fetch(new Request('https://example.test/wstFunnelSnapshot')), 'unchanged HTTP');
+  assert.equal(await new Worker(env).fetch(new Request('https://example.test/wstFunnelSnapshot')), 'unchanged HTTP');
+  assert.equal(await new Worker(env).fetch(new Request('https://example.test/tilbury/catalog')), 'unchanged Tilbury');
   assert.deepEqual((await new Worker(env).wstFunnelSnapshot()).days, []);
   h.namespace.list = async () => { throw Error('private buyer@example.test cs_live_private provider secret'); };
   await assert.rejects(new Worker(env).wstFunnelSnapshot(), { message: 'WST funnel snapshot is unavailable or incomplete.' });

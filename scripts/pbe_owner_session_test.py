@@ -27,6 +27,7 @@ from unittest.mock import patch
 
 import scripts.local_server as local_server
 from scripts.local_server import (
+    PhotosByElieLocalServer,
     PhotosByElieLocalHandler,
     assert_pbe_owner_restore_scope,
     assert_pbe_owner_x_scope,
@@ -206,6 +207,16 @@ class PBEOwnerSessionTests(unittest.TestCase):
             with self.assertRaises(PBEOwnerSessionError) as hidden:
                 checkout_identity(root)
             self.assertEqual(hidden.exception.code, "pbe_owner_checkout_content_mismatch")
+
+    def test_local_host_binding_does_not_require_reverse_dns(self) -> None:
+        with patch("socket.getfqdn", side_effect=AssertionError("reverse DNS must not block readiness")):
+            server = PhotosByElieLocalServer(("127.0.0.1", 0), PhotosByElieLocalHandler)
+            try:
+                self.assertEqual(server.server_name, "127.0.0.1")
+                self.assertEqual(server.server_port, server.socket.getsockname()[1])
+                self.assertGreater(server.server_port, 0)
+            finally:
+                server.server_close()
 
     def test_installed_runtime_identity_and_static_host_use_split_roots(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

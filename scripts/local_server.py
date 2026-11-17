@@ -25,6 +25,7 @@ import uuid
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -4652,6 +4653,13 @@ def _start_price_publish_task(repo_root: Path, payload: dict) -> dict:
     return copy.deepcopy(task)
 
 
+class PhotosByElieLocalServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        """Bind the configured address without a reverse-DNS startup dependency."""
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Serve Photos By Elie locally with owner helper endpoints.")
     parser.add_argument("port", nargs="?", type=int, default=8000)
@@ -4687,7 +4695,7 @@ def main() -> int:
     else:
         handler = PhotosByElieLocalHandler
 
-    server = ThreadingHTTPServer((args.bind, args.port), handler)
+    server = PhotosByElieLocalServer((args.bind, args.port), handler)
     server.allow_lan_owner = args.allow_lan_owner
     server.pbe_host_authenticator = PBEOwnerHostAuthenticator(bootstrap_secret, checkout)
     if args.backstage_bootstrap_file:

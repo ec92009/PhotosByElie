@@ -43,26 +43,6 @@ jobs:
           fi
       - name: Customer, checkout, lifecycle, and artifact regressions
         run: npm test
-      - name: Diagnose a failed split-root host startup
-        if: failure()
-        run: |
-          python - <<'PY'
-          import subprocess
-          import unittest
-          from unittest.mock import patch
-          import scripts.pbe_owner_session_test as tests
-
-          original_popen = subprocess.Popen
-          diagnostic = "import faulthandler, pathlib, runpy, sys; faulthandler.dump_traceback_later(8); sys.argv = sys.argv[1:]; sys.path.insert(0, str(pathlib.Path(sys.argv[0]).parent)); runpy.run_path(sys.argv[0], run_name='__main__')"
-
-          def traced_host(arguments, *args, **kwargs):
-              if len(arguments) > 1 and str(arguments[1]).endswith('/scripts/local_server.py'):
-                  arguments = [arguments[0], '-c', diagnostic, *arguments[1:]]
-              return original_popen(arguments, *args, **kwargs)
-
-          with patch.object(subprocess, 'Popen', side_effect=traced_host):
-              unittest.main(module=tests, defaultTest='PBEOwnerSessionTests.test_installed_runtime_identity_and_static_host_use_split_roots')
-          PY
       - name: Generated API contract
         run: npm run contract:check
       - name: Build exact-file public candidate

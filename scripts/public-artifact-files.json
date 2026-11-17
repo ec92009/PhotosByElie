@@ -25,6 +25,8 @@
     ".nojekyll",
     "CNAME",
     "analytics.js",
+    "wst-actions.js",
+    "wst-beacon.js",
     "assets/apple-photos/2025-2026-app-contexts.js",
     "assets/apple-photos/2025/2025-cordoba-la-mezquita/app-context.js",
     "assets/apple-photos/2026/2026-malaga-museo-ruso/app-context.js",

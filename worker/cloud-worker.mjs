@@ -1,3 +1,4 @@
+import { handleTilbury } from "./tilbury-shops.mjs";
 import { launch } from "@cloudflare/playwright";
 import { WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
 import { waitForCloudRenderCompletion } from "./cloud-render-browser.mjs";
@@ -69,7 +70,9 @@ export class RealEstateRenderWorkflow extends WorkflowEntrypoint {
 }
 
 export default class PhotosByElieWorker extends WorkerEntrypoint {
-  fetch(request) {
+  async fetch(request) {
+    const response = await handleTilbury(request, this.env);
+    if (response) return response;
     return worker.fetch(request, this.env);
   }
 

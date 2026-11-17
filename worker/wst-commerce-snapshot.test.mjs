@@ -59,6 +59,7 @@ test("private commerce RPC retains its live-configuration gate and existing HTTP
   const stripe = { listPaymentIntents: async () => ({ data: [] }), listRefunds: async () => ({ data: [] }) };
   const Worker = vm.runInNewContext(source.slice(start).replace("export default class", "class") + "\nPhotosByElieWorker;", {
     WorkerEntrypoint: class { constructor(environment) { this.env = environment; } },
+    handleTilbury: async () => null,
     worker: { fetch: (request, environment) => { calls.push({ request, environment }); return "existing-http-handler"; } },
     createKvStore(options) { assert.equal(options.namespace, namespace); assert.equal(options.prefix, "test-prefix"); return store; },
     createStripeClient(options) { assert.equal(options.secretKey, "synthetic-secret"); assert.equal(options.webhookSecret, "synthetic-webhook"); return stripe; },
@@ -67,7 +68,7 @@ test("private commerce RPC retains its live-configuration gate and existing HTTP
   assert.throws(() => new Worker({}).wstCommerceSnapshot(), /Live Stripe is unavailable/);
   const worker = new Worker(env);
   const request = new Request("https://example.test/wstCommerceSnapshot");
-  assert.equal(worker.fetch(request), "existing-http-handler");
+  assert.equal(await worker.fetch(request), "existing-http-handler");
   assert.equal(calls[0].request, request);
   assert.equal(calls[0].environment, env);
   const snapshot = await worker.wstCommerceSnapshot();

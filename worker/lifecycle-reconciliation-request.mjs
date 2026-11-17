@@ -2,7 +2,7 @@
  * Existing apply envelopes have a 1 MiB ceiling; the new preparation request
  * is limited to 64 KiB. Authentication must happen before this reader is used.
  */
-export async function readReconciliationRequest(request) {
+export async function readReconciliationRequest(request, { maxBytes = 1048576 } = {}) {
   const tooLarge = () => Object.assign(new Error("Lifecycle reconciliation request exceeds its size limit."), {
     status: 413, code: "lifecycle_reconciliation_too_large",
   });
@@ -15,7 +15,7 @@ export async function readReconciliationRequest(request) {
         const { done, value } = await reader.read();
         if (done) break;
         bytes += value.byteLength;
-        if (bytes > 1048576) {
+        if (bytes > maxBytes) {
           await reader.cancel();
           throw tooLarge();
         }

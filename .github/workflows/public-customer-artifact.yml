@@ -1,0 +1,64 @@
+name: Public customer artifact
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'codex/**', 't3/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  customer-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Existing Python image-test dependency
+        run: python -m pip install 'Pillow==12.3.0'
+      - name: Integrated catalog, SEO, resilience, and fulfillment regressions
+        run: |
+          if test -f scripts/public_gallery_startup.test.mjs; then
+            node --test scripts/public_gallery_startup.test.mjs
+          fi
+          if test -f scripts/customer_resilience.test.mjs; then
+            node --test scripts/customer_resilience.test.mjs
+          fi
+          if test -f scripts/build_public_seo.mjs; then
+            node --test scripts/build_public_seo.test.mjs
+          fi
+          if test -f worker/paid-order-fulfillment.test.mjs; then
+            node --test worker/paid-order-fulfillment.test.mjs
+          fi
+      - name: Customer, checkout, lifecycle, and artifact regressions
+        run: npm test
+      - name: Generated API contract
+        run: npm run contract:check
+      - name: Build exact-file public candidate
+        run: npm run public:build
+      - name: Revalidate bytes, dependencies, catalog, identity, and forbidden paths
+        run: npm run public:check
+      - name: Retain the validated customer site only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: public-customer-${{ github.sha }}
+          path: tmp/public-release/site/
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Retain the matching receipt separately
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: public-customer-receipt-${{ github.sha }}
+          path: tmp/public-release/receipt.json
+          if-no-files-found: error

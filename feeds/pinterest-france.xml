@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — Paris &amp; France Photography</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-france.xml" rel="self" type="application/rss+xml" />
+    <description>Curated fine-art photography from Paris, Versailles, Giverny, Albi, and across France by Elie Cohen — architecture, gardens, bridges, and quiet light.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Church, Invalides — Paris Invalides Church Light | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=20220506-045942-03172-b368612e02</link>
+      <guid isPermaLink="false">pbe-pin-20220506-045942-03172-b368612e02</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>Church, Invalides photographed in France by Elie Cohen. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_1800.jpg" medium="image" type="image/jpeg" width="1438" height="1800" />
+    </item>
+    <item>
+      <title>2024 Musée des Années 30 — Boulogne Musee des Annees 30 Interiors | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=001-7ab802eeb0</link>
+      <guid isPermaLink="false">pbe-pin-001-7ab802eeb0</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie museum interior photographs from Boulogne-Billancourt, curated for French travel inspiration and refined wall-art detail.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/001-7ab802eeb0_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/001-7ab802eeb0_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
+  </channel>
+</rss>

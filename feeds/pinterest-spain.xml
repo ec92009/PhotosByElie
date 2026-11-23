@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — Spain Travel Photography</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-spain.xml" rel="self" type="application/rss+xml" />
+    <description>Curated fine-art travel and architectural photography from Spain by Elie Cohen — Seville, Córdoba, Valencia, Madrid, Bilbao, Cádiz, Ronda, and Andalusia.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Nerja Caves, Spain — Nerja Caves Stone Forms | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=001-9018ca506d</link>
+      <guid isPermaLink="false">pbe-pin-001-9018ca506d</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>Nerja Caves, Spain photographed in Nerja, Andalusia, Spain by Elie Cohen. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/001-9018ca506d_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/001-9018ca506d_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
+    <item>
+      <title>Nerja Caves, Spain — Nerja Caves Stone Forms | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=001-3f183d6653</link>
+      <guid isPermaLink="false">pbe-pin-001-3f183d6653</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>Nerja Caves, Spain photographed in Nerja, Andalusia, Spain by Elie Cohen. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
+  </channel>
+</rss>

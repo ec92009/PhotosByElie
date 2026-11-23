@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — California &amp; USA Travel Photography</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-usa.xml" rel="self" type="application/rss+xml" />
+    <description>Curated fine-art coastal and travel photography from San Diego, Del Mar, La Jolla, Solana Beach, and California by Elie Cohen.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Carlsbad, garden — Carlsbad Garden and Coast Light | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=20180712-1827-16605-457c78af75</link>
+      <guid isPermaLink="false">pbe-pin-20180712-1827-16605-457c78af75</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>A five-photo Photos By Elie edit of Carlsbad garden color, coastal dusk, and Southern California atmosphere, selected as travel photography and wall-art inspiration. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_1800.jpg" medium="image" type="image/jpeg" width="1194" height="1800" />
+    </item>
+    <item>
+      <title>Diana Monkey Portrait in San Diego — San Diego Zoo Wildlife Portraits | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=20161106-1557-28005-3d1ee36f82</link>
+      <guid isPermaLink="false">pbe-pin-20161106-1557-28005-3d1ee36f82</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>A Photos By Elie wildlife portrait edit from San Diego Zoo, selected for expressive animal detail, warm natural color, and wall-art potential. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20161106-1557-28005-3d1ee36f82_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20161106-1557-28005-3d1ee36f82_1800.jpg" medium="image" type="image/jpeg" width="1200" height="1800" />
+    </item>
+  </channel>
+</rss>

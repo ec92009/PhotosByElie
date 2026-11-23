@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — Mexico Travel Photography</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-mexico.xml" rel="self" type="application/rss+xml" />
+    <description>Curated fine-art coastal and travel photography from Mexico by Elie Cohen.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Puerto Vallarta | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=img-5009-c1c087846c</link>
+      <guid isPermaLink="false">pbe-pin-img-5009-c1c087846c</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie Puerto Vallarta frames selected for tropical marina color, warm wall-art atmosphere, and first-party travel browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/img-5009-c1c087846c_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/img-5009-c1c087846c_1800.jpg" medium="image" type="image/jpeg" width="1800" height="1350" />
+    </item>
+    <item>
+      <title>Puerto Vallarta | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=img-4962-20fc5febfe</link>
+      <guid isPermaLink="false">pbe-pin-img-4962-20fc5febfe</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie Puerto Vallarta frames selected for tropical marina color, warm wall-art atmosphere, and first-party travel browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/img-4962-20fc5febfe_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/img-4962-20fc5febfe_1800.jpg" medium="image" type="image/jpeg" width="1800" height="1350" />
+    </item>
+  </channel>
+</rss>

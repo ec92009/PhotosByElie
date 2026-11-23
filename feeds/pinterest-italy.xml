@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — Italy Travel Photography</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-italy.xml" rel="self" type="application/rss+xml" />
+    <description>Curated fine-art photography from Florence, San Gimignano, Pisa, and Tuscany by Elie Cohen.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Pisa Marble and Leaning Tower Wall Art</title>
+      <link>https://photos-by-elie.com/photo.html?id=img-1197-0132d88761</link>
+      <guid isPermaLink="false">pbe-pin-img-1197-0132d88761</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie photography from Pisa, selected for marble architecture, tower geometry, and Italian travel atmosphere for wall-art browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/img-1197-0132d88761_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/img-1197-0132d88761_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
+    <item>
+      <title>Pisa Cathedral Facade Detail — Pisa Cathedral Marble Facade | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo.html?id=001-ca3691704b</link>
+      <guid isPermaLink="false">pbe-pin-001-ca3691704b</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>Pisa Cathedral Facade Detail photographed in Pisa, Tuscany, Italy by Elie Cohen. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/001-ca3691704b_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/001-ca3691704b_1800.jpg" medium="image" type="image/jpeg" width="1260" height="1800" />
+    </item>
+  </channel>
+</rss>

@@ -157,8 +157,23 @@ def check_references(site: Path, paths: set[str], version: str) -> int:
     if entities:
         sitemap = ET.parse(site / "sitemap.xml")
         listed = set()
+        image_ns = "{http://www.google.com/schemas/sitemap-image/1.1}"
         for element in sitemap.iter():
-            if element.tag.rsplit("}", 1)[-1] != "loc":
+            if element.tag == f"{image_ns}loc":
+                img_url = urlsplit(element.text or "")
+                if (
+                    img_url.scheme != "https"
+                    or img_url.netloc != "download.photos-by-elie.com"
+                    or not img_url.path.startswith("/media/expo/")
+                    or not img_url.path.endswith("_900.jpg")
+                    or img_url.query
+                    or img_url.fragment
+                ):
+                    raise ValueError(
+                        f"generated sitemap image URL is outside approved public preview host: {element.text}"
+                    )
+                continue
+            if element.tag not in {"loc", "{http://www.sitemaps.org/schemas/sitemap/0.9}loc"}:
                 continue
             url = urlsplit(element.text or "")
             target = local_reference("index.html", element.text or "")

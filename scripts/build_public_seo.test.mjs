@@ -139,3 +139,44 @@ test('existing PBE-18 canonical helper maps eligible entities and retains utilit
   assert.equal(seo.pageUrl('/photo.html', { id: 'good' }), 'https://photos-by-elie.com/photo.html?id=good');
   assert.equal(seo.entityPath('photo', '../escape'), '');
 });
+
+test('enriches SEO metadata with location, keywords, licensable JSON-LD, image sitemap, and visible-ID filtering', (t) => {
+  const f = fixture(t);
+  execFileSync(process.env.PYTHON || 'python3', ['-c', `
+import sqlite3,sys
+c=sqlite3.connect(sys.argv[1])
+c.execute('ALTER TABLE media_items ADD COLUMN location TEXT')
+c.execute('ALTER TABLE media_items ADD COLUMN keyword_ids TEXT')
+c.execute('CREATE TABLE keyword_terms(keyword_id INTEGER PRIMARY KEY, keyword TEXT)')
+c.executemany('INSERT INTO keyword_terms VALUES(?,?)', [(1,'eiffel tower'),(2,'paris'),(3,'sunset')])
+c.execute('UPDATE media_items SET location=?, keyword_ids=? WHERE media_id=?', ('Paris, France', '1,2,3', 'good'))
+c.commit()
+`, f.catalog]);
+
+  const visibleFile = path.join(f.folder, 'visible.json');
+  fs.writeFileSync(visibleFile, JSON.stringify({ ok: true, visibleMediaIds: ['good'] }));
+  const result = build({ repoRoot: f.folder, catalog: f.catalog, output: f.output, visibleIdsFile: visibleFile });
+  assert.equal(result.photos, 1);
+  assert.equal(result.galleries, 1);
+  assert.ok(fs.existsSync(path.join(f.output, 'photo--good.html')));
+  assert.ok(!fs.existsSync(path.join(f.output, 'photo--second.html')));
+
+  const photoHtml = fs.readFileSync(path.join(f.output, 'photo--good.html'), 'utf8');
+  assert.match(photoHtml, /Paris, France/);
+  assert.match(photoHtml, /eiffel tower, paris, sunset/);
+  const jsonLd = JSON.parse(photoHtml.match(/id="photosbyelie-page-jsonld">(.*?)<\/script>/)[1]);
+  assert.equal(jsonLd.acquireLicensePage, 'https://photos-by-elie.com/photo--good.html');
+  assert.equal(jsonLd.license, 'https://photos-by-elie.com/support.html');
+  assert.equal(jsonLd.copyrightNotice, '© Photos By Elie');
+  assert.deepEqual(jsonLd.contentLocation, { '@type': 'Place', name: 'Paris, France' });
+  assert.equal(jsonLd.keywords, 'eiffel tower, paris, sunset');
+
+  const sitemap = fs.readFileSync(path.join(f.output, 'sitemap.xml'), 'utf8');
+  assert.match(sitemap, /xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1"/);
+  assert.match(sitemap, /<image:loc>https:\/\/download\.photos-by-elie\.com\/media\/expo\/good_900\.jpg<\/image:loc>/);
+  assert.doesNotMatch(sitemap, /photo--second\.html/);
+
+  const emptyVisible = path.join(f.folder, 'empty-visible.json');
+  fs.writeFileSync(emptyVisible, JSON.stringify({ ok: true, visibleMediaIds: [] }));
+  assert.throws(() => build({ repoRoot: f.folder, catalog: f.catalog, output: f.output, visibleIdsFile: emptyVisible }), /no media IDs/);
+});

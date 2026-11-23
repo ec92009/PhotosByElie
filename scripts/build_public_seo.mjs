@@ -57,8 +57,40 @@ export function renderEntity(template, entity) {
     `${main}\n<noscript><section class="panel"><h1>${escapeHtml(imageAlt)}</h1><p>${escapeHtml(description)}</p>${body}</section></noscript>`);
 }
 
+export function loadVisibleIds(visibleIdsFile) {
+  if (!visibleIdsFile) return null;
+  const raw = fs.readFileSync(path.resolve(visibleIdsFile), 'utf8').trim();
+  if (!raw) throw new Error('Visible IDs file is empty');
+  let list;
+  if (raw.startsWith('{') || raw.startsWith('[')) {
+    const parsed = JSON.parse(raw);
+    list = Array.isArray(parsed) ? parsed : (parsed.visibleMediaIds || parsed.ids || parsed.visibleIds);
+  } else {
+    list = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  }
+  if (!Array.isArray(list) || !list.length) throw new Error('Visible IDs file contains no media IDs');
+  return new Set(list.map((id) => String(id).trim()).filter(Boolean));
+}
+
+function buildPhotoDescription(photo, name, collection, seo) {
+  if (photo.description && String(photo.description).trim()) {
+    return seo.cleanPublicText(photo.description);
+  }
+  const location = photo.location ? seo.cleanPublicText(photo.location, '') : '';
+  const keywords = Array.isArray(photo.keywords)
+    ? photo.keywords.map((term) => seo.cleanPublicText(term, '')).filter(Boolean).slice(0, 5)
+    : [];
+  const place = location && location.toLowerCase() !== collection.toLowerCase()
+    ? `${location}`
+    : collection;
+  const kwTail = keywords.length ? ` Featuring ${keywords.join(', ')}.` : '';
+  return seo.cleanPublicText(
+    `${name} — ${place} travel photography by Elie Cohen. Digital wall-art downloads & archival prints.${kwTail}`,
+  );
+}
+
 /** Read only vetted public columns, then apply the existing commerce policy. */
-export function publicEntities(repoRoot, catalog, seo) {
+export function publicEntities(repoRoot, catalog, seo, { visibleIdsFile = process.env.PHOTOSBYELIE_VISIBLE_IDS_FILE || '' } = {}) {
   const rows = JSON.parse(execFileSync(process.env.PYTHON || 'python3',
     [path.join(root, 'scripts/read_public_seo_catalog.py'), catalog], {
       encoding: 'utf8', maxBuffer: 20 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
@@ -70,9 +102,11 @@ export function publicEntities(repoRoot, catalog, seo) {
     if (!Array.isArray(policy[name])) throw new Error(`Missing storefront policy ${name}`);
   }
   const retired = (name, value) => policy[name].some((item) => String(item).toLowerCase() === value.toLowerCase());
+  const visibleIds = loadVisibleIds(visibleIdsFile);
   const photos = rows.filter((row) => !retired('retiredCollectionKeys', row.collectionKey)
     && row.collectionKey.toLowerCase() !== 'ai' && !retired('retiredSourceOrigins', 'camera')
-    && !retired('retiredMediaTypes', 'photo'));
+    && !retired('retiredMediaTypes', 'photo')
+    && (!visibleIds || visibleIds.has(row.id)));
   if (!photos.length) throw new Error('Refusing to generate an empty SEO catalog');
   const ids = new Set();
   for (const photo of photos) {
@@ -84,7 +118,7 @@ export function publicEntities(repoRoot, catalog, seo) {
 }
 
 /** Build into a new staging directory and replace only our marked prior output. */
-export function build({ repoRoot = root, output = path.join(root, 'tmp/public-seo'), catalog = path.join(repoRoot, 'assets/catalog/photosbyelie.sqlite') } = {}) {
+export function build({ repoRoot = root, output = path.join(root, 'tmp/public-seo'), catalog = path.join(repoRoot, 'assets/catalog/photosbyelie.sqlite'), visibleIdsFile = process.env.PHOTOSBYELIE_VISIBLE_IDS_FILE || '' } = {}) {
   repoRoot = path.resolve(repoRoot);
   output = path.resolve(output);
   if (fs.existsSync(output) && (!fs.existsSync(path.join(output, marker)) || fs.lstatSync(output).isSymbolicLink())) {
@@ -92,7 +126,7 @@ export function build({ repoRoot = root, output = path.join(root, 'tmp/public-se
   }
   const catalogSha256 = crypto.createHash('sha256').update(fs.readFileSync(catalog)).digest('hex');
   const seo = loadSeo(repoRoot);
-  const photos = publicEntities(repoRoot, catalog, seo);
+  const photos = publicEntities(repoRoot, catalog, seo, { visibleIdsFile });
   const photoTemplate = fs.readFileSync(path.join(repoRoot, 'photo.html'), 'utf8');
   const galleryTemplate = fs.readFileSync(path.join(repoRoot, 'gallery.html'), 'utf8');
   const mediaConfig = { window: {} };
@@ -110,23 +144,28 @@ export function build({ repoRoot = root, output = path.join(root, 'tmp/public-se
   const stage = fs.mkdtempSync(path.join(path.dirname(output), '.seo-stage-'));
   try {
     fs.writeFileSync(path.join(stage, marker), 'photosbyelie.public-seo.v1\n');
-    const urls = ['/', '/gallery.html', '/support.html', '/privacy.html', '/terms.html', '/data-deletion.html']
+    const sitemapEntries = ['/', '/gallery.html', '/property-photography.html', '/social.html', '/campaign.html', '/support.html', '/privacy.html', '/terms.html', '/data-deletion.html']
       .filter((route) => fs.existsSync(path.join(repoRoot, route === '/' ? 'index.html' : route.slice(1))))
-      .map((route) => seo.siteOrigin + route);
-    const emit = (entity, template) => {
+      .map((route) => ({ loc: seo.siteOrigin + route }));
+    const emit = (entity, template, imageEntry = null) => {
       fs.writeFileSync(path.join(stage, seo.entityPath(entity.kind, entity.key).slice(1)), renderEntity(template, entity));
-      urls.push(entity.url);
+      sitemapEntries.push(imageEntry ? { loc: entity.url, image: imageEntry } : { loc: entity.url });
     };
     for (const photo of photos) {
       const name = seo.cleanPublicText(photo.title);
       const collection = seo.cleanPublicText(photo.collectionTitle);
-      const description = seo.cleanPublicText(photo.description || `${name} from the ${collection} gallery by Photos By Elie.`);
+      const location = photo.location ? seo.cleanPublicText(photo.location, '') : '';
+      const keywords = Array.isArray(photo.keywords) ? photo.keywords : [];
+      const description = buildPhotoDescription(photo, name, collection, seo);
       const url = entityUrl('photo', photo.id);
       const image = imageFor(photo);
+      const locationNote = location && location.toLowerCase() !== collection.toLowerCase()
+        ? ` · ${escapeHtml(location)}`
+        : '';
       emit({ kind: 'photo', key: photo.id, title: `Photos By Elie | ${name}`, description, url, image, imageAlt: name,
-        jsonLd: seo.imageObjectJsonLd({ name, description, url, image, collectionName: collection }),
-        body: `<p><a href="./photo.html?id=${escapeHtml(photo.id)}">${escapeHtml(name)}</a> · <a href="${entityUrl('gallery', photo.collectionKey)}">${escapeHtml(collection)}</a></p>`,
-      }, photoTemplate);
+        jsonLd: seo.imageObjectJsonLd({ name, description, url, image, collectionName: collection, location, keywords }),
+        body: `<p><a href="./photo.html?id=${escapeHtml(photo.id)}">${escapeHtml(name)}</a> · <a href="${entityUrl('gallery', photo.collectionKey)}">${escapeHtml(collection)}</a>${locationNote}</p>`,
+      }, photoTemplate, { loc: image, title: name });
     }
     for (const [key, items] of groups) {
       const name = `${seo.cleanPublicText(items[0].collectionTitle)} Gallery`;
@@ -139,14 +178,21 @@ export function build({ repoRoot = root, output = path.join(root, 'tmp/public-se
         body: `<p><a href="./gallery.html?gallery=${escapeHtml(key)}">${escapeHtml(name)}</a></p><ul>${items.map((photo) => `<li><a href="${entityUrl('photo', photo.id)}">${escapeHtml(seo.cleanPublicText(photo.title))}</a></li>`).join('')}</ul>`,
       }, galleryTemplate);
     }
-    fs.writeFileSync(path.join(stage, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc></url>`).join('\n')}\n</urlset>\n`);
+    const formatSitemapEntry = (entry) => {
+      if (!entry.image) return `  <url><loc>${escapeHtml(entry.loc)}</loc></url>`;
+      return `  <url><loc>${escapeHtml(entry.loc)}</loc><image:image><image:loc>${escapeHtml(entry.image.loc)}</image:loc><image:title>${escapeHtml(entry.image.title)}</image:title></image:image></url>`;
+    };
+    fs.writeFileSync(
+      path.join(stage, 'sitemap.xml'),
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${sitemapEntries.map(formatSitemapEntry).join('\n')}\n</urlset>\n`,
+    );
     fs.copyFileSync(path.join(repoRoot, 'robots.txt'), path.join(stage, 'robots.txt'));
     if (crypto.createHash('sha256').update(fs.readFileSync(catalog)).digest('hex') !== catalogSha256) {
       throw new Error('Public catalog changed during SEO generation; output was not replaced');
     }
     if (fs.existsSync(output)) fs.rmSync(output, { recursive: true });
     fs.renameSync(stage, output);
-    return { photos: photos.length, galleries: groups.size, urls: urls.length,
+    return { photos: photos.length, galleries: groups.size, urls: sitemapEntries.length,
       catalogSha256, output };
   } catch (error) {
     fs.rmSync(stage, { recursive: true, force: true });
@@ -158,8 +204,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const args = process.argv.slice(2);
   const config = {};
   for (let index = 0; index < args.length; index += 2) {
-    const key = { '--repo-root': 'repoRoot', '--output': 'output', '--catalog': 'catalog' }[args[index]];
-    if (!key || !args[index + 1]) throw new Error('Usage: build_public_seo.mjs [--repo-root PATH] [--output PATH] [--catalog PATH]');
+    const key = { '--repo-root': 'repoRoot', '--output': 'output', '--catalog': 'catalog', '--visible-ids-file': 'visibleIdsFile' }[args[index]];
+    if (!key || !args[index + 1]) throw new Error('Usage: build_public_seo.mjs [--repo-root PATH] [--output PATH] [--catalog PATH] [--visible-ids-file PATH]');
     config[key] = args[index + 1];
   }
   console.log(JSON.stringify(build(config)));

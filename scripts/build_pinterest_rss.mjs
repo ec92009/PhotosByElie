@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { loadSeo, publicEntities } from "./build_public_seo.mjs";
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE_ORIGIN = "https://photos-by-elie.com";
@@ -184,10 +185,29 @@ function listFilesRecursive(dir, filename) {
   return out.sort();
 }
 
-export function collectCandidates(repoRoot, visibleSet) {
+function loadSeoPhotoIds(repoRoot) {
+  const catalogPath = path.join(repoRoot, "assets", "catalog", "photosbyelie.sqlite");
+  const photosJsPath = path.join(repoRoot, "photos.js");
+  const pricingPath = path.join(repoRoot, "assets", "catalog", "product-pricing.json");
+  if (!fs.existsSync(catalogPath) || !fs.existsSync(photosJsPath) || !fs.existsSync(pricingPath)) {
+    return null;
+  }
+  const seo = loadSeo(repoRoot);
+  const photos = publicEntities(repoRoot, catalogPath, seo, { visibleIdsFile: "" });
+  return new Set(photos.map((photo) => photo.id));
+}
+
+export function collectCandidates(repoRoot, visibleSet, options = {}) {
   if (!(visibleSet instanceof Set) || visibleSet.size === 0) {
     throw new Error("visibleSet must be a non-empty Set of live visible media IDs.");
   }
+
+  const seoPhotoIds = options.seoPhotoIds instanceof Set ? options.seoPhotoIds : loadSeoPhotoIds(repoRoot);
+  const photoLinkFor = (mediaId) => (
+    seoPhotoIds && seoPhotoIds.has(mediaId)
+      ? `${SITE_ORIGIN}/photo--${encodeURIComponent(mediaId)}.html`
+      : `${SITE_ORIGIN}/photo.html?id=${encodeURIComponent(mediaId)}`
+  );
 
   const byId = new Map();
 
@@ -224,7 +244,7 @@ export function collectCandidates(repoRoot, visibleSet) {
         height,
         title: buildPinTitle(item.title, setTitle, item.location),
         description: buildPinDescription(item.title, setTitle, setDesc, item.location, collection),
-        link: `${SITE_ORIGIN}/photo.html?id=${encodeURIComponent(mediaId)}`,
+        link: photoLinkFor(mediaId),
         imageUrl: `${MEDIA_ORIGIN}/media/expo/${encodeURIComponent(mediaId)}_1800.jpg`,
       });
     }
@@ -266,7 +286,7 @@ export function collectCandidates(repoRoot, visibleSet) {
           height,
           title: buildPinTitle(item.title, setTitle, item.location || campaign.location),
           description: buildPinDescription(item.title, setTitle, setDesc, item.location || campaign.location, collection),
-          link: `${SITE_ORIGIN}/photo.html?id=${encodeURIComponent(mediaId)}`,
+          link: photoLinkFor(mediaId),
           imageUrl: `${MEDIA_ORIGIN}/media/expo/${encodeURIComponent(mediaId)}_1800.jpg`,
         });
       }
@@ -376,8 +396,8 @@ ${itemXml}
 `;
 }
 
-export function buildAllFeeds({ repoRoot = DEFAULT_REPO_ROOT, visibleSet, asOf, startDate = DRIP_START_DATE }) {
-  const candidates = collectCandidates(repoRoot, visibleSet);
+export function buildAllFeeds({ repoRoot = DEFAULT_REPO_ROOT, visibleSet, asOf, startDate = DRIP_START_DATE, seoPhotoIds }) {
+  const candidates = collectCandidates(repoRoot, visibleSet, { seoPhotoIds });
   const lastBuildDate = new Date(parseUtcDay(asOf)).toUTCString();
   const outputs = [];
   const boardQueues = [];

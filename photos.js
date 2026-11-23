@@ -4128,19 +4128,27 @@ window.photosByElieSeo = (() => {
       image: photos.slice(0, 12).map((photo) => absoluteUrl(photo.image || photo.url || defaultImage)),
     },
   });
-  const imageObjectJsonLd = ({ name, description, url, image, collectionName, keywords = [] }) => ({
-    "@context": "https://schema.org",
-    "@type": "ImageObject",
-    name: cleanPublicText(name),
-    description: cleanPublicText(description || `${name} by ${siteName}`),
-    url: absoluteUrl(url),
-    contentUrl: absoluteUrl(image || defaultImage),
-    thumbnailUrl: absoluteUrl(image || defaultImage),
-    creator: { "@type": "Person", name: "Elie Cohen" },
-    creditText: siteName,
-    isPartOf: collectionName ? { "@type": "ImageGallery", name: cleanPublicText(collectionName) } : undefined,
-    keywords: keywords.filter(Boolean).slice(0, 24).join(", "),
-  });
+  const imageObjectJsonLd = ({ name, description, url, image, collectionName, location = "", keywords = [] }) => {
+    const canonicalUrl = absoluteUrl(url);
+    const cleanLocation = location ? cleanPublicText(location, "") : "";
+    return {
+      "@context": "https://schema.org",
+      "@type": "ImageObject",
+      name: cleanPublicText(name),
+      description: cleanPublicText(description || `${name} by ${siteName}`),
+      url: canonicalUrl,
+      contentUrl: absoluteUrl(image || defaultImage),
+      thumbnailUrl: absoluteUrl(image || defaultImage),
+      creator: { "@type": "Person", name: "Elie Cohen" },
+      creditText: siteName,
+      copyrightNotice: `© ${siteName}`,
+      license: `${siteOrigin}/support.html`,
+      acquireLicensePage: canonicalUrl,
+      contentLocation: cleanLocation ? { "@type": "Place", name: cleanLocation } : undefined,
+      isPartOf: collectionName ? { "@type": "ImageGallery", name: cleanPublicText(collectionName) } : undefined,
+      keywords: keywords.filter(Boolean).slice(0, 24).join(", "),
+    };
+  };
   return {
     absoluteUrl,
     applyPageMeta,

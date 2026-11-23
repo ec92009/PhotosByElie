@@ -87,3 +87,17 @@ test("Pinterest RSS prioritizes portraits, interleaves themes, and drips steadil
   assert.doesNotMatch(spainFeed.xml, /r2\.dev/);
   assert.doesNotMatch(spainFeed.xml, /spain-revoked-1/);
 });
+
+test("Pinterest RSS emits canonical photo--<id>.html links for SEO-eligible IDs", () => {
+  const root = makeTempRepo();
+  const visible = new Set(["spain-portrait-1", "spain-portrait-2"]);
+  const feeds = buildAllFeeds({
+    repoRoot: root,
+    visibleSet: visible,
+    asOf: "2026-11-23",
+    seoPhotoIds: new Set(["spain-portrait-1"]),
+  });
+  const spainFeed = feeds.find((f) => f.slug === "spain");
+  assert.match(spainFeed.xml, /<link>https:\/\/photos-by-elie\.com\/photo--spain-portrait-1\.html<\/link>/);
+  assert.match(spainFeed.xml, /<link>https:\/\/photos-by-elie\.com\/photo\.html\?id=spain-portrait-2<\/link>/);
+});

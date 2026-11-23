@@ -189,8 +189,10 @@
     ].filter(Boolean).join(" ");
     const photoAspectStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const photoOpenLabel = `Open ${title}`;
+    const eagerImage = Number.isInteger(index) && index >= 0 && index < 6 && !image.startsWith("/__photosbyelie/source-preview/");
+    const imageLoadingAttrs = eagerImage ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
     const mediaHtml = `
-      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" decoding="async" data-caption-sample-src="${escapeHtml(sampleImage)}"${imageColorState} data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
+      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" ${imageLoadingAttrs} data-caption-sample-src="${escapeHtml(sampleImage)}"${imageColorState} data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
       ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       ${originBadgeHtml(origin, originLabel, isVideo)}

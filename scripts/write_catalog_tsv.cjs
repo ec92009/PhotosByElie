@@ -12,37 +12,30 @@ const repoRoot = path.resolve(__dirname, "..");
 const dataPath = path.join(repoRoot, "photos-data.js");
 
 const runtimeParser = `(() => {
-  const readBinary = (relativePath) => {
-    const script = document.currentScript;
-    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-    const url = new URL(relativePath, scriptUrl || window.location.href);
-    if (version) url.searchParams.set("v", version);
-    const request = new XMLHttpRequest();
-    request.open("GET", url.href, false);
-    request.overrideMimeType?.("text/plain; charset=x-user-defined");
-    request.send(null);
-    if (request.status && (request.status < 200 || request.status >= 300)) {
-      throw new Error(\`Could not load \${relativePath}: HTTP \${request.status}\`);
-    }
-    const response = request.responseText || "";
-    const bytes = new Uint8Array(response.length);
-    for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
-    return bytes;
+  const bootstrapScript = document.currentScript;
+  const bootstrapScriptUrl = bootstrapScript?.src ? new URL(bootstrapScript.src, window.location.href) : null;
+  const bootstrapVersion = bootstrapScriptUrl?.searchParams.get("v")
+    || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1]
+    || "";
+  const resolveCatalogUrl = (relativePath) => {
+    const url = new URL(relativePath, bootstrapScriptUrl || window.location.href);
+    if (bootstrapVersion) url.searchParams.set("v", bootstrapVersion);
+    return url;
   };
-  const readJson = (relativePath, fallback = {}) => {
+  const readBinary = async (relativePath) => {
+    const url = resolveCatalogUrl(relativePath);
+    const response = await fetch(url.href, { cache: "default", credentials: "same-origin" });
+    if (!response.ok) {
+      throw new Error(\`Could not load \${relativePath}: HTTP \${response.status}\`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  };
+  const readJson = async (relativePath, fallback = {}) => {
     try {
-      const script = document.currentScript;
-      const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-      const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-      const url = new URL(relativePath, scriptUrl || window.location.href);
-      if (version) url.searchParams.set("v", version);
-      const request = new XMLHttpRequest();
-      request.open("GET", url.href, false);
-      request.overrideMimeType?.("application/json; charset=utf-8");
-      request.send(null);
-      if (request.status && (request.status < 200 || request.status >= 300)) return fallback;
-      return JSON.parse(request.responseText || "{}");
+      const url = resolveCatalogUrl(relativePath);
+      const response = await fetch(url.href, { cache: "default", credentials: "same-origin" });
+      if (!response.ok) return fallback;
+      return await response.json();
     } catch {
       return fallback;
     }
@@ -100,6 +93,8 @@ const runtimeParser = `(() => {
   };
 
   const isLocalhost = () => /^(localhost|127\\.0\\.0\\.1)$/i.test(window.location.hostname);
+  const lifecycleBatchSize = 100;
+  const lifecycleMaxConcurrency = 6;
   let lifecycleVisibleIds = null;
 
   const lifecycleSafePhoto = (photo) => {
@@ -196,27 +191,85 @@ const runtimeParser = `(() => {
     return guarded;
   };
 
-  const applyLifecycleVisibility = async (data = {}) => {
+  const fetchVisibleList = async (base) => {
+    const response = await fetch(\`\${base}/lifecycle/visible\`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (response.status === 404 || response.status === 405) {
+      return { fallback: true };
+    }
+    if (!response.ok) throw new Error(\`Lifecycle visibility failed with HTTP \${response.status}.\`);
+    const payload = await response.json();
+    if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
+    const ids = new Set();
+    payload.visibleMediaIds.forEach((id) => {
+      if (typeof id !== "string" || !id.trim()) throw new Error("Lifecycle visibility response is malformed.");
+      ids.add(id.trim());
+    });
+    return { fallback: false, ids };
+  };
+
+  const applyLifecycleVisibility = async (data = {}, prefetchedVisiblePromise = null) => {
     if (isLocalhost()) return data;
     const base = lifecycleWorkerBase();
+    const detailPhotoId = requestedDetailPhotoId();
     const ids = lifecycleCandidateIds(data);
     const requestedIds = new Set(ids);
     if (!base || !ids.length) throw new Error("Lifecycle visibility authority is unavailable.");
     const visibleIds = new Set();
-    for (let index = 0; index < ids.length; index += 100) {
-      const response = await fetch(\`\${base}/lifecycle/visibility\`, {
-        method: "POST",
-        cache: "no-store",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mediaIds: ids.slice(index, index + 100) }),
-      });
-      if (!response.ok) throw new Error(\`Lifecycle visibility failed with HTTP \${response.status}.\`);
-      const payload = await response.json();
-      (payload.visibleMediaIds || []).forEach((id) => {
-        const normalized = String(id || "").trim();
-        if (!requestedIds.has(normalized)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
-        visibleIds.add(normalized);
-      });
+    let useBatchedVisibility = Boolean(detailPhotoId);
+    if (!useBatchedVisibility) {
+      const result = prefetchedVisiblePromise
+        ? await prefetchedVisiblePromise
+        : await fetchVisibleList(base);
+      if (result.fallback) {
+        useBatchedVisibility = true;
+      } else {
+        result.ids.forEach((id) => {
+          if (requestedIds.has(id)) visibleIds.add(id);
+        });
+      }
+    }
+    if (useBatchedVisibility) {
+      const batches = [];
+      for (let index = 0; index < ids.length; index += lifecycleBatchSize) {
+        batches.push(ids.slice(index, index + lifecycleBatchSize));
+      }
+      let cursor = 0;
+      let stopped = false;
+      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      const authorizeNext = async () => {
+        if (stopped) return;
+        const batchIndex = cursor;
+        cursor += 1;
+        if (batchIndex >= batches.length) return;
+        const batchRequestedIds = new Set(batches[batchIndex]);
+        const response = await fetch(\`\${base}/lifecycle/visibility\`, {
+          method: "POST",
+          cache: "no-store",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mediaIds: batches[batchIndex] }),
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        if (!response.ok) throw new Error(\`Lifecycle visibility failed with HTTP \${response.status}.\`);
+        const payload = await response.json();
+        if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
+        payload.visibleMediaIds.forEach((id) => {
+          const normalized = typeof id === "string" ? id.trim() : "";
+          if (!normalized || !batchRequestedIds.has(normalized)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
+          visibleIds.add(normalized);
+        });
+        await authorizeNext();
+      };
+      const concurrency = Math.min(lifecycleMaxConcurrency, batches.length);
+      try {
+        await Promise.all(Array.from({ length: concurrency }, () => authorizeNext()));
+      } catch (error) {
+        stopped = true;
+        controller?.abort?.();
+        throw error;
+      }
     }
     lifecycleVisibleIds = visibleIds;
     return Object.fromEntries(Object.entries(data).map(([key, collection]) => [key, {
@@ -225,12 +278,14 @@ const runtimeParser = `(() => {
     }]));
   };
 
-  const finishCatalogLoad = async (source, data, owner, productCatalog) => {
+  const finishCatalogLoad = async (source, data, owner, productCatalog, pricingPromise, visiblePromise) => {
     const existingData = window.photosByElieData || {};
-    const filteredData = await applyLifecycleVisibility({ ...(data || {}), ...existingData });
+    const [filteredData, canonicalCatalog] = await Promise.all([
+      applyLifecycleVisibility({ ...(data || {}), ...existingData }, visiblePromise),
+      pricingPromise,
+    ]);
     installLifecycleGuardedCatalog(filteredData);
     window.photosByElieOwnerData = owner || {};
-    const canonicalCatalog = readJson("./assets/catalog/product-pricing.json");
     applyProductCatalog({ ...canonicalCatalog, ...(productCatalog || {}), storefrontPolicy: canonicalCatalog.storefrontPolicy || {} });
     window.photosByElieCatalogSource = source;
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieData);
@@ -243,9 +298,17 @@ const runtimeParser = `(() => {
   window.photosByElieOwnerData = window.photosByElieOwnerData || {};
   window.photosByElieCatalogReady = (async () => {
     if (window.photosByElieCatalogSqlite?.decodeCatalog) {
+      let visiblePromise = null;
+      const pricingPromise = readJson("./assets/catalog/product-pricing.json");
+      const base = lifecycleWorkerBase();
+      if (!isLocalhost() && !requestedDetailPhotoId() && base) {
+        visiblePromise = fetchVisibleList(base);
+        visiblePromise.catch(() => {});
+      }
       try {
-        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
-        return await finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
+        const bytes = await readBinary("./assets/catalog/photosbyelie.sqlite");
+        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(bytes);
+        return await finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog, pricingPromise, visiblePromise);
       } catch (error) {
         console.warn(error?.message || "SQLite catalog load failed.");
       }

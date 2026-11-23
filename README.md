@@ -33,7 +33,8 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v314.0`
+- Current visible version: `v314.1`
+- `v314.1` speeds up storefront startup and gallery loading by replacing synchronous catalog XHR with async `fetch`, overlapping SQLite catalog download with a single CORS-simple `GET /lifecycle/visible` authority check (with `POST /lifecycle/visibility` fallback and single-ID checks on `photo.html`), prioritizing the first six gallery thumbnails (`fetchpriority="high"`), and preconnecting to the auth and media Worker origins.
 - `v314.0` adds the approved eight-photo Florence to San Gimignano film and still collection to All campaigns and the social listing, using the existing public YouTube pair and portrait derivative.
 - `v256.1` adds the approved Sintra and Les Invalides daily collections to All campaigns and the social listing, with twelve original selected still IDs each, vertical public YouTube previews and matching wide-film links. Their existing public preview lifecycle registrations were reconciled through the supported connector; no video was rerendered or reposted.
 - `v256.0` sends each All campaigns Watch on YouTube link to its matching public widescreen film. The vertical preview and still-photo detail remain unchanged. Future campaign pairs must retain the verified wide ID in `video.videoId` and portrait ID in `video.shortId`; the shared directory renderer uses the former for the external CTA.

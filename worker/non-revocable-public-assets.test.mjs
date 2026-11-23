@@ -121,11 +121,21 @@ test("deployed media route rechecks the deny plane after the R2 read", async () 
   assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
 });
 
-const runCatalogBootstrap = async ({ hostname, visibleMediaIds, responseOk = true }) => {
+const runCatalogBootstrap = async ({
+  hostname,
+  pathname = "/gallery.html",
+  search = "",
+  visibleMediaIds = [],
+  responseOk = true,
+  visibleStatus,
+  visiblePayload,
+  visibilityHandler,
+}) => {
   const source = readFileSync(new URL("../photos-data.js", import.meta.url), "utf8");
   const events = [];
+  const fetchCalls = [];
   const page = {
-    location: { hostname, href: `https://${hostname}/gallery.html` },
+    location: { hostname, pathname, search, href: `https://${hostname}${pathname}${search}` },
     photosByElieMediaConfig: { authWorkerBaseUrl: "https://auth.photos-by-elie.com" },
     photosByElieCatalogSqlite: {
       decodeCatalog: () => ({
@@ -145,38 +155,64 @@ const runCatalogBootstrap = async ({ hostname, visibleMediaIds, responseOk = tru
     dispatchEvent: (event) => events.push(event),
   };
   page.window = page;
-  class MockRequest {
-    open(_method, url) { this.url = url; }
-    overrideMimeType() {}
-    send() {
-      this.status = 200;
-      this.responseText = this.url.includes("product-pricing.json") ? "{}" : "catalog";
-    }
-  }
   const context = {
     window: page,
     document: { currentScript: { src: `https://${hostname}/photos-data.js?v=test` }, querySelector: () => null },
-    XMLHttpRequest: MockRequest,
     CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
     URL,
+    URLSearchParams,
+    AbortController,
     Uint8Array,
     console,
-    fetch: async () => ({ ok: responseOk, status: responseOk ? 200 : 503, json: async () => ({ visibleMediaIds }) }),
+    fetch: async (url, init = {}) => {
+      fetchCalls.push({ url: String(url), init });
+      const parsed = new URL(url);
+      if (parsed.pathname.endsWith("photosbyelie.sqlite")) {
+        return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer };
+      }
+      if (parsed.pathname.endsWith("product-pricing.json")) {
+        return { ok: true, status: 200, json: async () => ({}) };
+      }
+      if (parsed.pathname.endsWith("/lifecycle/visible")) {
+        const status = visibleStatus ?? (responseOk ? 200 : 503);
+        const ok = status >= 200 && status < 300;
+        return {
+          ok,
+          status,
+          json: async () => (visiblePayload !== undefined ? visiblePayload : { visibleMediaIds }),
+        };
+      }
+      if (parsed.pathname.endsWith("/lifecycle/visibility")) {
+        if (visibilityHandler) return visibilityHandler(url, init);
+        return { ok: responseOk, status: responseOk ? 200 : 503, json: async () => ({ visibleMediaIds }) };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    },
   };
   const { runInNewContext } = await import("node:vm");
   runInNewContext(source, context);
   await page.photosByElieCatalogReady;
-  return page;
+  return { page, fetchCalls };
 };
 
 test("public late context registration cannot reintroduce denied media or direct URLs", async () => {
-  const page = await runCatalogBootstrap({ hostname: "photos-by-elie.com", visibleMediaIds: ["media-visible"] });
+  const { page, fetchCalls } = await runCatalogBootstrap({
+    hostname: "photos-by-elie.com",
+    visibleMediaIds: ["media-visible", "foreign-unlisted-id"],
+  });
   assert.deepEqual(page.photosByElieData.initial.photos.map((photo) => photo.id), ["media-visible"]);
+  const visibleCall = fetchCalls.find((call) => call.url.endsWith("/lifecycle/visible"));
+  assert.ok(visibleCall);
+  assert.equal(visibleCall.init.method, "GET");
+  assert.equal(visibleCall.init.cache, "no-store");
+  assert.equal(visibleCall.init.headers, undefined);
+  assert.equal(visibleCall.init.body, undefined);
 
   page.photosByElieData.late = {
     title: "Late context",
     photos: [
       { id: "media-denied", imageSrc: "/repo/denied.jpg", media: { publicPreview: { galleryKey: "expo/denied.jpg" } } },
+      { id: "foreign-unlisted-id", imageSrc: "/repo/foreign.jpg", media: { publicPreview: { galleryKey: "expo/foreign.jpg" } } },
       {
         id: "media-visible",
         imageSrc: "/repo/visible.jpg",
@@ -193,20 +229,52 @@ test("public late context registration cannot reintroduce denied media or direct
   assert.deepEqual(page.photosByElieData.late.photos.map((photo) => photo.id), ["media-visible"]);
 });
 
+test("public catalog falls back to POST /lifecycle/visibility when GET /lifecycle/visible returns 405", async () => {
+  const { page, fetchCalls } = await runCatalogBootstrap({
+    hostname: "photos-by-elie.com",
+    visibleStatus: 405,
+    visibleMediaIds: ["media-visible"],
+  });
+  assert.deepEqual(page.photosByElieData.initial.photos.map((photo) => photo.id), ["media-visible"]);
+  assert.ok(fetchCalls.some((call) => call.url.endsWith("/lifecycle/visible")));
+  assert.ok(fetchCalls.some((call) => call.url.endsWith("/lifecycle/visibility") && call.init.method === "POST"));
+});
+
+test("photo.html?id=... checks only the requested photo via POST /lifecycle/visibility", async () => {
+  const posted = [];
+  const { page, fetchCalls } = await runCatalogBootstrap({
+    hostname: "photos-by-elie.com",
+    pathname: "/photo.html",
+    search: "?id=media-visible",
+    visibilityHandler: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      posted.push(body.mediaIds);
+      return { ok: true, status: 200, json: async () => ({ visibleMediaIds: body.mediaIds }) };
+    },
+  });
+  assert.deepEqual(posted, [["media-visible"]]);
+  assert.equal(fetchCalls.some((call) => call.url.endsWith("/lifecycle/visible")), false);
+  assert.deepEqual(page.photosByElieData.initial.photos.map((photo) => photo.id), ["media-visible"]);
+});
+
 test("localhost catalog keeps direct context behavior", async () => {
-  const page = await runCatalogBootstrap({ hostname: "localhost", visibleMediaIds: [] });
+  const { page } = await runCatalogBootstrap({ hostname: "localhost", visibleMediaIds: [] });
   page.photosByElieData.late = {
     photos: [{ id: "local-only", imageSrc: "/local/photo.jpg" }],
   };
   assert.equal(page.photosByElieData.late.photos[0].imageSrc, "/local/photo.jpg");
 });
 
-test("failed public visibility authority leaves a guarded empty catalog", async () => {
+test("failed or malformed public visibility authority leaves a guarded empty catalog", async () => {
   await assert.rejects(
     runCatalogBootstrap({ hostname: "photos-by-elie.com", visibleMediaIds: [], responseOk: false }),
     /lifecycle-authorized public catalog/,
   );
-  const page = await runCatalogBootstrap({ hostname: "photos-by-elie.com", visibleMediaIds: [] });
+  await assert.rejects(
+    runCatalogBootstrap({ hostname: "photos-by-elie.com", visiblePayload: { visibleMediaIds: [123] } }),
+    /lifecycle-authorized public catalog/,
+  );
+  const { page } = await runCatalogBootstrap({ hostname: "photos-by-elie.com", visibleMediaIds: [] });
   page.photosByElieData = { late: { photos: [{ id: "not-authorized", imageSrc: "/repo/photo.jpg" }] } };
   assert.deepEqual(page.photosByElieData.late.photos, []);
 });

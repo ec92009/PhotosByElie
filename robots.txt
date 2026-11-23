@@ -8,5 +8,6 @@ Disallow: /liked.html
 Disallow: /real-estate.html
 Disallow: /experiments/
 Disallow: /socials/
+Disallow: /landing-concept/
 
-Sitemap: https://ec92009.github.io/PhotosByElie/sitemap.xml
+Sitemap: https://photos-by-elie.com/sitemap.xml

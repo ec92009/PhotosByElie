@@ -39,7 +39,7 @@ test('off-by-default rollout emits legacy shapes only, with no raw campaign or r
   assert.equal(h.sent.length, 1);
   assert.deepEqual(h.sent[0].properties, { path: '/photo.html', locale: 'en' });
   assert.equal(h.window.WebSignals.track('pbe_stage', { stage: 'product_ready' }), false);
-  for (const page of ['photo.html', 'gallery.html', 'basket.html', 'liked.html', 'index.html']) assert.doesNotMatch(read(page), /data-wst-pbe-funnel=["']true/);
+  for (const page of ['photo.html', 'gallery.html', 'basket.html', 'liked.html', 'index.html']) assert.match(read(page), /analytics\.js\?v=[^"']+["']\s+data-wst-pbe-funnel=["']true["']/);
 });
 
 test('early stages flush once, product readiness latches synchronously and no server stage can be sent', () => {

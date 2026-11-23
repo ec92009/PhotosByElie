@@ -373,7 +373,8 @@ const publicMediaResponse = async (request, env) => {
 
   const bucket = requiredBinding(env, "PUBLIC_MEDIA");
   const rangeHeader = request.headers.get("range");
-  const metadata = typeof bucket.head === "function" ? await bucket.head(key) : null;
+  const needsHead = Boolean(rangeHeader) || request.method === "HEAD";
+  const metadata = needsHead && typeof bucket.head === "function" ? await bucket.head(key) : null;
 
   if (rangeHeader) {
     if (!metadata) {

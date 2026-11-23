@@ -6224,3 +6224,39 @@ test("deliverable views enforce passive MIME and sandbox active-looking bytes", 
   const transcoded = createRealEstateDeliverables({ ...options, videoTranscoder: { toMp4: async () => ({ body, contentType: "text/html", filename: "active.html" }) } });
   await assert.rejects(transcoded.completeAssemblyOutput({ ...payload, id: "test.mp4", filename: "test.mp4", contentType: "video/mp4", body }), { code: "invalid_real_estate_assembly_content_type" });
 });
+
+test("GET /lifecycle/visible returns fail-closed visible IDs with strict no-store and CORS max-age", async () => {
+  const catalog = loadCatalog();
+  const worker = createWorker({
+    catalog,
+    store: createMemoryStore(),
+    lifecycleDenyStore: {
+      ...allowLifecycleFor(),
+      listVisibleMediaIds: async () => ["media-alpha", "media-bravo"],
+    },
+  });
+  const response = await worker.fetch(new Request("https://worker.test/lifecycle/visible"));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.equal(response.headers.get("access-control-max-age"), "86400");
+  assert.deepEqual(await response.json(), { ok: true, visibleMediaIds: ["media-alpha", "media-bravo"] });
+
+  const preflight = await worker.fetch(new Request("https://worker.test/lifecycle/visibility", {
+    method: "OPTIONS",
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(preflight.status, 200);
+  assert.equal(preflight.headers.get("access-control-max-age"), "86400");
+
+  const unavailableWorker = createWorker({
+    catalog,
+    store: createMemoryStore(),
+    lifecycleDenyStore: null,
+  });
+  const unavailable = await unavailableWorker.fetch(new Request("https://worker.test/lifecycle/visible"));
+  assert.equal(unavailable.status, 503);
+  assert.equal(unavailable.headers.get("cache-control"), "private, no-store, max-age=0");
+});
+

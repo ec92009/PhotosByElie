@@ -224,47 +224,86 @@
     const startedAt = clock();
     timings.lifecycleMode = "authority";
     const base = lifecycleWorkerBase();
+    const detailPhotoId = requestedDetailPhotoId();
     const ids = lifecycleCandidateIds(data).filter((id) => catalogPhotosById.has(id));
     if (!base) throw new Error("Lifecycle visibility authority is unavailable.");
     const visibleIds = new Set();
-    const batches = [];
-    for (let index = 0; index < ids.length; index += lifecycleBatchSize) {
-      batches.push(ids.slice(index, index + lifecycleBatchSize));
+    if (!ids.length) {
+      timings.lifecycleBatchCount = 0;
+      timings.lifecycleConcurrency = 0;
+      timings.lifecycleEndpoint = detailPhotoId ? "visibility" : "visible";
+      timings.lifecycleMs = duration(startedAt);
+      lifecycleVisibleIds = visibleIds;
+      return Object.fromEntries(Object.entries(data).map(([key, collection]) => [key, {
+        ...collection,
+        photos: [],
+      }]));
     }
-    let cursor = 0;
-    let stopped = false;
-    const controller = new AbortController();
-    const authorizeNext = async () => {
-      if (stopped) return;
-      const batchIndex = cursor;
-      cursor += 1;
-      if (batchIndex >= batches.length) return;
-      const requestedIds = new Set(batches[batchIndex]);
-      const response = await fetch(`${base}/lifecycle/visibility`, {
-        method: "POST",
-        cache: "no-store",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mediaIds: batches[batchIndex] }),
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error(`Lifecycle visibility failed with HTTP ${response.status}.`);
-      const payload = await response.json();
-      if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
-      payload.visibleMediaIds.forEach((id) => {
-        if (typeof id !== "string" || !requestedIds.has(id)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
-        visibleIds.add(id);
-      });
-      await authorizeNext();
-    };
-    const concurrency = Math.min(lifecycleMaxConcurrency, batches.length);
-    timings.lifecycleBatchCount = batches.length;
-    timings.lifecycleConcurrency = concurrency;
+    const candidateIdSet = new Set(ids);
+    let useBatchedVisibility = Boolean(detailPhotoId);
     try {
-      await Promise.all(Array.from({ length: concurrency }, () => authorizeNext()));
-    } catch (error) {
-      stopped = true;
-      controller.abort();
-      throw error;
+      if (!useBatchedVisibility) {
+        const response = await fetch(`${base}/lifecycle/visible`, {
+          method: "GET",
+          cache: "no-store",
+        });
+        if (response.status === 404 || response.status === 405) {
+          useBatchedVisibility = true;
+        } else {
+          if (!response.ok) throw new Error(`Lifecycle visibility failed with HTTP ${response.status}.`);
+          const payload = await response.json();
+          if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
+          payload.visibleMediaIds.forEach((id) => {
+            if (typeof id !== "string" || !id.trim()) throw new Error("Lifecycle visibility response is malformed.");
+            if (candidateIdSet.has(id)) visibleIds.add(id);
+          });
+          timings.lifecycleBatchCount = 1;
+          timings.lifecycleConcurrency = 1;
+          timings.lifecycleEndpoint = "visible";
+        }
+      }
+      if (useBatchedVisibility) {
+        const batches = [];
+        for (let index = 0; index < ids.length; index += lifecycleBatchSize) {
+          batches.push(ids.slice(index, index + lifecycleBatchSize));
+        }
+        let cursor = 0;
+        let stopped = false;
+        const controller = new AbortController();
+        const authorizeNext = async () => {
+          if (stopped) return;
+          const batchIndex = cursor;
+          cursor += 1;
+          if (batchIndex >= batches.length) return;
+          const requestedIds = new Set(batches[batchIndex]);
+          const response = await fetch(`${base}/lifecycle/visibility`, {
+            method: "POST",
+            cache: "no-store",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ mediaIds: batches[batchIndex] }),
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error(`Lifecycle visibility failed with HTTP ${response.status}.`);
+          const payload = await response.json();
+          if (!Array.isArray(payload?.visibleMediaIds)) throw new Error("Lifecycle visibility response is malformed.");
+          payload.visibleMediaIds.forEach((id) => {
+            if (typeof id !== "string" || !requestedIds.has(id)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
+            visibleIds.add(id);
+          });
+          await authorizeNext();
+        };
+        const concurrency = Math.min(lifecycleMaxConcurrency, batches.length);
+        timings.lifecycleBatchCount = batches.length;
+        timings.lifecycleConcurrency = concurrency;
+        timings.lifecycleEndpoint = "visibility";
+        try {
+          await Promise.all(Array.from({ length: concurrency }, () => authorizeNext()));
+        } catch (error) {
+          stopped = true;
+          controller.abort();
+          throw error;
+        }
+      }
     } finally {
       timings.lifecycleMs = duration(startedAt);
     }

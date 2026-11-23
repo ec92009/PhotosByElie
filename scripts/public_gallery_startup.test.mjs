@@ -34,11 +34,12 @@ const deferred = () => {
 const startBootstrap = ({
   photos = defaultPhotos, catalog = catalogBytes, pricing = pricingBytes,
   catalogStatus = 200, pricingStatus = 200, lifecycleDelayMs = 0,
-  onVisibility, catalogGate, pageUrl = "https://photos-by-elie.com/gallery.html?gallery=spain",
+  onVisibility, onVisible, visibleStatus = onVisibility ? 404 : 200, catalogGate,
+  pageUrl = "https://photos-by-elie.com/gallery.html?gallery=spain",
   sourceText = source, crypto = webcrypto, decoder = true, sharedPayload, bodyPhotoId,
 } = {}) => {
   const location = new URL(pageUrl);
-  const stats = { active: 0, maxActive: 0, decodeCalls: 0, lifecycleCalls: 0, aborted: 0 };
+  const stats = { active: 0, maxActive: 0, decodeCalls: 0, lifecycleCalls: 0, visibleCalls: 0, aborted: 0 };
   const requests = [], marks = [], events = [], warnings = [];
   const page = {
     location,
@@ -71,6 +72,21 @@ const startBootstrap = ({
         if (isCatalog && catalogGate) await catalogGate;
         const status = isCatalog ? catalogStatus : pricingStatus;
         return { ok: status >= 200 && status < 300, status, arrayBuffer: async () => arrayBufferFor(isCatalog ? catalog : pricing) };
+      }
+      if (pathname.endsWith("/lifecycle/visible")) {
+        stats.visibleCalls += 1;
+        if (visibleStatus !== 200) {
+          return { ok: false, status: visibleStatus, json: async () => ({ error: { code: "not_found" } }) };
+        }
+        const call = stats.lifecycleCalls++;
+        stats.maxActive = Math.max(stats.maxActive, ++stats.active);
+        try {
+          if (lifecycleDelayMs) await delay(lifecycleDelayMs, undefined, { signal: options.signal });
+          const payload = onVisible
+            ? await onVisible({ call, options, page })
+            : { visibleMediaIds: photos.map((photo) => photo.id) };
+          return { ok: true, status: 200, json: async () => payload };
+        } finally { stats.active -= 1; }
       }
       const batch = JSON.parse(options.body).mediaIds;
       const call = stats.lifecycleCalls++;
@@ -164,7 +180,7 @@ test("async loading stays empty and ignores stale context rows, unknown IDs and 
   assert.equal(result.page.photosByElieData.context.photos.length, 1);
   assert.equal(result.page.photosByElieData.spain.title, "Spain");
   assert.ok(result.requests.filter(({ options }) => options.body).every(({ options }) => !options.body.includes("absent-from-generation")));
-  const assetRequests = result.requests.filter(({ options }) => !options.body);
+  const assetRequests = result.requests.filter(({ url, options }) => !options.body && !new URL(url).pathname.endsWith("/lifecycle/visible"));
   assert.ok(assetRequests.every(({ url }) => url.startsWith("https://photos-by-elie.com/PhotosByElie/assets/catalog/") && url.endsWith("?v=integration")));
 });
 
@@ -271,8 +287,54 @@ test("generated photo routes use body identity with query precedence, bounded to
   assert.equal(unknown.page.photosByElieData.spain.photos.length, 0);
   for (const route of ["/gallery.html", "/basket.html", "/photo--media-0173.html/extra", "/not-photo--media-0173.html", "/photo--_invalid.html"]) {
     const result = await runBootstrap({ pageUrl: `https://photos-by-elie.com${route}`, bodyPhotoId: "media-0173" });
-    assert.equal(result.stats.lifecycleCalls, 7);
+    assert.equal(result.stats.lifecycleCalls, 1);
+    assert.equal(result.page.photosByElieCatalogTimings.lifecycleEndpoint, "visible");
     assert.equal(result.page.photosByElieData.spain.photos.length, 620);
+  }
+});
+
+test("full catalog uses a single CORS-simple GET /lifecycle/visible request, intersects against catalog, and fails closed on 503 or malformed payloads", async () => {
+  const result = await runBootstrap({
+    onVisible: () => ({
+      ok: true,
+      visibleMediaIds: [
+        ...defaultPhotos.filter((photo) => photo.id !== "media-0003").map((photo) => photo.id),
+        "foreign-id-not-in-catalog",
+      ],
+    }),
+  });
+  assert.equal(result.error, null);
+  assert.equal(result.stats.visibleCalls, 1);
+  assert.equal(result.stats.lifecycleCalls, 1);
+  const visibleRequest = result.requests.find(({ url }) => new URL(url).pathname.endsWith("/lifecycle/visible"));
+  assert.equal(visibleRequest.options.method, "GET");
+  assert.equal(visibleRequest.options.cache, "no-store");
+  assert.equal(visibleRequest.options.headers, undefined);
+  assert.equal(visibleRequest.options.body, undefined);
+  assert.equal(result.page.photosByElieCatalogTimings.lifecycleBatchCount, 1);
+  assert.equal(result.page.photosByElieCatalogTimings.lifecycleConcurrency, 1);
+  assert.equal(result.page.photosByElieCatalogTimings.lifecycleEndpoint, "visible");
+  assert.equal(result.page.photosByElieData.spain.photos.length, 619);
+  assert.equal(result.page.photosByElieData.spain.photos.some((photo) => photo.id === "media-0003"), false);
+  assert.equal(result.page.photosByElieData.spain.photos.some((photo) => photo.id === "foreign-id-not-in-catalog"), false);
+
+  // 405 falls back to batched POST /lifecycle/visibility.
+  const fallback = await runBootstrap({ visibleStatus: 405 });
+  assert.equal(fallback.error, null);
+  assert.equal(fallback.stats.visibleCalls, 1);
+  assert.equal(fallback.stats.lifecycleCalls, 7);
+  assert.equal(fallback.page.photosByElieCatalogTimings.lifecycleEndpoint, "visibility");
+  assert.equal(fallback.page.photosByElieData.spain.photos.length, 620);
+
+  // 503 fails closed immediately without falling back to POST.
+  const unavailable = await runBootstrap({ visibleStatus: 503 });
+  assertDenied(unavailable, { decoded: true });
+  assert.equal(unavailable.stats.visibleCalls, 1);
+  assert.equal(unavailable.stats.lifecycleCalls, 0);
+
+  // Malformed payloads fail closed.
+  for (const payload of [null, {}, { visibleMediaIds: "media-0000" }, { visibleMediaIds: [null] }, { visibleMediaIds: [""] }]) {
+    assertDenied(await runBootstrap({ onVisible: () => payload }), { decoded: true });
   }
 });
 

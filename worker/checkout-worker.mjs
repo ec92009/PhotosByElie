@@ -77,6 +77,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
+    "access-control-max-age": "86400",
     ...headers,
   },
 });
@@ -105,6 +106,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
+    "access-control-max-age": "86400",
     "cache-control": "private, no-store",
     vary: "Origin",
     ...extraHeaders,
@@ -2920,6 +2922,17 @@ export const createPhotosByElieWorker = ({
     }
   };
 
+  const lifecycleVisible = async () => {
+    if (!lifecycleDenyStore?.listVisibleMediaIds) {
+      return errorJson(503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable; visibility is denied.");
+    }
+    const visibleMediaIds = await lifecycleDenyStore.listVisibleMediaIds();
+    return json({
+      ok: true,
+      visibleMediaIds,
+    }, 200, PRIVATE_NO_STORE_HEADERS);
+  };
+
   const lifecycleVisibility = async (request) => {
     if (!lifecycleDenyStore?.visibilityFor) {
       return errorJson(503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable; visibility is denied.");
@@ -4136,6 +4149,7 @@ export const createPhotosByElieWorker = ({
         return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY,
           lifecycle: "ready" }, 200, { "cache-control": "no-store" });
       }
+      if (request.method === "GET" && path === "/lifecycle/visible") return await lifecycleVisible();
       if (request.method === "POST" && path === "/lifecycle/visibility") return await lifecycleVisibility(request);
       if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
       if (request.method === "GET" && path === "/shared-galleries") return await getSharedGalleries(request);

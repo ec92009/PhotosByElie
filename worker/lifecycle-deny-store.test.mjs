@@ -656,3 +656,101 @@ test("missing projection and missing authority fail closed", async () => {
   } });
   await assert.rejects(missing.assertAllowed(["media-one"]), { code: "lifecycle_authority_unavailable" });
 });
+
+test("assertObjectAllowed executes a single D1 query and preserves all fail-closed error codes", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  let queryCount = 0;
+  const origPrepare = database.prepare.bind(database);
+  database.prepare = (sql) => {
+    queryCount += 1;
+    return origPrepare(sql);
+  };
+
+  queryCount = 0;
+  const allowed = await store.assertObjectAllowed({ bucket: "public", objectKey: "gallery/one.jpg", context: "media:get" });
+  assert.deepEqual(allowed, { canonicalMediaId: "media-one" });
+  assert.equal(queryCount, 1);
+
+  queryCount = 0;
+  await assert.rejects(
+    store.assertObjectAllowed({ bucket: "public", objectKey: "gallery/missing.jpg", context: "media:get" }),
+    { code: "lifecycle_object_binding_missing", status: 503 },
+  );
+  assert.equal(queryCount, 1);
+
+  const armed = await store.armBatch({ operationId: "op-single-query-deny", operation: "x", denied: true, items: [member()] });
+  queryCount = 0;
+  await assert.rejects(
+    store.assertObjectAllowed({ bucket: "public", objectKey: "gallery/one.jpg", context: "media:get" }),
+    (error) => error.code === "asset_lifecycle_denied" && error.status === 410 && error.details.reasons[0] === "barrier-armed",
+  );
+  assert.equal(queryCount, 1);
+
+  await store.markLocallyCommitted(armed);
+  await store.applyBatch({ ...armed, receipts: [receiptFor(armed, "one", true, "recoverable")] });
+  queryCount = 0;
+  await assert.rejects(
+    store.assertObjectAllowed({ bucket: "public", objectKey: "gallery/one.jpg", context: "media:get" }),
+    (error) => error.code === "asset_lifecycle_denied" && error.status === 410 && error.details.reasons[0] === "recoverable",
+  );
+  assert.equal(queryCount, 1);
+
+  database.sqlite.prepare("UPDATE pbe_lifecycle_control SET state = 'blocked'").run();
+  queryCount = 0;
+  await assert.rejects(
+    store.assertObjectAllowed({ bucket: "public", objectKey: "gallery/one.jpg", context: "media:get" }),
+    { code: "lifecycle_authority_unavailable", status: 503 },
+  );
+  assert.equal(queryCount, 1);
+});
+
+test("listVisibleMediaIds returns sorted visible IDs in a single read-only query and fails closed when unavailable", async () => {
+  const database = new TransactionalD1();
+  const store = createD1LifecycleDenyStore({ database });
+  const members = [member("charlie"), member("alpha"), member("bravo")];
+  await store.seedVisibleBatch({ seedId: "seed-visible-list", items: members });
+  // Blocked authority must fail closed.
+  await assert.rejects(store.listVisibleMediaIds(), { code: "lifecycle_authority_unavailable", status: 503 });
+
+  await store.activate({ activationId: "act-visible-list", ...await summarizeLifecycleManifest(members) });
+
+  let queryCount = 0;
+  const origPrepare = database.prepare.bind(database);
+  database.prepare = (sql) => {
+    queryCount += 1;
+    return origPrepare(sql);
+  };
+
+  queryCount = 0;
+  assert.deepEqual(await store.listVisibleMediaIds(), ["media-alpha", "media-bravo", "media-charlie"]);
+  assert.equal(queryCount, 1);
+
+  // Armed barrier immediately hides media-bravo before apply.
+  const arm = await store.armBatch({ operationId: "op-hide-bravo", operation: "x", denied: true, items: [member("bravo")] });
+  queryCount = 0;
+  assert.deepEqual(await store.listVisibleMediaIds(), ["media-alpha", "media-charlie"]);
+  assert.equal(queryCount, 1);
+
+  // Applied denial keeps media-bravo hidden.
+  await store.markLocallyCommitted(arm);
+  await store.applyBatch({ ...arm, receipts: [receiptFor(arm, "bravo", true, "recoverable")] });
+  assert.deepEqual(await store.listVisibleMediaIds(), ["media-alpha", "media-charlie"]);
+
+  // Denying all remaining items returns [] (not an authority error) while control is ready.
+  const armRest = await store.armBatch({ operationId: "op-hide-rest", operation: "x", denied: true, items: [member("alpha"), member("charlie")] });
+  await store.markLocallyCommitted(armRest);
+  await store.applyBatch({
+    ...armRest,
+    receipts: [
+      receiptFor(armRest, "alpha", true, "recoverable"),
+      receiptFor(armRest, "charlie", true, "recoverable"),
+    ],
+  });
+  assert.deepEqual(await store.listVisibleMediaIds(), []);
+
+  // Missing control row fails closed even if rows exist.
+  database.sqlite.prepare("DELETE FROM pbe_lifecycle_control").run();
+  await assert.rejects(store.listVisibleMediaIds(), { code: "lifecycle_authority_unavailable", status: 503 });
+});
+

@@ -80,35 +80,38 @@ test("deployed media route serves reviewed music and rejects an existing unknown
   assert.equal(rejected.headers.get("cache-control"), "private, no-store, max-age=0");
 });
 
-test("deployed media route rechecks the deny plane after the R2 read", async () => {
+test("deployed media route rechecks the deny plane after the R2 read without redundant R2 head on GET", async () => {
   let denied = false;
+  let d1Queries = 0;
+  let headCalls = 0;
   const database = {
     batch: async () => [],
     prepare(sql) {
+      d1Queries += 1;
       return {
         bind() { return this; },
         async first() {
-          if (sql.includes("pbe_lifecycle_control")) return { schema_version: 4, state: "ready" };
-          if (sql.includes("pbe_lifecycle_media_bindings")) return { canonical_media_id: "media-one" };
+          if (sql.includes("pbe_lifecycle_control") && sql.includes("pbe_lifecycle_media_bindings")) {
+            return {
+              authority_schema_version: 4,
+              authority_state: "ready",
+              binding_media_id: "media-one",
+              identity_media_id: "media-one",
+              projection_revision: denied ? 1 : 0,
+              projection_denied: denied ? 1 : 0,
+              projection_state: denied ? "recoverable" : "visible",
+              barrier_revision: null,
+            };
+          }
           return null;
         },
-        async all() {
-          if (!sql.includes("pbe_lifecycle_media_identity")) return { results: [] };
-          return { results: [{
-            canonical_media_id: "media-one",
-            revision: denied ? 1 : 0,
-            denied: denied ? 1 : 0,
-            lifecycle_state: denied ? "recoverable" : "visible",
-            receipt_id: denied ? "receipt-one" : "seed-one",
-            barrier_revision: null,
-          }] };
-        },
+        async all() { return { results: [] }; },
       };
     },
   };
   const object = { bytes: new Uint8Array([7, 8, 9]), size: 3, httpMetadata: { contentType: "image/jpeg" } };
   const bucket = {
-    head: async () => object,
+    head: async () => { headCalls += 1; return object; },
     get: async () => {
       denied = true;
       return { ...object, body: object.bytes };
@@ -121,6 +124,50 @@ test("deployed media route rechecks the deny plane after the R2 read", async () 
   assert.equal(response.status, 410);
   assert.equal(await response.text(), "Media unavailable");
   assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+  assert.equal(headCalls, 0);
+  assert.equal(d1Queries, 2);
+});
+
+test("deployed media route denies revoked objects in 1 D1 query with zero R2 reads", async () => {
+  let d1Queries = 0;
+  let headCalls = 0;
+  let getCalls = 0;
+  const database = {
+    batch: async () => [],
+    prepare() {
+      d1Queries += 1;
+      return {
+        bind() { return this; },
+        async first() {
+          return {
+            authority_schema_version: 4,
+            authority_state: "ready",
+            binding_media_id: "media-denied",
+            identity_media_id: "media-denied",
+            projection_revision: 2,
+            projection_denied: 1,
+            projection_state: "recoverable",
+            barrier_revision: null,
+          };
+        },
+        async all() { return { results: [] }; },
+      };
+    },
+  };
+  const bucket = {
+    head: async () => { headCalls += 1; return null; },
+    get: async () => { getCalls += 1; return null; },
+  };
+  const response = await deployedWorker.fetch(
+    new Request("https://worker.test/media/expo/revoked.jpg"),
+    { ACCESS_DB: database, PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(response.status, 410);
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(d1Queries, 1);
+  assert.equal(headCalls, 0);
+  assert.equal(getCalls, 0);
 });
 
 const runCatalogBootstrap = async ({ hostname, visibleMediaIds, responseOk = true }) => {

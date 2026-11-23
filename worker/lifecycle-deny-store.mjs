@@ -1298,15 +1298,57 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
   };
 
   const assertObjectAllowed = async ({ bucket, objectKey, context = "media" }) => {
-    await assertReady();
     const normalizedBucket = clean(bucket);
     const normalizedKey = clean(objectKey);
-    if (!normalizedBucket || !normalizedKey) throw lifecycleError("lifecycle_object_binding_missing", "Media object binding is missing; access is denied.");
-    const binding = await database.prepare(`SELECT canonical_media_id FROM pbe_lifecycle_media_bindings
-      WHERE bucket = ? AND object_key = ?`).bind(normalizedBucket, normalizedKey).first();
-    if (!binding?.canonical_media_id) throw lifecycleError("lifecycle_object_binding_missing", "Media object is not bound to a canonical media ID; access is denied.");
-    await assertAllowed([binding.canonical_media_id], context);
-    return { canonicalMediaId: clean(binding.canonical_media_id) };
+    let row;
+    try {
+      row = await database.prepare(`SELECT
+          control.schema_version AS authority_schema_version,
+          control.state AS authority_state,
+          binding.canonical_media_id AS binding_media_id,
+          identity.canonical_media_id AS identity_media_id,
+          projection.revision AS projection_revision,
+          projection.denied AS projection_denied,
+          projection.lifecycle_state AS projection_state,
+          (SELECT MAX(revision) FROM pbe_lifecycle_barriers WHERE canonical_media_id = binding.canonical_media_id) AS barrier_revision
+        FROM pbe_lifecycle_control control
+        LEFT JOIN pbe_lifecycle_media_bindings binding
+          ON binding.bucket = ? AND binding.object_key = ?
+        LEFT JOIN pbe_lifecycle_media_identity identity
+          ON identity.canonical_media_id = binding.canonical_media_id
+        LEFT JOIN pbe_lifecycle_projection projection
+          ON projection.canonical_media_id = binding.canonical_media_id
+        WHERE control.control_id = ?`).bind(normalizedBucket, normalizedKey, CONTROL_ID).first();
+    } catch (error) {
+      throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle migration or authority is unavailable; access is denied.", 503, {
+        cause: error?.message || String(error),
+      });
+    }
+    if (!row || Number(row.authority_schema_version) !== SCHEMA_VERSION || row.authority_state !== "ready") {
+      throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle authority is not ready; access is denied.");
+    }
+    if (!normalizedBucket || !normalizedKey) {
+      throw lifecycleError("lifecycle_object_binding_missing", "Media object binding is missing; access is denied.");
+    }
+    const canonicalMediaId = clean(row.binding_media_id);
+    if (!canonicalMediaId) {
+      throw lifecycleError("lifecycle_object_binding_missing", "Media object is not bound to a canonical media ID; access is denied.");
+    }
+    const revision = row.projection_revision == null ? null : Number(row.projection_revision);
+    const barrierRevision = row.barrier_revision == null ? null : Number(row.barrier_revision);
+    let deniedReason = "";
+    if (!clean(row.identity_media_id)) deniedReason = "identity-missing";
+    else if (revision == null) deniedReason = "projection-missing";
+    else if (barrierRevision != null && barrierRevision >= revision) deniedReason = "barrier-armed";
+    else if (Boolean(row.projection_denied)) deniedReason = row.projection_state;
+    if (deniedReason) {
+      throw lifecycleError("asset_lifecycle_denied", "One or more assets are unavailable.", 410, {
+        context,
+        mediaIds: [canonicalMediaId],
+        reasons: [deniedReason],
+      });
+    }
+    return { canonicalMediaId };
   };
 
   const visibilityFor = async (mediaIds) => {
@@ -1316,6 +1358,37 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
       visible: !decision.denied,
       revision: decision.revision,
     }));
+  };
+
+  const listVisibleMediaIds = async () => {
+    let rows;
+    try {
+      rows = await rowsFrom(database.prepare(`SELECT k, canonical_media_id FROM (
+          SELECT 1 AS k,
+            CASE WHEN schema_version = ? AND state = 'ready' THEN '1' ELSE '0' END AS canonical_media_id
+          FROM pbe_lifecycle_control
+          WHERE control_id = ?
+          UNION ALL
+          SELECT 2 AS k, identity.canonical_media_id AS canonical_media_id
+          FROM pbe_lifecycle_media_identity identity
+          INNER JOIN pbe_lifecycle_projection projection
+            ON projection.canonical_media_id = identity.canonical_media_id
+          LEFT JOIN pbe_lifecycle_barriers barrier
+            ON barrier.canonical_media_id = identity.canonical_media_id
+          WHERE projection.denied = 0 AND projection.revision IS NOT NULL
+          GROUP BY identity.canonical_media_id, projection.revision
+          HAVING MAX(barrier.revision) IS NULL OR MAX(barrier.revision) < projection.revision
+        )
+        ORDER BY k ASC, canonical_media_id ASC`).bind(SCHEMA_VERSION, CONTROL_ID));
+    } catch (error) {
+      throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle migration or authority is unavailable; access is denied.", 503, {
+        cause: error?.message || String(error),
+      });
+    }
+    if (!rows.length || Number(rows[0].k) !== 1 || rows[0].canonical_media_id !== "1") {
+      throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle authority is not ready; access is denied.");
+    }
+    return [...new Set(rows.slice(1).map((row) => clean(row.canonical_media_id)).filter(Boolean))];
   };
 
   // One read snapshot, no registration, no private bindings, no source-version
@@ -1413,6 +1486,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     abort,
     decisionsFor,
     visibilityFor,
+    listVisibleMediaIds,
     verifyPublicPreviews,
     assertAllowed,
     assertObjectAllowed,

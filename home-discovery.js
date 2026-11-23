@@ -348,7 +348,10 @@
       const origin = photoOrigin(photo, item.collectionKey);
       const originLabel = isVideo ? "Video" : photoOriginLabel(photo, item.collectionKey);
       const originShortLabel = isVideo ? "Video" : photoOriginShortLabel(photo, item.collectionKey);
-      const badgeOrigin = isVideo ? "video" : origin;
+      const originBadge = window.photosByElieGalleryCard?.originBadgeHtml?.(origin, originLabel, isVideo)
+        ?? ((isVideo || origin === "ai")
+          ? `<span class="photo-origin-badge is-${escapeHtml(isVideo ? "video" : origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>`
+          : "");
       const title = escapeHtml(photo.title);
       const href = escapeHtml(versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`));
       const isLiked = likedIds.has(photo.id);
@@ -363,7 +366,7 @@
           <a class="mock-photo ${photo.className || ""} ${image ? "has-image" : ""} ${isVideo ? "is-video" : ""}" href="${href}" data-home-result-link ${window.photosByEliePhotoAspectStyle?.(photo) || ""}>
             ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" data-photo-card-image/>` : ""}
             ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
-            ${window.photosByElieGalleryCard?.originBadgeHtml?.(origin, originLabel, isVideo) || `<span class="photo-origin-badge is-${escapeHtml(badgeOrigin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>`}
+            ${originBadge}
           </a>
           ${likedStore() ? `
             <div class="gallery-card-actions">

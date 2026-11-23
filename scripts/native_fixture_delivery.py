@@ -43,6 +43,8 @@ def deliver_fixture_assets(
         raise ValueError("fixture id is required")
     if not selected_ids or len(selected_ids) > 24:
         raise ValueError("choose between 1 and 24 exact fixture assets")
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(repo_root, selected_ids)
 
     plan = delivery_plan(repo_root, fixture)
     by_id = {str(item["assetId"]): item for item in plan["items"]}

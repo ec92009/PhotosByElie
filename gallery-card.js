@@ -33,6 +33,7 @@
   );
 
   const originBadgeHtml = (origin, originLabel, isVideo = false) => {
+    if (!isVideo && origin !== "ai") return "";
     const iconName = isVideo ? "play" : origin === "ai" ? "autoAwesome" : "photoCamera";
     const icon = window.photosByElieMdIcon?.(iconName) || escapeHtml(isVideo ? "Video" : origin === "ai" ? "AI" : "Camera");
     return `<span class="photo-origin-badge is-${escapeHtml(isVideo ? "video" : origin)}" title="${escapeHtml(originLabel)}" aria-label="${escapeHtml(originLabel)}">${icon}<span class="origin-badge-label">${escapeHtml(originLabel)}</span></span>`;

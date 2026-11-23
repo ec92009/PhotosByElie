@@ -409,6 +409,9 @@ def record_photos_sync_snapshot(
     items: Iterable[dict[str, Any]],
 ) -> dict[str, Any]:
     """Import an incremental PhotoKit snapshot without disturbing live versions."""
+    from legacy_r2_source import reject_legacy_photos_at_root
+    items = list(items)
+    reject_legacy_photos_at_root(repo_root, [str(item.get("assetId") or "") for item in items])
     timestamp = now_iso()
     changes = {
         "baseline": 0,

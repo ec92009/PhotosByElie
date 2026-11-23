@@ -151,21 +151,48 @@ test('Catalog rejection and visibility 503 terminate every controller without ex
   }
 });
 
+const basketCheckoutSlice = (source) => {
+  const helpersStart = source.indexOf('const checkoutMutationControls = () => [');
+  const helpersEnd = source.indexOf('\nconst syncEmbeddedBrowserWarning', helpersStart);
+  const handlerStart = source.indexOf('checkoutGuest?.addEventListener("click", async () => {');
+  const handlerEnd = source.indexOf('\nconst simulateMockPayment =', handlerStart);
+  assert.ok(helpersStart > 0 && helpersEnd > helpersStart);
+  assert.ok(handlerStart > 0 && handlerEnd > handlerStart);
+  return `
+    const CHECKOUT_PROGRESS_DELAY_MS = 3000;
+    const CHECKOUT_TIMEOUT_MS = 25000;
+    let checkoutRequestActive = false;
+    let checkoutRedirecting = false;
+    let checkoutProgressTimer = null;
+    let checkoutProgressMessage = "";
+    ${source.slice(helpersStart, helpersEnd)}
+    ${source.slice(handlerStart, handlerEnd)}
+  `;
+};
+
+const makeCheckoutControl = (extra = {}) => ({
+  dataset: {},
+  disabled: false,
+  hasAttribute(name) { return name === 'data-checkout-disabled-before' && 'checkoutDisabledBefore' in this.dataset; },
+  ...extra,
+});
+
 test('Checkout synchronously latches before an await and suppresses reentrant requests', async () => {
-  const source = read('basket.js');
-  const start = source.indexOf('let checkoutStarting = false;');
-  const end = source.indexOf('\nmockPay?.', start);
-  assert.ok(start > 0 && end > start);
+  const snippet = basketCheckoutSlice(read('basket.js'));
   let handler, release, requests = 0, statuses = 0;
   const pending = new Promise((resolve) => { release = resolve; });
-  const button = { disabled: false, addEventListener(_, fn) { handler = fn; } };
-  const sandbox = { checkoutGuest: button, setBasketStatus() { statuses++; }, t: (key) => key,
-    signedInAccountEmail: () => '', checkoutEmail: { value: 'buyer@example.test' }, validCheckoutEmail: () => true,
-    discountCodeInput: null, deliveryAvailabilityLoaded: false,
+  const button = makeCheckoutControl({ addEventListener(_, fn) { handler = fn; } });
+  const sandbox = {
+    checkoutGuest: button, setBasketStatus() { statuses++; }, t: (key) => key,
+    signedInAccountEmail: () => '', checkoutEmail: makeCheckoutControl({ value: 'buyer@example.test' }),
+    validCheckoutEmail: () => true, discountCodeInput: null, orderIntent: null,
+    document: { querySelectorAll: () => [] }, window: { setTimeout, clearTimeout },
+    deliveryAvailabilityLoaded: false,
     ensureDeliveryAvailabilityLoaded: () => { requests++; return pending; },
     basketStore: { read: () => [], write: (items) => items }, pruneUnavailableBasketSelections: (items) => items,
-    digitalCheckoutItems: () => [], renderBasket() {}, removeMissingDeliverySelections: () => false };
-  vm.runInNewContext(source.slice(start, end), sandbox);
+    digitalCheckoutItems: () => [], renderBasket() {}, removeMissingDeliverySelections: () => false,
+  };
+  vm.runInNewContext(snippet, sandbox);
   const first = handler(); assert.equal(button.disabled, true); assert.equal(statuses, 2);
   await handler(); assert.equal(requests, 1);
   release(); await first; assert.equal(button.disabled, false);
@@ -184,22 +211,24 @@ test('Customer shells expose no-JS guidance, polite live status, and early theme
 });
 
 test('Checkout sends one request while pending, releases on failure, and stays latched for redirect', async () => {
-  const source = read('basket.js');
-  const start = source.indexOf('let checkoutStarting = false;');
-  const end = source.indexOf('\nmockPay?.', start);
+  const snippet = basketCheckoutSlice(read('basket.js'));
   for (const rejectRequest of [true, false]) {
     let handler, settle, requests = 0, redirects = 0;
     const pending = new Promise((resolve, reject) => { settle = rejectRequest ? reject : resolve; });
-    const button = { disabled: false, addEventListener(_, fn) { handler = fn; } };
-    const sandbox = { checkoutGuest: button, setBasketStatus() {}, t: (key) => key,
-      signedInAccountEmail: () => '', checkoutEmail: { value: 'buyer@example.test' }, validCheckoutEmail: () => true,
-      discountCodeInput: null, deliveryAvailabilityLoaded: true,
+    const button = makeCheckoutControl({ addEventListener(_, fn) { handler = fn; } });
+    const sandbox = {
+      checkoutGuest: button, setBasketStatus() {}, t: (key) => key,
+      signedInAccountEmail: () => '', checkoutEmail: makeCheckoutControl({ value: 'buyer@example.test' }),
+      validCheckoutEmail: () => true, discountCodeInput: null, orderIntent: null,
+      document: { querySelectorAll: () => [] }, deliveryAvailabilityLoaded: true,
       basketStore: { read: () => [], write: (items) => items }, pruneUnavailableBasketSelections: (items) => items,
       digitalCheckoutItems: () => [{ photoId: 'one' }], checkRecentPurchases: async () => null,
       basketDigitalSubtotalCents: () => 100, checkoutFetch() { requests++; return pending; },
       setCheckoutState() {}, renderCheckoutResult() {}, syncCheckoutControls() {}, renderBasket() {},
-      removeMissingDeliverySelections: () => false, window: { location: { assign() { redirects++; } } } };
-    vm.runInNewContext(source.slice(start, end), sandbox);
+      removeMissingDeliverySelections: () => false,
+      window: { setTimeout, clearTimeout, location: { assign() { redirects++; } } },
+    };
+    vm.runInNewContext(snippet, sandbox);
     const first = handler();
     await new Promise(setImmediate); // drain the VM and host promise queues
     assert.equal(requests, 1);

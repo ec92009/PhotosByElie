@@ -1847,6 +1847,9 @@ def _fixture_review_predicates(
 
 def _photo_library_identifier(row: sqlite3.Row) -> str:
     raw = _read_json(row["raw_json"], {}) if "raw_json" in row.keys() else {}
+    from legacy_r2_source import is_legacy_source
+    if is_legacy_source(row["source_anchor"], raw):
+        return ""
     local_identifier = str(raw.get("localIdentifier") or "")
     if local_identifier:
         return local_identifier
@@ -3157,7 +3160,7 @@ def ai_preview_targets(
     with connect(repo_root) as conn:
         rows = conn.execute(
             f"""
-            SELECT a.asset_id, a.source_anchor, editorial.ai_preview_path
+            SELECT a.asset_id, a.source_anchor, a.raw_json, editorial.ai_preview_path
             FROM sidecar_assets AS a
             JOIN asset_editorial_state AS editorial
               ON editorial.asset_id = a.asset_id
@@ -3169,6 +3172,9 @@ def ai_preview_targets(
         ).fetchall()
     targets: list[dict[str, str]] = []
     for row in rows:
+        from legacy_r2_source import is_legacy_source
+        if is_legacy_source(row["source_anchor"], _read_json(row["raw_json"], {})):
+            continue
         existing = Path(str(row["ai_preview_path"] or ""))
         if existing.is_file():
             continue
@@ -3943,7 +3949,9 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
         camera = raw.get("cameraMetadata") or raw.get("camera") or {}
         lens = raw.get("lensMetadata") or raw.get("lens") or camera.get("lensModel") or ""
         source_anchor = str(row["source_anchor"] or "")
-        source_kind = "apple_photos" if source_anchor.startswith(("apple-photos", "ph://")) or raw.get("localIdentifier") else "photosbyelie"
+        from legacy_r2_source import is_legacy_source
+        source_kind = "legacy_r2" if is_legacy_source(source_anchor, raw) else (
+            "apple_photos" if source_anchor.startswith(("apple-photos", "ph://")) or raw.get("localIdentifier") else "photosbyelie")
         items.append({
         "assetId": row["asset_id"], "sourceKind": source_kind, "sourceIdentity": source_anchor,
         "filename": row["filename"] or "", "mediaType": row["media_type"] or "", "capturedAt": row["captured_at"] or "",

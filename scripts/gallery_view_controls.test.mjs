@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -15,7 +16,33 @@ const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
 const galleryCardJs = read("gallery-card.js");
 const ownerSessionJs = read("pbe-owner-session.js");
-const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
+const {
+  COMMAND_BATCH_SIZE,
+  GROUP_ORDER,
+  chunkSelection,
+  createRegistry,
+  matchesKeyboardShortcut,
+  restoreVisibleSelection,
+  runSelectionBatches,
+  selectVisibleIds,
+} = createRequire(import.meta.url)("../gallery-commands.js");
+
+test("public cards omit the redundant camera badge while keeping provenance badges", () => {
+  const sandbox = {
+    document: { addEventListener() {} },
+    HTMLImageElement: class {},
+    window: {
+      photosByElieMdIcon: (name) => `<svg data-icon="${name}"></svg>`,
+    },
+  };
+  vm.runInNewContext(galleryCardJs, sandbox);
+  const { originBadgeHtml } = sandbox.window.photosByElieGalleryCard;
+
+  assert.equal(originBadgeHtml("camera", "Camera photo"), "");
+  assert.match(originBadgeHtml("ai", "AI image"), /photo-origin-badge is-ai/);
+  assert.match(originBadgeHtml("ai", "AI image"), /data-icon="autoAwesome"/);
+  assert.match(originBadgeHtml("camera", "Video", true), /photo-origin-badge is-video/);
+});
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
   let role = "visitor";
@@ -33,7 +60,7 @@ test("command registry keeps role gating, stable group order, and disabled posit
   });
 
   assert.deepEqual(GROUP_ORDER, ["filters", "selection", "view", "actions-rating-color", "workflow"]);
-  assert.equal(MAX_SELECTION, 500);
+  assert.equal(COMMAND_BATCH_SIZE, 500);
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview"]);
   assert.equal(registry.command("clear").enabled, false);
   assert.equal(registry.command("clear").disabledReason, "Nothing selected.");
@@ -41,6 +68,41 @@ test("command registry keeps role gating, stable group order, and disabled posit
   role = "owner";
   selected = 1;
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview", "workflow"]);
+});
+
+test("Gallery selection has no 500-photo capacity ceiling", () => {
+  const ids501 = Array.from({ length: 501 }, (_, index) => `photo-${index + 1}`);
+  const ids546 = Array.from({ length: 546 }, (_, index) => `photo-${index + 1}`);
+
+  assert.equal(selectVisibleIds([], ids501).length, 501);
+  assert.deepEqual(selectVisibleIds([], ids546), ids546);
+  const deselected = new Set(selectVisibleIds([], ids546));
+  deselected.delete(ids546[500]);
+  assert.equal(deselected.size, 545);
+  assert.equal(deselected.has(ids546[500]), false);
+  assert.deepEqual(restoreVisibleSelection(ids546, ids546), ids546);
+  assert.deepEqual(restoreVisibleSelection([...deselected], ids546), [...deselected]);
+  assert.deepEqual(restoreVisibleSelection(ids546, ids546.slice(46)), ids546.slice(46));
+  assert.deepEqual(chunkSelection(ids501).map((batch) => batch.length), [500, 1]);
+  assert.deepEqual(chunkSelection(ids546).map((batch) => batch.length), [500, 46]);
+});
+
+test("Gallery bulk dispatch preserves successful chunks and identifies failures", async () => {
+  const ids = Array.from({ length: 546 }, (_, index) => `photo-${index + 1}`);
+  const calls = [];
+  const batches = await runSelectionBatches(ids, async (photoIds, metadata) => {
+    calls.push([...photoIds]);
+    if (metadata.batchNumber === 2) throw new Error("second chunk unavailable");
+    return { succeeded: photoIds };
+  });
+
+  assert.deepEqual(calls.map((batch) => batch.length), [500, 46]);
+  assert.equal(batches[0].status, "fulfilled");
+  assert.deepEqual(batches[0].value.succeeded, ids.slice(0, 500));
+  assert.equal(batches[1].status, "rejected");
+  assert.equal(batches[1].reason, "second chunk unavailable");
+  assert.deepEqual(batches[1].photoIds, ids.slice(500));
+  assert.deepEqual(batches.map(({ batchNumber, totalBatches }) => [batchNumber, totalBatches]), [[1, 2], [2, 2]]);
 });
 
 test("buttons and keyboard dispatch the same command execution path", async () => {
@@ -169,12 +231,16 @@ test("gallery cards bound native Owner preview bursts and retry transient failur
 test("selection, round-trip state, and Quick Look follow the integrated contract", () => {
   assert.match(galleryJs, /data-gallery-select-photo/);
   assert.match(galleryJs, /class="gallery-card-selection"/);
-  assert.match(galleryJs, /const selectionLimit = galleryCommandModel\.MAX_SELECTION/);
+  assert.match(galleryJs, /const commandBatchSize = galleryCommandModel\.COMMAND_BATCH_SIZE/);
+  assert.match(galleryJs, /selectVisibleIds/);
+  assert.match(galleryJs, /runSelectionBatches/);
   assert.match(galleryJs, /id: "clear-selection"[\s\S]*roles: \["visitor"\]/);
   assert.match(galleryJs, /id: "keep-primary"[\s\S]*roles: \["owner"\]/);
   assert.match(galleryJs, /ownerCullingEnabled && selectedPhotoIds\.size === 1/);
   assert.match(galleryJs, /navigationNonce: detailRoundTripNonce/);
   assert.match(galleryJs, /selectionIds: \[\.\.\.selectedPhotoIds\]/);
+  assert.doesNotMatch(galleryJs, /selectionIds:[^\n]+slice\([^\n]*500/);
+  assert.doesNotMatch(galleryJs, /selectionRecency[^\n]+slice\([^\n]*500/);
   assert.match(galleryJs, /const selectedNavigation = selectedItems\.length > 1/);
   assert.match(galleryJs, /wrapNavigation: selectedNavigation/);
   assert.match(galleryJs, /navigationKind: selectedNavigation \? "selected" : "loaded"/);
@@ -182,6 +248,7 @@ test("selection, round-trip state, and Quick Look follow the integrated contract
   assert.match(galleryJs, /commandButton \|\| cardButton/);
   assert.match(galleryJs, /id: "toggle-selection"[\s\S]*shortcut: "s"/);
   assert.match(detailJs, /selectionIds: Array\.isArray\(payload\?\.selectionIds\)/);
+  assert.doesNotMatch(detailJs, /selectionIds:[^\n]+slice\([^\n]*500/);
   assert.match(detailJs, /navigationNonce: payload\?\.navigationNonce/);
   assert.match(photosJs, /data-finder-preview-key-legend/);
   assert.match(photosJs, /data-finder-preview-fit/);
@@ -230,35 +297,28 @@ test("search and filter changes keep the filter controls in view", () => {
   assert.match(emptyFilterReset, /renderGallery\(\{ scrollSelection: false \}\);/);
 });
 
-test("pagination anchors every append to the first new card and keeps it keyboard-reachable", () => {
-  assert.match(galleryJs, /const paginationPhotoIdAtCurrentLimit = \(\) =>/);
-  assert.match(galleryJs, /return photos\[visibleLimit\]\?\.id \|\| "";/);
-  assert.match(galleryJs, /targetTop: controls\.getBoundingClientRect\(\)\.top/);
+test("pagination exposes symmetric 24, 48, and 96 controls while preserving its visual anchor", () => {
+  assert.match(galleryJs, /lessButton = makeWindowButton\(\{ count: pageSize/);
+  assert.match(galleryJs, /lessDoubleButton = makeWindowButton\(\{ count: pageSize \* 2/);
+  assert.match(galleryJs, /lessQuadButton = makeWindowButton\(\{ count: pageSize \* 4/);
+  assert.match(galleryJs, /moreButton\.textContent = `\+\$\{pageSize\}`/);
+  assert.match(galleryJs, /moreDoubleButton\.textContent = `\+\$\{pageSize \* 2\}`/);
+  assert.match(galleryJs, /moreQuadButton\.textContent = `\+\$\{pageSize \* 4\}`/);
+  assert.match(galleryJs, /galleryWindowModel\.moveGalleryWindow/);
+  assert.match(galleryJs, /visibleStart = nextWindow\.start/);
+  assert.match(galleryJs, /visibleLimit = nextWindow\.end/);
+  assert.match(galleryJs, /backwardControls\.append\(lessQuadButton, lessDoubleButton, lessButton\)/);
+  assert.match(galleryJs, /forwardControls\.append\(moreButton, moreDoubleButton, moreQuadButton\)/);
+  assert.match(galleryJs, /galleryRoot\.before\(backwardControls\)/);
+  assert.match(galleryJs, /galleryRoot\.after\(forwardControls\)/);
+  assert.match(galleryJs, /backwardControls\.getBoundingClientRect\(\)\.bottom/);
+  assert.match(galleryJs, /forwardControls\.getBoundingClientRect\(\)\.top/);
+  assert.match(galleryJs, /targetTop: resolvedTargetTop/);
   assert.match(galleryJs, /top: Math\.max\(0, \(window\.scrollY \|\| 0\) \+ delta\)/);
   assert.match(galleryJs, /link\.focus\(\{ preventScroll: true \}\)/);
   assert.match(galleryJs, /new window\.ResizeObserver\(schedulePaginationAnchorRestore\)/);
   assert.doesNotMatch(galleryJs, /preserveScrollAfterRender/);
-
-  const moreHandler = galleryJs.slice(
-    galleryJs.indexOf('moreButton.addEventListener("click"'),
-    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
-  );
-  const remainingHandler = galleryJs.slice(
-    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
-    galleryJs.indexOf('showAllButton.addEventListener("click"'),
-  );
-  for (const handler of [moreHandler, remainingHandler]) {
-    assert.match(handler, /paginationPhotoIdAtCurrentLimit\(\)/);
-    assert.match(handler, /beginPaginationAnchor\(anchorPhotoId\)/);
-    assert.match(handler, /renderGallery\(\{ scrollSelection: false \}\);/);
-    assert.match(handler, /schedulePaginationAnchorRestore\(\);/);
-  }
-
-  const showAllHandler = galleryJs.slice(galleryJs.indexOf('showAllButton.addEventListener("click"'));
-  assert.match(showAllHandler, /setPaginationBusy\(true\)/);
-  assert.match(showAllHandler, /beginPaginationAnchor\(anchorPhotoId, \{ focusEachRender: true \}\)/);
-  assert.match(showAllHandler, /setPaginationBusy\(false\)/);
-  assert.doesNotMatch(showAllHandler, /showAllButton\.blur\(\)/);
+  assert.doesNotMatch(galleryJs, /galleryShowAll|showAllButton|showAllChunkSize/);
   assert.match(galleryHtml, /data-gallery-status aria-live="polite"/);
 });
 
@@ -361,14 +421,35 @@ test("public gallery retires Media state without changing the private generic fi
 });
 
 test("detail round trips restore the loaded boundary and focus after click or double-click navigation", () => {
-  assert.match(galleryJs, /visibleLimit: visibleLimit >= photos\.length \? "all" : visibleLimit/);
+  assert.match(galleryJs, /visibleStart,\s*visibleLimit,/);
   assert.match(galleryJs, /pendingGalleryReturnState\?\.visibleLimit === "all"/);
   assert.match(galleryJs, /expandGalleryToIncludeIndex\(returnIndex\)/);
   assert.match(galleryJs, /restorePendingGalleryReturn\(\)/);
   assert.match(galleryJs, /card\.querySelector\("\[data-photo-link\]"\)\?\.focus\?\.\(\{ preventScroll: true \}\)/);
   assert.match(galleryJs, /card\.addEventListener\("dblclick"[\s\S]*window\.location\.assign/);
   assert.match(detailJs, /link\.addEventListener\("click", writeGalleryReturnState\)/);
+  assert.match(detailJs, /visibleStart: Number\.isFinite\(Number\(payload\?\.visibleStart\)\)/);
   assert.match(detailJs, /visibleLimit: payload\?\.visibleLimit \|\| null/);
+});
+
+test("gallery checkpoints are local-first, bounded, and included in signed-in profile sync", () => {
+  assert.match(photosJs, /photosbyelie-gallery-checkpoints-v1/);
+  assert.match(photosJs, /const maxGalleryCheckpoints = 24/);
+  assert.match(photosJs, /window\.photosByElieGalleryCheckpoints =/);
+  assert.match(photosJs, /galleryCheckpoints: readGalleryCheckpoints\(\)/);
+  assert.match(photosJs, /photosbyelie:gallerycheckpointschange/);
+  assert.match(galleryJs, /windowStart: visibleStart/);
+  assert.match(galleryJs, /windowEnd: visibleLimit/);
+  assert.match(galleryJs, /anchorOffset: card\?\.getBoundingClientRect\(\)\.top \|\| 0/);
+  assert.match(galleryJs, /querySelectorAll\("\[data-photo-index\]\[data-photo-id\]"\)/);
+  assert.match(galleryJs, /checkpointMatchesExplicitFilter/);
+  assert.match(galleryJs, /galleryCheckpointRestoreActive/);
+  assert.match(galleryJs, /const earliestCompletion = Date\.now\(\) \+ 2000/);
+  assert.match(galleryJs, /const deadline = Date\.now\(\) \+ 10000/);
+  assert.match(galleryJs, /imagesSettled && stablePasses >= 3 && Date\.now\(\) >= earliestCompletion/);
+  assert.match(galleryJs, /window\.addEventListener\("scroll", queueGalleryCheckpointWrite/);
+  assert.match(galleryJs, /window\.addEventListener\("pagehide", persistGalleryCheckpoint\)/);
+  assert.doesNotMatch(galleryJs, /document\.cookie/);
 });
 
 test("Back to top is body-mounted above the version pill with safe-area and reduced-motion support", () => {

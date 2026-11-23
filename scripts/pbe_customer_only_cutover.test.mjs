@@ -118,10 +118,16 @@ const runCatalogBootstrap = async ({ pathname, search = "", photos }) => {
     querySelector: () => null,
   };
   const fetch = async (url, options) => {
+    const parsedUrl = new URL(url);
     for (const name of ["photosbyelie.sqlite", "product-pricing.json"]) {
-      if (!new URL(url).pathname.endsWith(name)) continue;
+      if (!parsedUrl.pathname.endsWith(name)) continue;
       const bytes = fs.readFileSync(path.join(root, "assets/catalog", name));
       return { ok: true, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+    }
+    if (parsedUrl.pathname.endsWith("/lifecycle/visible")) {
+      const allIds = [...photos.map((photo) => photo.id), "spain-one"];
+      visibilityRequests.push({ endpoint: "/lifecycle/visible", method: options?.method || "GET" });
+      return { ok: true, json: async () => ({ visibleMediaIds: allIds }) };
     }
     const ids = JSON.parse(options.body).mediaIds;
     visibilityRequests.push(ids);
@@ -149,11 +155,11 @@ test("public photo detail verifies only its requested lifecycle identity", async
   assert.equal(result.window.photosByElieData.spain.photos.length, 0);
 });
 
-test("public gallery still verifies the complete catalog in bounded batches", async () => {
+test("public gallery verifies the complete catalog via a single GET /lifecycle/visible request", async () => {
   const photos = Array.from({ length: 205 }, (_, index) => ({ id: `france-${index}`, media: {} }));
   const result = await runCatalogBootstrap({ pathname: "/gallery.html", photos });
 
-  assert.deepEqual(result.visibilityRequests.map((ids) => ids.length), [100, 100, 6]);
+  assert.deepEqual(result.visibilityRequests, [{ endpoint: "/lifecycle/visible", method: "GET" }]);
   assert.equal(result.window.photosByElieData.france.photos.length, 205);
   assert.equal(result.window.photosByElieData.spain.photos.length, 1);
 });

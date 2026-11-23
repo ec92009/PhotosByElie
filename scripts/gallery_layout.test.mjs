@@ -203,3 +203,10 @@ test("public consumers reconcile stale layout after every empty transition", () 
     assert.match(branch, /applyPreviewLayout\(\);/);
   }
 });
+
+test("campaign details omit the inactive Grid slider while keeping image-fit controls", () => {
+  const campaign = fs.readFileSync(path.join(repoRoot, "campaign.js"), "utf8");
+  assert.doesNotMatch(campaign, /data-gallery-density|setCampaignDensityColumns|applyCampaignDensity/);
+  assert.match(campaign, /data-gallery-fit-mode="fit"/);
+  assert.match(campaign, /data-gallery-fit-mode="fill"/);
+});

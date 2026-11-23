@@ -42,6 +42,7 @@ test("basket and order ignore public worker overrides but allow localhost overri
     checkoutWorkerBaseUrl: "https://checkout.photos-by-elie.com",
   };
   const basketHelpers = between(sourceFor("basket.js"), "const normalizedWorkerBase", "const escapeText");
+  assert.match(sourceFor("basket.js"), /fetch\(`\$\{checkoutRequestBaseUrl\(path\)\}\$\{path\}`/);
   const orderHelpers = between(sourceFor("order.js"), "const normalizedWorkerBase", "const currentParams");
 
   const publicBasket = pageSandbox({
@@ -49,14 +50,30 @@ test("basket and order ignore public worker overrides but allow localhost overri
     config,
   });
   publicBasket.workerBaseKey = "photosbyelie-worker-base";
-  assert.equal(evaluate(basketHelpers, publicBasket, "workerBaseUrl()"), config.checkoutWorkerBaseUrl);
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, publicBasket, "[workerBaseUrl(), accountCheckoutWorkerBaseUrl(), checkoutRequestBaseUrl('/checkout/guest'), checkoutRequestBaseUrl('/checkout/account')]")),
+    JSON.stringify([config.checkoutWorkerBaseUrl, config.authWorkerBaseUrl, config.checkoutWorkerBaseUrl, config.authWorkerBaseUrl]),
+  );
 
   const localBasket = pageSandbox({
     href: "http://localhost:8000/basket.html?workerBase=http://dev-worker.test:8787",
     config,
   });
   localBasket.workerBaseKey = "photosbyelie-worker-base";
-  assert.equal(evaluate(basketHelpers, localBasket, "workerBaseUrl()"), "http://dev-worker.test:8787");
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, localBasket, "[workerBaseUrl(), accountCheckoutWorkerBaseUrl()]")),
+    JSON.stringify(["http://dev-worker.test:8787", "http://dev-worker.test:8787"]),
+  );
+
+  const splitLocalBasket = pageSandbox({
+    href: "http://localhost:8000/basket.html?workerBase=http://dev-worker.test:8787&authWorkerBase=http://dev-auth.test:8788",
+    config,
+  });
+  splitLocalBasket.workerBaseKey = "photosbyelie-worker-base";
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, splitLocalBasket, "[checkoutRequestBaseUrl('/checkout/guest'), checkoutRequestBaseUrl('/checkout/account')]")),
+    JSON.stringify(["http://dev-worker.test:8787", "http://dev-auth.test:8788"]),
+  );
 
   const publicOrder = pageSandbox({
     href: "https://photos-by-elie.com/order.html?workerBase=https://attacker.example&authWorkerBase=https://attacker-auth.example",
@@ -117,4 +134,87 @@ test("account and Real Estate use configured origins publicly and local override
     realEstateBaseFor("http://localhost:8000/real-estate.html?workerBase=http://dev-worker.test:8787", true),
     "http://dev-worker.test:8787",
   );
+});
+
+test("basket checkout has bounded progress, mutation interlocks, and retry restoration", () => {
+  const basket = sourceFor("basket.js");
+  assert.match(basket, /const CHECKOUT_PROGRESS_DELAY_MS = 3000;/);
+  assert.match(basket, /const CHECKOUT_TIMEOUT_MS = 25000;/);
+  assert.match(basket, /orderIntent\?\.setAttribute\("aria-busy", active \? "true" : "false"\)/);
+  assert.match(basket, /"\[data-remove-item\]"/);
+  assert.match(basket, /"\[data-basket-resolution\]"/);
+  assert.match(basket, /checkoutEmail,/);
+  assert.match(basket, /discountCodeInput,/);
+  assert.match(basket, /control\.dataset\.checkoutDisabledBefore/);
+  assert.match(basket, /const checkoutDeadline = Date\.now\(\) \+ CHECKOUT_TIMEOUT_MS;/);
+  assert.match(basket, /await withCheckoutDeadline\(ensureDeliveryAvailabilityLoaded\(\), checkoutDeadline\)/);
+  assert.match(basket, /checkoutDeadline - Date\.now\(\)/);
+  assert.match(basket, /finally \{\s+setCheckoutRequestActive\(false\);/);
+
+  const translations = sourceFor("photos.js");
+  assert.match(translations, /'basket\.checkout_started': 'Checkout started · Step 1 of 3:/);
+  assert.match(translations, /'basket\.checking_purchases': 'Step 2 of 3:/);
+  assert.match(translations, /'basket\.creating_checkout': 'Step 3 of 3:/);
+  assert.match(translations, /'basket\.checkout_still_working': 'Still working/);
+
+  const makeControl = (disabled = false) => ({
+    dataset: {},
+    disabled,
+    hasAttribute(name) {
+      return name === "data-checkout-disabled-before" && "checkoutDisabledBefore" in this.dataset;
+    },
+  });
+  const checkoutGuest = makeControl();
+  const checkoutEmail = makeControl();
+  const discountCodeInput = makeControl();
+  const basketRemove = makeControl();
+  const unavailableResolution = makeControl(true);
+  const timers = [];
+  const statuses = [];
+  const busyValues = [];
+  const helperSource = between(basket, "const checkoutMutationControls", "const syncEmbeddedBrowserWarning");
+  const sandbox = {
+    checkoutGuest,
+    checkoutEmail,
+    discountCodeInput,
+    document: { querySelectorAll: () => [basketRemove, unavailableResolution] },
+    orderIntent: { setAttribute: (_name, value) => busyValues.push(value) },
+    setBasketStatus: (message) => statuses.push(message),
+    t: (_key, replacements) => `Still working: ${replacements.step}`,
+    window: {
+      clearTimeout: () => {},
+      setTimeout: (callback, delay) => {
+        timers.push({ callback, delay });
+        return timers.length;
+      },
+    },
+  };
+  vm.runInNewContext(`
+    const CHECKOUT_PROGRESS_DELAY_MS = 3000;
+    let checkoutRequestActive = false;
+    let checkoutProgressTimer = null;
+    let checkoutProgressMessage = "";
+    ${helperSource}
+    globalThis.__checkout = { setCheckoutProgress, setCheckoutRequestActive };
+  `, sandbox);
+
+  sandbox.__checkout.setCheckoutProgress("Step 1 of 3");
+  sandbox.__checkout.setCheckoutRequestActive(true);
+  assert.deepEqual(busyValues, ["true"]);
+  assert.equal(timers[0].delay, 3000);
+  assert.equal(checkoutGuest.disabled, true);
+  assert.equal(checkoutEmail.disabled, true);
+  assert.equal(discountCodeInput.disabled, true);
+  assert.equal(basketRemove.disabled, true);
+  assert.equal(unavailableResolution.disabled, true);
+  timers[0].callback();
+  assert.equal(statuses.at(-1), "Still working: Step 1 of 3");
+
+  sandbox.__checkout.setCheckoutRequestActive(false);
+  assert.deepEqual(busyValues, ["true", "false"]);
+  assert.equal(checkoutGuest.disabled, false);
+  assert.equal(checkoutEmail.disabled, false);
+  assert.equal(discountCodeInput.disabled, false);
+  assert.equal(basketRemove.disabled, false);
+  assert.equal(unavailableResolution.disabled, true);
 });

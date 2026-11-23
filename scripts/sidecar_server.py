@@ -197,7 +197,8 @@ def _run_backstage_photos_preview(
     timeout: float = 60,
 ) -> dict:
     """Request one still preview from the already-running Backstage app."""
-
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(Path.cwd(), [asset_id])
     try:
         return request_preview(
             asset_id,
@@ -278,6 +279,8 @@ def _run_backstage_photos_preview_task(
         return failure("invalid_max_pixel", "Backstage preview max-pixel must be between 256 and 1800.")
 
     root = repo_root.expanduser().resolve()
+    from legacy_r2_source import reject_legacy_photos_at_root
+    reject_legacy_photos_at_root(root, [asset_id])
     destination = Path(destination_text).expanduser()
     if not destination.is_absolute():
         destination = root / destination
@@ -982,6 +985,12 @@ class SidecarHandler(LocalHttpSecurityMixin, SimpleHTTPRequestHandler):
         asset_id = unquote(path[len(SIDECAR_PREVIEW_PATH):])
         if not asset_id:
             self.send_error(HTTPStatus.BAD_REQUEST, "missing asset id")
+            return
+        from legacy_r2_source import reject_legacy_photos_at_root
+        try:
+            reject_legacy_photos_at_root(Path.cwd(), [asset_id])
+        except ValueError:
+            self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"ok": False, "code": "legacy_r2_source_has_no_photos_capability"})
             return
         cache_path = _preview_cache_path(Path.cwd(), asset_id, max_pixel)
         if not cache_path.exists():

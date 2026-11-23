@@ -1,15 +1,65 @@
 # PhotosByElie
 
-Static first version of the Photos By Elie site, intended for GitHub Pages at:
+Photos By Elie contains two separate applications: PBE is the customer-facing
+website; PhotosByElie Backstage (PBB) is the private macOS Owner workspace.
 
-`https://ec92009.github.io/PhotosByElie/`
+The website is served from `main` at `https://photos-by-elie.com/`.
+GitHub Pages publishing follows a push to `main`; a documentation change does
+not require an application version bump or a separate runtime release.
+
+## Start here
+
+- For Owner work, open the installed **PhotosByElie Backstage** and follow
+  [Getting started with Backstage](docs/BACKSTAGE_GETTING_STARTED.md).
+  Gallery, Review, Metadata, Uploads, Delivery, Storage and Activity are native
+  workflows. PBE browser pages do not grant Owner capabilities, including on localhost.
+- For the product boundary and priorities, read the
+  [North Star](docs/architecture/north-star.md).
+- `owner.html` is an unlinked, restricted credential-enrollment/recovery
+  fallback. Use it only when the native setup flow requires it; it is not an
+  Owner review, import, connector-health or mutation workspace. The normal
+  **Set up this Mac** flow may open a browser account-picker handoff and then
+  returns to Backstage. That authorization step does not restore browser Owner tools.
+- Private workflow state is authoritative in `assets/owner-actions/Owner.sqlite`.
+  JSON exports are compatibility or audit views. The public projection is plain
+  `assets/catalog/photosbyelie.sqlite`; never substitute private Owner state or
+  the legacy compressed catalog for it. See the
+  [SQLite authority contract](docs/architecture/sqlite-catalog-owner-state.md).
+- Backstage's enrolled credentials are local to the Mac in Keychain. PBE web
+  publishing, Worker deployment, signed Backstage releases, local installation,
+  and customer delivery are separate operations. See
+  [Backstage architecture](docs/architecture/backstage-native.md) and the
+  [update contract](docs/architecture/backstage-update-contract.md).
 
 ## Version
 
-- Current visible version: `v321.12`
+- Current visible version: `v321.13`
+- `v321.13` unifies `main` (`property-photography.html`, bounded gallery window, canonical `robots.txt` + 197-URL `sitemap.xml`, `.wst/site.json`) with the reconciled `v321.12` Worker & storefront release (WST PBE-225 funnel producer, paid refund settlement serialization, System theme & customer recovery, parallel `GET /lifecycle/visible` startup, and single-query Worker media authorization).
+- `v314.1` speeds up storefront startup and gallery loading by replacing synchronous catalog XHR with async `fetch`, overlapping SQLite catalog download with a single CORS-simple `GET /lifecycle/visible` authority check (with `POST /lifecycle/visibility` fallback and single-ID checks on `photo.html`), prioritizing the first six gallery thumbnails (`fetchpriority="high"`), and preconnecting to the auth and media Worker origins.
+- `v314.0` adds the approved eight-photo Florence to San Gimignano film and still collection to All campaigns and the social listing, using the existing public YouTube pair and portrait derivative.
+- `v256.1` adds the approved Sintra and Les Invalides daily collections to All campaigns and the social listing, with twelve original selected still IDs each, vertical public YouTube previews and matching wide-film links. Their existing public preview lifecycle registrations were reconciled through the supported connector; no video was rerendered or reposted.
+- `v256.0` sends each All campaigns Watch on YouTube link to its matching public widescreen film. The vertical preview and still-photo detail remain unchanged. Future campaign pairs must retain the verified wide ID in `video.videoId` and portrait ID in `video.shortId`; the shared directory renderer uses the former for the external CTA.
+- `v254.3` keeps public YouTube Shorts on the All campaigns directory only.
+  Their campaign detail links now open the public photo collection, with no
+  embedded player; still-only subjects continue to require exactly four
+  lifecycle-authorized public photos for each collage.
+- `v252.0` adds optional public YouTube video metadata to first-party campaign
+  pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
+  and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+
+### Historical version receipts
+
+These entries describe their named release, not current operating instructions.
+Older references to browser Owner, Sidecar or Photos Bridge are superseded by
+**Start here** and the active Backstage guide.
+
+- `v245.2` reconciles the Owner-authoritative public catalog with current
+  lifecycle blocks, removes the redundant camera-origin badge from ordinary
+  still-photo cards, and lets Gallery selection span every filtered result
+  while preserving bounded internal batches.
 - `v219.0` releases the verified 121-photo La Concha receipt set into Corine's
   private gallery without re-exporting source media. The Worker authorizes the
   canonical private masters through a fixture-derived allowlist, while the
@@ -203,19 +253,23 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Structure
 
+This inventory includes compatibility files retained for history. Presence in
+the repository does not make a retired browser workflow an active entry point.
+
+
 - `index.html`: one-page photo hub with France, USA, Spain, Mexico, Italy, Portugal, Slovakia, Panoramas, and a latest-social campaign shelf
 - `campaign.html`: first-party social/Pinterest mini-collection landing page that keeps visitors on Photos By Elie instead of a single-photo dead end
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
-- `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Waste Basket review, and Title/Keywords review
+- `owner-review.html`: retired browser review compatibility page; use native Backstage Gallery, Review and Waste Basket
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
 - `support.html`: buyer-facing payment, delivery recovery, license, refund-expectation, and support notes for digital checkout
 - `real-estate.html`: private real-estate product workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, starts with the saved PDF/video/selection shelf, supports create-new-selection and edit-existing-selection flows, click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, preview/download PDF and video outputs, cloud-saved selection manifests, masked password entry, and selected-original ZIP delivery through the Worker
 - `slideshow-music.html`: public mini-app with normalized, country-tagged Pixabay audition candidates for Spain, Portugal, France, and USA, original subdued Spanish/classical guitar cues below, per-track play/pause, seeking, local star ratings, and local delete/hide controls for real estate slideshow use
-- `owner.html`: canonical production Owner control surface for cloud identity/access, on-demand connector health, recursive fixture creation, universal indexed-asset search, immutable fixture-scoped Sidecar pools, destination/receipt review, guarded per-asset R2-to-Apple-Photos delivery, and explicit retryable Apple Photos give-back
-- `new-owner.html`: compatibility redirect to the canonical `owner.html` surface
-- `owner-auth.js`: localhost helper/cloud Owner availability client for catalog and cloud maintenance actions
+- `owner.html`: unlinked restricted credential-enrollment/recovery fallback; normal Owner work is native Backstage
+- `new-owner.html`: compatibility redirect to the restricted `owner.html` fallback
+- `owner-auth.js`: retained browser authorization compatibility code; not an active catalog-maintenance workspace
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
 - `hidden-actions.js`: localhost-only live review action store for Waste Basket blacklist changes, undo, and owner assignment state
@@ -268,9 +322,35 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Preview
 
-Use the GitHub Pages URL above after pushing to `main`.
+Use a local server for customer-site review before publishing. Follow
+[SHOW_ME_SOP.md](SHOW_ME_SOP.md) for active preview URLs and visible version
+reporting. A push to `main` publishes GitHub Pages; a local preview does not.
+Neither path enables browser Owner tools.
 
-## Current Behavior
+## Current behavior
+
+- Customers browse the public catalog, save likes and basket choices, pay through
+  the checkout Worker, and receive authorized downloads. Private customer access
+  remains scoped to the relevant gallery or delivery.
+- Owner decisions and mutations run in enrolled Backstage. Read current queue,
+  proposal and storage counts from its authoritative stores and live receipts,
+  not from historical README snapshots.
+- Plain `assets/catalog/photosbyelie.sqlite` is the deployable public catalog.
+  `Owner.sqlite`, its WAL/SHM files, credentials and private workflow exports
+  must remain outside public assets.
+- Publication registration, uploading, website deployment and delivery are
+  separate steps; a completed earlier step does not prove a later one.
+
+## Historical implementation notes
+
+Archived on 2026-09-05 from the former mixed “Current Behavior” section. These
+notes preserve release and migration evidence, including the dated May review
+snapshot. They are **not current instructions or current counts**. References
+to localhost Owner, browser Imports/Title/Keywords, Sidecar, Photos Bridge,
+legacy source folders and browser mutation shortcuts are superseded by the
+native entry points above. Verify any current behavior against the active
+Backstage guide and the relevant source/release receipt.
+
 
 - Public collections are ordered France, USA, Spain, Mexico, Italy, Portugal, and Slovakia.
 - AI-generated images are retired from the commercial storefront. Public catalog generation excludes the `ai` collection and AI-origin rows, while the underlying source archive and Owner-side records remain intact.
@@ -282,7 +362,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Latest social shelf. It filters the generated campaign index to Facebook, Instagram, Pinterest, and Threads targets, shows the newest social springboards first, and keeps static fallback cards for the 2026-06-15 themes plus the 2026-05-27 acceptance-criteria package themes.
 - `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
-- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
+- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent. Campaign JSON may also include an optional explicit-public `video` object (`provider`, widescreen `videoId`, optional `shortId`, `title`, `durationSeconds`, and `visibility`); PBE derives YouTube URLs from validated IDs and refuses invalid or non-public video metadata.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Catalog totals and R2 coverage are volatile operational facts: read them from the latest verified Owner projection/deployment receipt and Backstage health surfaces rather than this README, which must not become a competing source of truth.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
@@ -483,3 +563,5 @@ node --test worker/checkout-worker.test.mjs
 ```
 
 See `worker/README.md` for route examples and Stripe/mock configuration.
+
+All campaigns: `campaign.html` is the permanent public campaign directory (PBE-198). Large composite cards use at most two columns and link to complete public campaign membership. `npm run campaigns:index` is already part of social package finalization; membership is filtered against the live lifecycle-authorized catalog in the browser.

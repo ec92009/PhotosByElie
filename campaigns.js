@@ -134,6 +134,7 @@
     const card = document.createElement('a');
     card.className = 'campaign-directory-card';
     card.dataset.campaignRepresentation = 'four-photo-collage';
+    card.dataset.campaignSource = normalizeSource(campaign.source);
     card.href = campaignHref(campaign);
     const composite = document.createElement('div');
     composite.className = 'campaign-composite campaign-composite--four';
@@ -228,10 +229,7 @@
       const publicFilm = window.photosByElieCampaignVideo?.normalize(campaign.video);
       if (publicFilm?.portraitEmbedUrl) continue;
       const card = cardFor(campaign, entries, compositeEntries);
-      if (card) {
-        card.dataset.campaignSource = normalizeSource(campaign.source);
-        grid.append(card);
-      }
+      if (card) grid.append(card);
     }
     status.textContent = grid.children.length
       ? `${grid.children.length} ${directoryNoun} to explore`

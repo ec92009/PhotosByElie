@@ -92,6 +92,31 @@
       </div>
       <p class="basket-status" data-basket-status aria-live="polite"></p>
     </section>
+    <section class="panel collector-note-strip" id="collector-note" data-collector-source="photo" aria-labelledby="collector-note-title">
+      <div class="collector-note-strip-inner">
+        <div class="collector-note-strip-copy">
+          <p class="eyebrow" data-i18n="collector.eyebrow">Collector’s note</p>
+          <h2 id="collector-note-title" data-i18n="collector.title">Free travel wallpaper pack, plus new releases.</h2>
+          <p data-i18n="collector.body">Get three high-resolution wallpapers from Andalusia, Tuscany, and Paris right away, plus an occasional note when a new series opens.</p>
+        </div>
+        <div class="collector-note-strip-panel">
+          <form class="collector-note-strip-form" id="collector-note-form" novalidate>
+            <label class="collector-note-strip-label" for="collector-email" data-i18n="collector.email_label">Email address</label>
+            <div class="collector-note-strip-row">
+              <input id="collector-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required/>
+              <button class="btn primary collector-note-strip-submit" id="collector-submit" type="submit" data-i18n="collector.submit">Get the wallpapers</button>
+            </div>
+            <input class="collector-note-strip-trap" id="collector-website" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"/>
+            <p class="collector-note-strip-fineprint" data-i18n="collector.fineprint">Occasional notes only. No spam, no tracking cookies, unsubscribe in one click.</p>
+            <p class="collector-note-strip-status" id="collector-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="collector-note-strip-pack" id="collector-wallpapers" hidden>
+            <p class="collector-note-strip-pack-title" data-i18n="collector.pack_title">Your wallpapers are ready</p>
+            <ul class="collector-note-strip-pack-list" id="collector-wallpapers-list"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -124,5 +149,6 @@
   <script src="./liked-store.js?v=321.13"></script>
   <script src="./photo-detail.js?v=321.13"></script>
   <script src="./basket-rail.js?v=321.13"></script>
+  <script src="./collector-note.js?v=321.13"></script>
 </body>
 </html>

@@ -306,6 +306,7 @@
     "campaigns.css",
     "campaigns.js",
     "catalog-sqlite.js",
+    "collector-note.js",
     "data-deletion.html",
     "embedded-browser.js",
     "feeds/google-merchant.xml",

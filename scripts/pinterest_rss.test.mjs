@@ -9,6 +9,7 @@ import {
   orderCandidatesForBoard,
   selectReleasedItems,
   BOARD_FEEDS,
+  THEME_FEEDS,
 } from "./build_pinterest_rss.mjs";
 
 function makeTempRepo() {
@@ -78,8 +79,12 @@ test("Pinterest RSS prioritizes portraits, interleaves themes, and drips steadil
   assert.equal(day2.length, 3);
 
   const feeds = buildAllFeeds({ repoRoot: root, visibleSet: visible, asOf: "2026-11-23" });
-  assert.equal(feeds.length, BOARD_FEEDS.length + 1);
+  assert.equal(feeds.length, BOARD_FEEDS.length + THEME_FEEDS.length + 1);
   const spainFeed = feeds.find((f) => f.slug === "spain");
+  const archFeed = feeds.find((f) => f.slug === "architecture");
+  const medFeed = feeds.find((f) => f.slug === "mediterranean");
+  assert.ok(archFeed.totalQueued >= 2);
+  assert.ok(medFeed.totalQueued >= 2);
   assert.match(spainFeed.xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
   assert.match(spainFeed.xml, /<rss version="2\.0" xmlns:media="http:\/\/search\.yahoo\.com\/mrss\/"/);
   assert.match(spainFeed.xml, /<enclosure url="https:\/\/download\.photos-by-elie\.com\/media\/expo\/spain-portrait-1_1800\.jpg"/);

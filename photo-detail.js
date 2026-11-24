@@ -426,6 +426,8 @@ if (!ownerDetailPurchaseHidden && !isHiddenCollection && !isOwnerCollection && !
   ]);
   const publicDescription = metadataValue(photo, "Description")
     || `${photo.title} from the ${localizedCollectionTitle()} gallery by Photos By Elie.`;
+  const publicLocation = metadataValue(photo, "Location") || photo.location || "";
+  const requestedOptionId = String(params.get("option") || "").trim();
   window.photosByElieSeo?.applyPageMeta({
     title: `Photos By Elie | ${photo.title}`,
     description: publicDescription,
@@ -439,9 +441,27 @@ if (!ownerDetailPurchaseHidden && !isHiddenCollection && !isOwnerCollection && !
       url: publicDetailUrl,
       image: publicImage,
       collectionName: localizedCollectionTitle(),
+      location: publicLocation,
       keywords: publicKeywords,
     }),
   });
+  if (availableResolutions.length && window.photosByElieSeo?.productJsonLd) {
+    const productSchema = window.photosByElieSeo.productJsonLd({
+      id: photo.id,
+      name: `${photo.title} — Fine Art Photography Download`,
+      description: publicDescription,
+      url: publicDetailUrl,
+      image: publicImage,
+      currency: window.photosByElieProductCatalog?.currency || "USD",
+      offers: availableResolutions.map((option) => ({
+        id: option.id,
+        label: productLabel(option),
+        price: option.price,
+      })),
+      selectedOptionId: requestedOptionId,
+    });
+    if (productSchema) window.photosByElieSeo.setJsonLd?.("photosbyelie-product-jsonld", productSchema);
+  }
 }
 setCollectionNav();
 const titleTarget = document.querySelector("[data-photo-title]");
@@ -1100,6 +1120,10 @@ if (ownerCullingEnabled) {
 
 if (!ownerDetailPurchaseHidden) {
   const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
+  const requestedOption = String(params.get("option") || "").trim();
+  if (!selectedIds.size && requestedOption && availableResolutions.some((option) => option.id === requestedOption)) {
+    selectedIds.add(requestedOption);
+  }
   const selectedOptionById = new Map((basketItemForPhoto()?.options || []).map((option) => [option.id, option]));
   const purchaseHeading = document.querySelector(".purchase-panel h2");
   if (isVideo && purchaseHeading) {

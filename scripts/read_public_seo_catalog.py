@@ -39,11 +39,19 @@ def read_catalog(path: Path) -> list[dict]:
         for row in conn.execute(f"""
             SELECT m.media_id AS id, m.title, m.description,
                    {loc_select}, {kw_select},
-                   c.slug AS collectionKey, c.title AS collectionTitle
+                   c.slug AS collectionKey, c.title AS collectionTitle,
+                   fa.width AS fullWidth, fa.height AS fullHeight
             FROM media_items AS m
             JOIN collections AS c USING (collection_id)
             JOIN source_origins AS o USING (source_origin_id)
             JOIN media_types AS t USING (media_type_id)
+            LEFT JOIN (
+              SELECT a.media_id, MAX(a.width) AS width, MAX(a.height) AS height
+              FROM media_assets AS a
+              JOIN asset_types AS k USING (asset_type_id)
+              WHERE k.code = 'full' AND a.width > 0 AND a.height > 0
+              GROUP BY a.media_id
+            ) AS fa ON fa.media_id = m.media_id
             WHERE c.scope = 'public' AND o.code = 'camera' AND t.code = 'photo'
               AND EXISTS (
                 SELECT 1 FROM media_assets AS a
@@ -61,6 +69,11 @@ def read_catalog(path: Path) -> list[dict]:
                 if term and term not in keywords:
                     keywords.append(term)
             item["keywords"] = keywords[:24]
+            fw = int(item.get("fullWidth") or 0)
+            fh = int(item.get("fullHeight") or 0)
+            item["fullWidth"] = fw
+            item["fullHeight"] = fh
+            item["megapixels"] = round((fw * fh) / 1_000_000.0, 2) if fw > 0 and fh > 0 else 0
             rows.append(item)
         return rows
 

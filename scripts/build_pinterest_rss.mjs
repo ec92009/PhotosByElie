@@ -78,6 +78,42 @@ export const BOARD_FEEDS = [
   },
 ];
 
+export const THEME_FEEDS = [
+  {
+    slug: "architecture",
+    file: "feeds/pinterest-architecture.xml",
+    title: "Photos By Elie — European Architecture Wall Art",
+    board: "European Architecture Wall Art",
+    description: "Fine-art architectural photography prints and downloads — cathedrals, palaces, courtyards, arches, domes, bridges, and historic stonework from Spain, France, Italy, and Portugal.",
+    matcher: (item) => /\b(arch|arches|cathedral|palace|courtyard|tower|bridge|dome|stone|facade|ruins|castle|cloister|monastery|museum|interior|gallery|opera|pyramid|mezquita|alhambra|invalides|guggenheim|notre[- ]dame|louvre|carmo|ajuda|sintra|pisa|ronda)\b/i.test(`${item.title} ${item.description} ${item.groupKey}`),
+    initialCount: 2,
+    intervalDays: 2,
+  },
+  {
+    slug: "coastal",
+    file: "feeds/pinterest-coastal.xml",
+    title: "Photos By Elie — Coastal & Ocean Wall Art",
+    board: "Coastal & Ocean Wall Art",
+    description: "Calming fine-art ocean, shoreline, harbor, cliff, and sunset wall-art photography from California, Portugal, Spain, and Mexico by Elie Cohen.",
+    matcher: (item) => /\b(coast|coastal|ocean|beach|sunset|sea|shore|shoreline|harbor|marina|pier|cliff|cliffs|atlantic|pacific|bay|tide|seaport|del mar|la jolla|solana|oceanside|cascais|cabo|nerja|gibraltar|puerto vallarta|benalmadena|fuengirola)\b/i.test(`${item.title} ${item.description} ${item.groupKey}`),
+    initialCount: 2,
+    intervalDays: 2,
+  },
+  {
+    slug: "mediterranean",
+    file: "feeds/pinterest-mediterranean.xml",
+    title: "Photos By Elie — Mediterranean Travel Wall Art",
+    board: "Mediterranean Travel Wall Art",
+    description: "Warm Mediterranean light, terracotta, tiles, whitewashed towns, courtyards, and sun-drenched coastal views from Andalusia, Valencia, Tuscany, and Portugal.",
+    matcher: (item) => (
+      ["spain", "italy", "portugal"].includes(item.collection)
+      && /\b(mediterranean|andalusia|seville|sevilla|cordoba|córdoba|granada|alhambra|ronda|valencia|nerja|malaga|málaga|cadiz|cádiz|setenil|florence|tuscany|san gimignano|pisa|lisbon|sintra|cascais|belem|belém|terrace|courtyard|tile|tiles|sun|warm|white town)\b/i.test(`${item.title} ${item.description} ${item.groupKey}`)
+    ),
+    initialCount: 2,
+    intervalDays: 2,
+  },
+];
+
 export const ALL_FEED = {
   slug: "all",
   file: "feeds/pinterest-all.xml",
@@ -444,6 +480,22 @@ export function buildAllFeeds({ repoRoot = DEFAULT_REPO_ROOT, visibleSet, asOf, 
     releasedCount: allReleased.length,
     xml: renderRssXml(ALL_FEED, allReleased, lastBuildDate),
   });
+
+  for (const feed of THEME_FEEDS) {
+    const themeItems = orderCandidatesForBoard(candidates.filter((item) => feed.matcher(item)));
+    const released = selectReleasedItems(themeItems, {
+      asOf,
+      startDate,
+      initialCount: feed.initialCount,
+      intervalDays: feed.intervalDays,
+    });
+    outputs.push({
+      ...feed,
+      totalQueued: themeItems.length,
+      releasedCount: released.length,
+      xml: renderRssXml(feed, released, lastBuildDate),
+    });
+  }
 
   return outputs;
 }

@@ -4149,6 +4149,70 @@ window.photosByElieSeo = (() => {
       keywords: keywords.filter(Boolean).slice(0, 24).join(", "),
     };
   };
+  const productJsonLd = ({
+    id,
+    name,
+    description,
+    url,
+    image,
+    currency = "USD",
+    offers = [],
+    selectedOptionId = "",
+  }) => {
+    const cleanOffers = (Array.isArray(offers) ? offers : [])
+      .map((option) => ({
+        id: String(option?.id || "").trim(),
+        label: cleanPublicText(option?.label || option?.id || "", ""),
+        price: Number(option?.price),
+      }))
+      .filter((option) => option.id && Number.isFinite(option.price) && option.price > 0);
+    if (!cleanOffers.length) return null;
+    const canonicalUrl = absoluteUrl(url);
+    const currencyCode = String(currency || "USD").trim().toUpperCase() || "USD";
+    const formatOffer = (option) => {
+      const offerUrl = new URL(canonicalUrl);
+      offerUrl.searchParams.set("option", option.id);
+      return {
+        "@type": "Offer",
+        sku: `pbe-${id}-${option.id}`,
+        name: option.label || option.id,
+        url: offerUrl.toString(),
+        priceCurrency: currencyCode,
+        price: option.price.toFixed(2),
+        availability: "https://schema.org/InStock",
+        itemCondition: "https://schema.org/NewCondition",
+        seller: { "@type": "Organization", name: siteName },
+      };
+    };
+    const matched = selectedOptionId
+      ? cleanOffers.find((option) => option.id === selectedOptionId)
+      : null;
+    const prices = cleanOffers.map((option) => option.price);
+    const offersNode = matched
+      ? formatOffer(matched)
+      : cleanOffers.length === 1
+        ? formatOffer(cleanOffers[0])
+        : {
+          "@type": "AggregateOffer",
+          priceCurrency: currencyCode,
+          lowPrice: Math.min(...prices).toFixed(2),
+          highPrice: Math.max(...prices).toFixed(2),
+          offerCount: cleanOffers.length,
+          availability: "https://schema.org/InStock",
+          offers: cleanOffers.map(formatOffer),
+        };
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      sku: matched ? `pbe-${id}-${matched.id}` : `pbe-${id}`,
+      name: cleanPublicText(name),
+      description: cleanPublicText(description || `${name} fine-art photography download by ${siteName}`),
+      image: [absoluteUrl(image || defaultImage)],
+      brand: { "@type": "Brand", name: siteName },
+      url: matched ? formatOffer(matched).url : canonicalUrl,
+      offers: offersNode,
+    };
+  };
   return {
     absoluteUrl,
     applyPageMeta,
@@ -4159,6 +4223,8 @@ window.photosByElieSeo = (() => {
     entityPath,
     imageObjectJsonLd,
     pageUrl,
+    productJsonLd,
+    setJsonLd,
     siteName,
     siteOrigin,
   };

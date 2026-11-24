@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Photos By Elie — Coastal &amp; Ocean Wall Art</title>
+    <link>https://photos-by-elie.com/</link>
+    <atom:link href="https://photos-by-elie.com/feeds/pinterest-coastal.xml" rel="self" type="application/rss+xml" />
+    <description>Calming fine-art ocean, shoreline, harbor, cliff, and sunset wall-art photography from California, Portugal, Spain, and Mexico by Elie Cohen.</description>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 24 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Carlsbad, garden — Carlsbad Garden and Coast Light | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo--20180712-1827-16605-457c78af75.html</link>
+      <guid isPermaLink="false">pbe-pin-20180712-1827-16605-457c78af75</guid>
+      <pubDate>Mon, 23 Nov 2026 09:01:00 GMT</pubDate>
+      <description>A five-photo Photos By Elie edit of Carlsbad garden color, coastal dusk, and Southern California atmosphere, selected as travel photography and wall-art inspiration. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_1800.jpg" medium="image" type="image/jpeg" width="1194" height="1800" />
+    </item>
+    <item>
+      <title>Nerja Caves, Spain — Nerja Caves Stone Forms | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo--001-3f183d6653.html</link>
+      <guid isPermaLink="false">pbe-pin-001-3f183d6653</guid>
+      <pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate>
+      <description>Nerja Caves, Spain photographed in Nerja, Andalusia, Spain by Elie Cohen. Available as high-resolution fine-art wall prints and digital editorial licensing on Photos By Elie.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
+  </channel>
+</rss>

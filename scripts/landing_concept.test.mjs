@@ -468,3 +468,38 @@ test("the offer price and product presentation agree with retained pricing and l
     assert.match(context.translate("support.license_2"), /written approval|autorisation ecrite|aprobacion escrita/);
   }
 });
+
+test("the production landing exposes the Collector's Note opt-in wallpaper signup safely", () => {
+  assert.match(productionHtml, /<section class="collector-note" id="collector-note"/);
+  assert.match(productionHtml, /id="collector-note-form"/);
+  assert.match(productionHtml, /id="collector-email"/);
+  assert.match(productionHtml, /id="collector-website"/);
+  assert.match(productionHtml, /id="collector-wallpapers" hidden/);
+  assert.match(js, /\/newsletter\/subscribe/);
+  assert.match(js, /initCollectorNote\(\)/);
+  assert.match(js, /target\.matches\?\.\("input, textarea, select"\)/);
+  assert.match(css, /\.collector-note \{/);
+  assert.match(css, /\[data-theme="day"\] \.collector-note/);
+
+  const helper = js.slice(js.indexOf("  const newsletterWorkerBaseUrl = "), js.indexOf("\n  const initCollectorNote = "));
+  const evalOrigin = (href) => {
+    const sandbox = {
+      URLSearchParams,
+      window: {
+        location: new URL(href),
+        photosByElieMediaConfig: { authWorkerBaseUrl: "https://auth.photos-by-elie.com" },
+      },
+    };
+    vm.runInNewContext(`${helper}\nglobalThis.__out = newsletterWorkerBaseUrl();`, sandbox);
+    return sandbox.__out;
+  };
+  assert.equal(
+    evalOrigin("https://photos-by-elie.com/?authWorkerBase=https://attacker.example"),
+    "https://auth.photos-by-elie.com",
+  );
+  assert.equal(
+    evalOrigin("http://localhost:8000/?authWorkerBase=http://dev-auth.test:8788"),
+    "http://dev-auth.test:8788",
+  );
+});
+

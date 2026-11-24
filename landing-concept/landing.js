@@ -94,7 +94,22 @@
       altWallArt: "A large framed Notre-Dame photograph above a light wood credenza",
       altBrowse: "An operator viewed from behind using a dark-mode photo browser displaying the Del Mar Dog Beach sunset",
       altLicensing: "One beach photograph shown as a print, editorial spread, and commercial display",
-      altProvenance: "An open photobook and a framed beach photograph on a desk"
+      altProvenance: "An open photobook and a framed beach photograph on a desk",
+      collectorEyebrow: "Collector’s note",
+      collectorTitle: "Free travel wallpaper pack, plus new releases.",
+      collectorBody: "Join for three high-resolution wallpapers from Andalusia, Tuscany, and Paris — delivered right away — and an occasional note when a new series opens.",
+      collectorEmailLabel: "Email address",
+      collectorSubmit: "Get the wallpapers",
+      collectorFineprint: "Occasional notes only. No spam, no tracking cookies, unsubscribe in one click.",
+      collectorPackTitle: "Your wallpapers are ready",
+      collectorSubmitting: "Preparing your wallpaper pack…",
+      collectorInvalidEmail: "Please enter a valid email address.",
+      collectorSuccessEmail: "Sent to your inbox — and ready to download below.",
+      collectorSuccessInstant: "You’re subscribed — your wallpapers are ready to download below.",
+      collectorAlreadySubscribed: "You’re already on the list — here are your wallpapers again.",
+      collectorRateLimited: "Too many attempts right now. Please try again in a little while.",
+      collectorError: "Could not complete signup right now. Please try again in a moment.",
+      collectorDownload: "Download"
     },
     fr: {
       productionPageTitle: "Photos By Elie | Photographie de voyage et art mural",
@@ -164,7 +179,22 @@
       altWallArt: "Une grande photographie encadrée de Notre-Dame au-dessus d’un buffet en bois clair",
       altBrowse: "Une personne vue de dos utilise un navigateur photo en mode sombre affichant le coucher de soleil de Del Mar",
       altLicensing: "Une photographie de plage présentée en tirage, dans une revue et sur un support commercial",
-      altProvenance: "Un livre photo ouvert et une photographie encadrée sur un bureau"
+      altProvenance: "Un livre photo ouvert et une photographie encadrée sur un bureau",
+      collectorEyebrow: "Note du collectionneur",
+      collectorTitle: "Pack gratuit de fonds d’écran de voyage et nouveautés.",
+      collectorBody: "Inscrivez-vous pour recevoir immédiatement trois fonds d’écran haute définition d’Andalousie, de Toscane et de Paris, puis une note occasionnelle lors d’une nouvelle série.",
+      collectorEmailLabel: "Adresse e-mail",
+      collectorSubmit: "Recevoir les fonds d’écran",
+      collectorFineprint: "Messages occasionnels uniquement. Zéro spam, aucun cookie de suivi, désinscription en un clic.",
+      collectorPackTitle: "Vos fonds d’écran sont prêts",
+      collectorSubmitting: "Préparation de votre pack…",
+      collectorInvalidEmail: "Veuillez saisir une adresse e-mail valide.",
+      collectorSuccessEmail: "Envoyé dans votre boîte de réception — et prêt à télécharger ci-dessous.",
+      collectorSuccessInstant: "Inscription confirmée — vos fonds d’écran sont prêts ci-dessous.",
+      collectorAlreadySubscribed: "Vous êtes déjà inscrit(e) — voici de nouveau vos fonds d’écran.",
+      collectorRateLimited: "Trop de tentatives pour le moment. Réessayez un peu plus tard.",
+      collectorError: "Impossible de finaliser l’inscription pour le moment. Réessayez dans un instant.",
+      collectorDownload: "Télécharger"
     },
     es: {
       productionPageTitle: "Photos By Elie | Fotografía de viajes y arte mural",
@@ -234,7 +264,22 @@
       altWallArt: "Una gran fotografía enmarcada de Notre-Dame sobre una credenza de madera clara",
       altBrowse: "Una persona vista de espaldas usa un navegador de fotos en modo oscuro que muestra el atardecer de Del Mar",
       altLicensing: "Una fotografía de playa presentada como impresión, reportaje editorial y anuncio comercial",
-      altProvenance: "Un fotolibro abierto y una fotografía enmarcada sobre un escritorio"
+      altProvenance: "Un fotolibro abierto y una fotografía enmarcada sobre un escritorio",
+      collectorEyebrow: "Nota del coleccionista",
+      collectorTitle: "Pack gratuito de fondos de pantalla y nuevos lanzamientos.",
+      collectorBody: "Únete para recibir al instante tres fondos de pantalla en alta resolución de Andalucía, la Toscana y París, además de una nota ocasional cuando se abra una nueva serie.",
+      collectorEmailLabel: "Correo electrónico",
+      collectorSubmit: "Obtener los fondos",
+      collectorFineprint: "Solo notas ocasionales. Sin spam ni cookies de seguimiento; baja en un clic.",
+      collectorPackTitle: "Tus fondos de pantalla están listos",
+      collectorSubmitting: "Preparando tu pack de fondos…",
+      collectorInvalidEmail: "Introduce una dirección de correo electrónico válida.",
+      collectorSuccessEmail: "Enviado a tu bandeja de entrada — y listo para descargar abajo.",
+      collectorSuccessInstant: "Suscripción confirmada — tus fondos están listos abajo.",
+      collectorAlreadySubscribed: "Ya estabas en la lista — aquí tienes de nuevo tus fondos.",
+      collectorRateLimited: "Demasiados intentos ahora mismo. Inténtalo de nuevo más tarde.",
+      collectorError: "No se pudo completar la suscripción ahora mismo. Inténtalo en un momento.",
+      collectorDownload: "Descargar"
     }
   };
 
@@ -627,11 +672,131 @@
     });
   };
 
+  const newsletterWorkerBaseUrl = () => {
+    const isLocalHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const params = new URLSearchParams(window.location.search);
+    const localOverride = isLocalHost ? (params.get("authWorkerBase") || params.get("workerBase") || "") : "";
+    const raw = localOverride
+      || window.photosByElieMediaConfig?.authWorkerBaseUrl
+      || "https://auth.photos-by-elie.com";
+    return String(raw).trim().replace(/\/+$/, "");
+  };
+
+  const initCollectorNote = () => {
+    const form = document.querySelector("#collector-note-form");
+    const emailInput = document.querySelector("#collector-email");
+    const trapInput = document.querySelector("#collector-website");
+    const submitButton = document.querySelector("#collector-submit");
+    const status = document.querySelector("#collector-status");
+    const packContainer = document.querySelector("#collector-wallpapers");
+    const packList = document.querySelector("#collector-wallpapers-list");
+    if (!form || !emailInput || !submitButton || !status || !packContainer || !packList) return;
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    let submitting = false;
+
+    const setStatus = (message = "", { error = false, success = false } = {}) => {
+      status.textContent = message;
+      status.classList.toggle("is-error", error);
+      status.classList.toggle("is-success", success);
+    };
+
+    const renderWallpapers = (wallpapers = []) => {
+      if (!Array.isArray(wallpapers) || !wallpapers.length) return;
+      const items = wallpapers.map((wallpaper) => {
+        const li = document.createElement("li");
+        li.className = "collector-note-pack-item";
+        const meta = document.createElement("span");
+        meta.className = "collector-note-pack-meta";
+        const strong = document.createElement("strong");
+        strong.textContent = String(wallpaper.title || "");
+        const small = document.createElement("small");
+        small.textContent = [wallpaper.location, wallpaper.dimensions].filter(Boolean).join(" · ");
+        meta.append(strong, small);
+
+        const link = document.createElement("a");
+        link.className = "collector-note-download";
+        link.href = String(wallpaper.downloadUrl || "");
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.setAttribute("download", "");
+        link.textContent = text("collectorDownload");
+
+        li.append(meta, link);
+        return li;
+      });
+      packList.replaceChildren(...items);
+      packContainer.hidden = false;
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (submitting) return;
+      const email = emailInput.value.trim();
+      if (!emailPattern.test(email)) {
+        setStatus(text("collectorInvalidEmail"), { error: true });
+        emailInput.focus();
+        return;
+      }
+
+      const worker = newsletterWorkerBaseUrl();
+      if (!worker) {
+        setStatus(text("collectorError"), { error: true });
+        return;
+      }
+
+      submitting = true;
+      submitButton.disabled = true;
+      form.setAttribute("aria-busy", "true");
+      setStatus(text("collectorSubmitting"));
+
+      try {
+        const response = await fetch(`${worker}/newsletter/subscribe`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email,
+            language: activeLanguage(),
+            source: "landing",
+            website: trapInput?.value || "",
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          setStatus(text("collectorRateLimited"), { error: true });
+          return;
+        }
+        if (response.status === 400 && payload?.error === "invalid_email") {
+          setStatus(text("collectorInvalidEmail"), { error: true });
+          return;
+        }
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(payload?.error || "newsletter_subscribe_failed");
+        }
+        const messageKey = payload.alreadySubscribed
+          ? "collectorAlreadySubscribed"
+          : payload.emailSent
+            ? "collectorSuccessEmail"
+            : "collectorSuccessInstant";
+        setStatus(text(messageKey), { success: true });
+        renderWallpapers(payload.wallpapers);
+        emailInput.value = "";
+      } catch {
+        setStatus(text("collectorError"), { error: true });
+      } finally {
+        submitting = false;
+        submitButton.disabled = false;
+        form.setAttribute("aria-busy", "false");
+      }
+    });
+  };
+
   if (totalLabel) totalLabel.textContent = pad(slides.length);
   applyPreferences(readPreferences());
   syncPauseButton();
   showSlide(0);
   initAccount();
+  initCollectorNote();
 
   previousButton?.addEventListener("click", () => showSlide(activeIndex - 1));
   nextButton?.addEventListener("click", () => showSlide(activeIndex + 1));
@@ -665,6 +830,8 @@
   });
   document.addEventListener("keydown", (event) => {
     if (settingsDialog?.open || document.querySelector("#account-dialog")?.open) return;
+    const target = event.target;
+    if (target && (target.matches?.("input, textarea, select") || target.isContentEditable)) return;
     if (event.key === "Escape" && exploreMenu?.classList.contains("is-open")) {
       event.preventDefault();
       setExploreOpen(false, { restoreFocus: true });

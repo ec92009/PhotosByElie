@@ -259,6 +259,32 @@
         </aside>
       </section>
 
+      <section class="collector-note" id="collector-note" aria-labelledby="collector-note-title">
+        <div class="collector-note-inner">
+          <div class="collector-note-copy">
+            <p class="eyebrow" data-i18n="collectorEyebrow">Collector’s note</p>
+            <h2 id="collector-note-title" data-i18n="collectorTitle">Free travel wallpaper pack, plus new releases.</h2>
+            <p data-i18n="collectorBody">Join for three high-resolution wallpapers from Andalusia, Tuscany, and Paris — delivered right away — and an occasional note when a new series opens.</p>
+          </div>
+          <div class="collector-note-panel">
+            <form class="collector-note-form" id="collector-note-form" novalidate>
+              <label class="collector-note-label" for="collector-email" data-i18n="collectorEmailLabel">Email address</label>
+              <div class="collector-note-row">
+                <input id="collector-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+                <button class="collector-note-submit" id="collector-submit" type="submit" data-i18n="collectorSubmit">Get the wallpapers</button>
+              </div>
+              <input class="collector-note-trap" id="collector-website" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+              <p class="collector-note-fineprint" data-i18n="collectorFineprint">Occasional notes only. No spam, no tracking cookies, unsubscribe in one click.</p>
+              <p class="collector-note-status" id="collector-status" role="status" aria-live="polite"></p>
+            </form>
+            <div class="collector-note-pack" id="collector-wallpapers" hidden>
+              <p class="collector-note-pack-title" data-i18n="collectorPackTitle">Your wallpapers are ready</p>
+              <ul class="collector-note-pack-list" id="collector-wallpapers-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer class="site-footer">
         <a class="brand footer-brand" href="./?v=321.13">
           <img src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="" width="40" height="40">

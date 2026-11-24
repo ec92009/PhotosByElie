@@ -22,6 +22,7 @@ import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createResendEmailClient } from "./resend-email-client.mjs";
+import { createD1NewsletterStore, handleNewsletterRequest, isNewsletterRequest } from "./newsletter.mjs";
 import { createD1SidecarStateStore } from "./sidecar-state-store.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions, storefrontPolicy, videoPriceTiers } from "./photos-catalog.generated.mjs";
@@ -463,6 +464,26 @@ export default {
     }
     if (url.pathname.startsWith("/media/")) {
       return publicMediaResponse(request, env);
+    }
+    if (isNewsletterRequest(url.pathname)) {
+      const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";
+      const newsletterEmailClient = env.RESEND_API_KEY && env.ORDER_EMAIL_FROM
+        ? createResendEmailClient({
+          apiKey: env.RESEND_API_KEY,
+          from: env.ORDER_EMAIL_FROM,
+          replyTo: env.ORDER_EMAIL_REPLY_TO || "",
+        })
+        : null;
+      return handleNewsletterRequest(request, {
+        store: env.ACCESS_DB ? createD1NewsletterStore({ database: env.ACCESS_DB }) : null,
+        emailClient: newsletterEmailClient,
+        rateLimitKv: env.ORDERS_KV || null,
+        kvPrefix: env.KV_PREFIX || "pbe",
+        publicSiteUrl,
+        workerPublicUrl: url.origin || env.WORKER_PUBLIC_URL,
+        ownerAuth: ownerAccessAuthFor(env),
+        connectorAuth: ownerConnectorAuthFor(env),
+      });
     }
 
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";

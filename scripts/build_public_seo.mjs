@@ -144,7 +144,21 @@ export function build({ repoRoot = root, output = path.join(root, 'tmp/public-se
   const stage = fs.mkdtempSync(path.join(path.dirname(output), '.seo-stage-'));
   try {
     fs.writeFileSync(path.join(stage, marker), 'photosbyelie.public-seo.v1\n');
-    const sitemapEntries = ['/', '/gallery.html', '/property-photography.html', '/social.html', '/campaign.html', '/support.html', '/privacy.html', '/terms.html', '/data-deletion.html']
+    const sitemapEntries = [
+      '/',
+      '/gallery.html',
+      '/guide-andalusia-wall-art.html',
+      '/guide-paris-fine-art-prints.html',
+      '/guide-california-coastal-photography.html',
+      '/guide-tuscany-wall-art.html',
+      '/property-photography.html',
+      '/social.html',
+      '/campaign.html',
+      '/support.html',
+      '/privacy.html',
+      '/terms.html',
+      '/data-deletion.html',
+    ]
       .filter((route) => fs.existsSync(path.join(repoRoot, route === '/' ? 'index.html' : route.slice(1))))
       .map((route) => ({ loc: seo.siteOrigin + route }));
     const emit = (entity, template, imageEntry = null) => {

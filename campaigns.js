@@ -18,8 +18,80 @@
   if (description && directoryDescription) description.textContent = directoryDescription;
   const status = root.querySelector('[role="status"]');
   const grid = root.querySelector('[data-campaign-directory]');
+  const filterBar = root.querySelector('[data-campaign-filters]');
   const rules = window.photosByElieCampaignCollection;
   const version = new URL(document.currentScript.src).searchParams.get('v');
+  const normalizeSource = (value) => String(value || '').trim().toLowerCase();
+  const sourceLabel = (key) => ({
+    youtube: 'YouTube',
+    pinterest: 'Pinterest',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    threads: 'Threads',
+    etsy: 'Etsy',
+  }[key] || (key ? key[0].toUpperCase() + key.slice(1) : 'All'));
+  let activeSource = normalizeSource(new URLSearchParams(location.search).get('source')) || 'all';
+
+  const applySourceFilter = (nextSource = 'all') => {
+    activeSource = nextSource || 'all';
+    const cards = [...grid.children];
+    let visible = 0;
+    for (const card of cards) {
+      const cardSource = card.dataset.campaignSource || '';
+      const show = activeSource === 'all' || cardSource === activeSource;
+      card.hidden = !show;
+      if (show) visible += 1;
+    }
+    if (filterBar) {
+      filterBar.querySelectorAll('button[data-filter-source]').forEach((btn) => {
+        const active = btn.dataset.filterSource === activeSource;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+    status.textContent = visible
+      ? (activeSource === 'all'
+        ? `${visible} ${directoryNoun} to explore`
+        : `${visible} ${sourceLabel(activeSource)} ${directoryNoun}`)
+      : `No public ${directoryNoun} match this filter yet.`;
+  };
+
+  const renderSourceFilters = () => {
+    if (!filterBar) return;
+    const counts = new Map();
+    for (const card of [...grid.children]) {
+      const src = card.dataset.campaignSource || '';
+      if (!src) continue;
+      counts.set(src, (counts.get(src) || 0) + 1);
+    }
+    if (counts.size < 2) {
+      filterBar.hidden = true;
+      return;
+    }
+    const order = ['youtube', 'pinterest', 'instagram', 'facebook', 'threads', 'etsy'];
+    const keys = [...counts.keys()].sort((a, b) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+    });
+    if (activeSource !== 'all' && !counts.has(activeSource)) activeSource = 'all';
+    const buttons = [
+      { key: 'all', label: `All (${grid.children.length})` },
+      ...keys.map((key) => ({ key, label: `${sourceLabel(key)} (${counts.get(key)})` })),
+    ].map(({ key, label }) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'campaign-filter-pill';
+      btn.dataset.filterSource = key;
+      btn.setAttribute('aria-pressed', key === activeSource ? 'true' : 'false');
+      btn.textContent = label;
+      btn.addEventListener('click', () => applySourceFilter(key));
+      return btn;
+    });
+    filterBar.replaceChildren(...buttons);
+    filterBar.hidden = false;
+    applySourceFilter(activeSource);
+  };
 
   const campaignHref = (campaign) => `./campaign.html?c=${encodeURIComponent(campaign.id)}`;
 
@@ -140,7 +212,11 @@
     const videoCampaigns = campaigns
       .map((campaign) => ({ campaign, video: window.photosByElieCampaignVideo?.normalize(campaign.video) }))
       .filter(({ video }) => Boolean(video?.portraitEmbedUrl));
-    videoCampaigns.forEach(({ campaign, video }) => grid.append(videoCardFor(campaign, video)));
+    videoCampaigns.forEach(({ campaign, video }) => {
+      const card = videoCardFor(campaign, video);
+      card.dataset.campaignSource = normalizeSource(campaign.source) || 'youtube';
+      grid.append(card);
+    });
     if (grid.children.length) status.textContent = 'Published films are ready while public photo previews load.';
     let catalogAvailable = true;
     try { await window.photosByElieCatalogReady; } catch { catalogAvailable = false; }
@@ -152,11 +228,15 @@
       const publicFilm = window.photosByElieCampaignVideo?.normalize(campaign.video);
       if (publicFilm?.portraitEmbedUrl) continue;
       const card = cardFor(campaign, entries, compositeEntries);
-      if (card) grid.append(card);
+      if (card) {
+        card.dataset.campaignSource = normalizeSource(campaign.source);
+        grid.append(card);
+      }
     }
     status.textContent = grid.children.length
       ? `${grid.children.length} ${directoryNoun} to explore`
       : `No public ${directoryNoun} are available yet.`;
+    renderSourceFilters();
   };
   // Observe catalog rejection immediately, even while the campaign index is loading.
   window.photosByElieCatalogReady.catch(() => {});

@@ -6,7 +6,16 @@
     <atom:link href="https://photos-by-elie.com/feeds/pinterest-coastal.xml" rel="self" type="application/rss+xml" />
     <description>Calming fine-art ocean, shoreline, harbor, cliff, and sunset wall-art photography from California, Portugal, Spain, and Mexico by Elie Cohen.</description>
     <language>en-us</language>
-    <lastBuildDate>Tue, 24 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 25 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Solana Beach Sunset | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo--20180304-1733-00111-33314469b1.html</link>
+      <guid isPermaLink="false">pbe-pin-20180304-1733-00111-33314469b1</guid>
+      <pubDate>Wed, 25 Nov 2026 09:02:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie photography from Solana Beach, California, selected for sunset layers, Pacific color, coastal silhouettes, and polished wall-art browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20180304-1733-00111-33314469b1_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20180304-1733-00111-33314469b1_1800.jpg" medium="image" type="image/jpeg" width="3695" height="4259" />
+    </item>
     <item>
       <title>Carlsbad, garden — Carlsbad Garden and Coast Light | Photos By Elie</title>
       <link>https://photos-by-elie.com/photo--20180712-1827-16605-457c78af75.html</link>

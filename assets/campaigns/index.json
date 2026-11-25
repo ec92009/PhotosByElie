@@ -1,53 +1,9 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-11-25T09:40:38.290Z",
-  "campaign_count": 185,
+  "generated_at": "2026-11-09T19:46:52.701Z",
+  "campaign_count": 184,
   "campaigns": [
-    {
-      "id": "youtube-barcelona-sagrada-familia-2026-11-25",
-      "source": "YouTube",
-      "title": "Barcelona: Sagrada Família Geometry & Light",
-      "description": "In Barcelona, Antoni Gaudí's Sagrada Família rises in carved stone, angular shadows and towering spires against deep Catalan skies. This twelve-photograph study moves between the sculptural geometry of the Passion Facade, the ornate tracery and figures of the Nativity Facade, bronze Catalan script, wrought iron and Gaudí's architectural model. Twelve original photographs by Elie Cohen invite a closer look at the light, structure and craftsmanship of Barcelona's landmark basilica. Music: \"Rumba Catalana Chill Out - Barcelona Music 08\" by vjgalaxy via Pixabay",
-      "date": "2026-11-25",
-      "href": "./campaign.html?c=youtube-barcelona-sagrada-familia-2026-11-25",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-barcelona-sagrada-familia-2026-11-25",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/c2c1ef9a-4819-4056-9604-fa9d3a94168e-001-aw3vld67t1jtt8i2bgg8s5xrkh1v-3c586124d4_900.jpg",
-      "imageAlt": "Barcelona Sagrada Familia Architectural Detail",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/c2c1ef9a-4819-4056-9604-fa9d3a94168e-001-aw3vld67t1jtt8i2bgg8s5xrkh1v-3c586124d4_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/a9bfb2f5-0135-413f-b031-85b2cb8d24e0-001-ashry3uoyfwdeeukwwdsfiapm9cc-b06034569d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/54d9223f-3449-489c-85ea-c0c083c46a2a-001-ae9ruhvddhv1ilk6jj20yufw4ssh-4caba82dd6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/a93decf6-b68e-4886-850b-8bca5f19b015-001-atpvkijgdwiwyv-rm5nulliyhhhh-18aaddaf11_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/bdbde5f7-abbf-4cfb-8443-17548e49a21f-001-aeoynxzizkreew9vt7jaz1cxfhcr-195b15ae73_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/2bnlu-49b7042f3e_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/joduont975ut0mynwp3kcid-aef20d62be_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/52c0b57f-61c2-4b80-930f-aca43603be61-001-afkyrt-o52eeotwtobmyi-rujmzj-9a9d7b2a25_900.jpg"
-      ],
-      "photoIds": [
-        "c2c1ef9a-4819-4056-9604-fa9d3a94168e-001-aw3vld67t1jtt8i2bgg8s5xrkh1v-3c586124d4",
-        "a9bfb2f5-0135-413f-b031-85b2cb8d24e0-001-ashry3uoyfwdeeukwwdsfiapm9cc-b06034569d",
-        "54d9223f-3449-489c-85ea-c0c083c46a2a-001-ae9ruhvddhv1ilk6jj20yufw4ssh-4caba82dd6",
-        "a93decf6-b68e-4886-850b-8bca5f19b015-001-atpvkijgdwiwyv-rm5nulliyhhhh-18aaddaf11",
-        "bdbde5f7-abbf-4cfb-8443-17548e49a21f-001-aeoynxzizkreew9vt7jaz1cxfhcr-195b15ae73",
-        "2bnlu-49b7042f3e",
-        "joduont975ut0mynwp3kcid-aef20d62be",
-        "52c0b57f-61c2-4b80-930f-aca43603be61-001-afkyrt-o52eeotwtobmyi-rujmzj-9a9d7b2a25",
-        "08154639-2661-4eaf-99ad-de88d35ccff3-001-aejoq3ftevxy0akc1vo3zihnx6ul-54ba04f591",
-        "74c1a3e6-b6e0-46ad-9747-30e4b9d07e20-001-azbof-lbl84ao56t-cb8g6qn7txl-2f9e7c5e52",
-        "r-25fff4ffe5",
-        "5otzyyxxml9vpx4vry79rcq-95e83a3f07"
-      ],
-      "compositePhotoIds": [
-        "c2c1ef9a-4819-4056-9604-fa9d3a94168e-001-aw3vld67t1jtt8i2bgg8s5xrkh1v-3c586124d4",
-        "a9bfb2f5-0135-413f-b031-85b2cb8d24e0-001-ashry3uoyfwdeeukwwdsfiapm9cc-b06034569d",
-        "54d9223f-3449-489c-85ea-c0c083c46a2a-001-ae9ruhvddhv1ilk6jj20yufw4ssh-4caba82dd6",
-        "a93decf6-b68e-4886-850b-8bca5f19b015-001-atpvkijgdwiwyv-rm5nulliyhhhh-18aaddaf11"
-      ],
-      "primaryPhotoCount": 12,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1795599638010
-    },
     {
       "id": "youtube-florence-san-gimignano-tuscan-light-2026-11-09",
       "source": "YouTube",

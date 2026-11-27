@@ -6,7 +6,16 @@
     <atom:link href="https://photos-by-elie.com/feeds/pinterest-france.xml" rel="self" type="application/rss+xml" />
     <description>Curated fine-art photography from Paris, Versailles, Giverny, Albi, and across France by Elie Cohen — architecture, gardens, bridges, and quiet light.</description>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 27 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Paris Eiffel Tower Night Wall Art</title>
+      <link>https://photos-by-elie.com/photo--20180509-2311-00255-7474968431.html</link>
+      <guid isPermaLink="false">pbe-pin-20180509-2311-00255-7474968431</guid>
+      <pubDate>Fri, 27 Nov 2026 09:03:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie photography of the Eiffel Tower at night, selected for illuminated Paris atmosphere, river reflections, and refined travel wall-art browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20180509-2311-00255-7474968431_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20180509-2311-00255-7474968431_1800.jpg" medium="image" type="image/jpeg" width="1200" height="1800" />
+    </item>
     <item>
       <title>Coupole des Galeries Lafayette — Paris Opera and Galeries Light Wall Art</title>
       <link>https://photos-by-elie.com/photo--20220505-153639-03083-3ded4343e5.html</link>

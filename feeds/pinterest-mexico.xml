@@ -6,7 +6,16 @@
     <atom:link href="https://photos-by-elie.com/feeds/pinterest-mexico.xml" rel="self" type="application/rss+xml" />
     <description>Curated fine-art coastal and travel photography from Mexico by Elie Cohen.</description>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 27 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Puerto Vallarta | Photos By Elie</title>
+      <link>https://photos-by-elie.com/photo--img-5011-3219c0b170.html</link>
+      <guid isPermaLink="false">pbe-pin-img-5011-3219c0b170</guid>
+      <pubDate>Thu, 26 Nov 2026 09:02:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie Puerto Vallarta frames selected for tropical marina color, warm wall-art atmosphere, and first-party travel browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/img-5011-3219c0b170_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/img-5011-3219c0b170_1800.jpg" medium="image" type="image/jpeg" width="1800" height="1350" />
+    </item>
     <item>
       <title>Puerto Vallarta | Photos By Elie</title>
       <link>https://photos-by-elie.com/photo--img-5009-c1c087846c.html</link>

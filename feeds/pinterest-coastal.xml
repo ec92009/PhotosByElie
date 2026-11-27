@@ -6,7 +6,16 @@
     <atom:link href="https://photos-by-elie.com/feeds/pinterest-coastal.xml" rel="self" type="application/rss+xml" />
     <description>Calming fine-art ocean, shoreline, harbor, cliff, and sunset wall-art photography from California, Portugal, Spain, and Mexico by Elie Cohen.</description>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 27 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Oceanside Pier Golden Hour Wall Art</title>
+      <link>https://photos-by-elie.com/photo--20180505-1814-00239-54fc56737b.html</link>
+      <guid isPermaLink="false">pbe-pin-20180505-1814-00239-54fc56737b</guid>
+      <pubDate>Fri, 27 Nov 2026 09:03:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie photography from Oceanside, California, selected for pier structure, warm coastal light, Pacific horizon, and relaxed wall-art browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/20180505-1814-00239-54fc56737b_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/20180505-1814-00239-54fc56737b_1800.jpg" medium="image" type="image/jpeg" width="1559" height="1800" />
+    </item>
     <item>
       <title>Solana Beach Sunset | Photos By Elie</title>
       <link>https://photos-by-elie.com/photo--20180304-1733-00111-33314469b1.html</link>

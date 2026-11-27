@@ -6,7 +6,16 @@
     <atom:link href="https://photos-by-elie.com/feeds/pinterest-italy.xml" rel="self" type="application/rss+xml" />
     <description>Curated fine-art photography from Florence, San Gimignano, Pisa, and Tuscany by Elie Cohen.</description>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 27 Nov 2026 09:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Pisa Marble and Leaning Tower Wall Art</title>
+      <link>https://photos-by-elie.com/photo--img-1213-7276413ecc.html</link>
+      <guid isPermaLink="false">pbe-pin-img-1213-7276413ecc</guid>
+      <pubDate>Fri, 27 Nov 2026 09:03:00 GMT</pubDate>
+      <description>Fine-art Photos By Elie photography from Pisa, selected for marble architecture, tower geometry, and Italian travel atmosphere for wall-art browsing.</description>
+      <enclosure url="https://download.photos-by-elie.com/media/expo/img-1213-7276413ecc_1800.jpg" type="image/jpeg" length="250000" />
+      <media:content url="https://download.photos-by-elie.com/media/expo/img-1213-7276413ecc_1800.jpg" medium="image" type="image/jpeg" width="1350" height="1800" />
+    </item>
     <item>
       <title>Pisa Marble and Leaning Tower Wall Art</title>
       <link>https://photos-by-elie.com/photo--img-1208-d059e156dc.html</link>

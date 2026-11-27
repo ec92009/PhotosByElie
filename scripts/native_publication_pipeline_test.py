@@ -5,6 +5,7 @@ import sqlite3
 import threading
 from pathlib import Path
 import sys
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -28,7 +29,7 @@ from native_publication_pipeline import (
     upload_eligibility_plan,
 )
 from native_catalog_promotion import verify_public_catalog, verify_upload_run_catalog
-from owner_catalog_projection import import_projection
+from owner_catalog_projection import import_projection, projection_snapshot
 from sidecar_state_db import upsert_assets
 
 
@@ -94,6 +95,50 @@ class NativePublicationPipelineTest(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_late_catalog_failures_preserve_original_error_and_projection(self):
+        """Cleanup must not mask failures after the staged SQLite is closed."""
+        record_photos_sync_snapshot(self.root, [{
+            "assetId": "asset-1", "title": "Catalog title",
+            "keywords": ["Spain"], "renderedFingerprint": "render-catalog",
+        }])
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET pixel_width=2400, pixel_height=1600, "
+                         "location_label='Spain' WHERE asset_id='asset-1'")
+            conn.commit()
+            before = projection_snapshot(conn, ensure_schema=False)
+        catalog = self.root / "assets/catalog/photosbyelie.sqlite"
+        original_bytes = catalog.read_bytes()
+        failure = RuntimeError("Catalog authority pending projection requires verification before another write")
+
+        def reject_projection(conn, *_args, **_kwargs):
+            # Make rollback observable as well as preserving the real error.
+            conn.execute("UPDATE owner_public_catalog_projections SET revision=revision+1")
+            raise failure
+
+        with patch("native_catalog_promotion.store_projection", side_effect=reject_projection):
+            with self.assertRaises(RuntimeError) as caught:
+                publish_verified_asset(self.root, "asset-1", verified_public_set("catalog-asset"))
+        self.assertIs(caught.exception, failure)
+        with connect(self.root) as conn:
+            self.assertEqual(projection_snapshot(conn, ensure_schema=False), before)
+            audit = conn.execute("SELECT state,error_text FROM public_catalog_publications "
+                                 "WHERE asset_id='asset-1'").fetchone()
+            self.assertEqual(dict(audit), {"state": "failed", "error_text": str(failure)})
+        self.assertEqual(catalog.read_bytes(), original_bytes)
+        self.assertEqual(list(catalog.parent.glob(".photosbyelie.sqlite.*")), [])
+
+        replacement_failure = OSError("synthetic catalog replacement failure")
+        with patch("native_catalog_promotion.os.replace", side_effect=replacement_failure):
+            with self.assertRaises(OSError) as caught:
+                publish_verified_asset(self.root, "asset-1", verified_public_set("catalog-asset"))
+        self.assertIs(caught.exception, replacement_failure)
+        with connect(self.root) as conn:
+            after = projection_snapshot(conn, ensure_schema=False)
+        self.assertEqual(after["revision"], before["revision"] + 1)
+        self.assertNotEqual(after["sha256"], before["sha256"])
+        self.assertEqual(catalog.read_bytes(), original_bytes)
+        self.assertEqual(list(catalog.parent.glob(".photosbyelie.sqlite.*")), [])
 
     def test_metadata_change_preserves_approval_and_appearance_returns_to_review(self):
         baseline = [

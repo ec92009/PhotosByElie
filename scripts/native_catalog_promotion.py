@@ -925,6 +925,7 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
                 raise CatalogPromotionError(f"catalog foreign_key_check failed: {foreign_keys[:5]}")
             catalog.commit()
             catalog.close()
+            catalog = None
             payload = staged_path.read_bytes()
             owner.execute("BEGIN IMMEDIATE")
             projection = store_projection(
@@ -955,14 +956,15 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
                 "projectionSha256": projection["sha256"],
             }
         except Exception:
-            if catalog.in_transaction:
+            if catalog is not None and catalog.in_transaction:
                 catalog.rollback()
             if owner.in_transaction:
                 owner.rollback()
             raise
         finally:
             try:
-                catalog.close()
+                if catalog is not None:
+                    catalog.close()
             except sqlite3.Error:
                 pass
             owner.close()

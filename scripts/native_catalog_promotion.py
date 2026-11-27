@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -790,18 +791,32 @@ def _catalog_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _resolve_node_executable() -> str:
+    """Resolve Node cleanly even when launched from GUI Backstage without Homebrew PATH."""
+    for candidate in (shutil.which("node"), "/opt/homebrew/bin/node", "/usr/local/bin/node"):
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return "node"
+
+
 def refresh_public_catalog_artifacts(repo_root: Path) -> dict[str, Any]:
     """Refresh browser/home/sidecar/Worker projections after SQLite promotion."""
+    node = _resolve_node_executable()
+    node_dir = str(Path(node).parent) if "/" in node else ""
+    env = dict(os.environ)
+    if node_dir and node_dir not in env.get("PATH", "").split(":"):
+        env["PATH"] = f"{node_dir}:{env.get('PATH', '')}" if env.get("PATH") else node_dir
     commands = [
-        ["node", "scripts/write_catalog_tsv.cjs", "--bootstrap-only"],
-        ["node", "scripts/write_media_sidecar.mjs"],
-        ["node", "scripts/write_worker_catalog.mjs"],
+        [node, "scripts/write_catalog_tsv.cjs", "--bootstrap-only"],
+        [node, "scripts/write_media_sidecar.mjs"],
+        [node, "scripts/write_worker_catalog.mjs"],
     ]
     steps: list[dict[str, Any]] = []
     for command in commands:
         completed = subprocess.run(
             command,
             cwd=repo_root,
+            env=env,
             text=True,
             capture_output=True,
             check=False,
@@ -817,16 +832,206 @@ def refresh_public_catalog_artifacts(repo_root: Path) -> dict[str, Any]:
     return {"ok": True, "steps": steps}
 
 
-def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]:
-    path = repo_root / PUBLIC_CATALOG_PATH
+def _validate_candidate_metadata(candidate: dict[str, Any]) -> tuple[int, int, float | None]:
+    """Verify catalog dimensions, video duration, and resolved collection before SQLite writes."""
     row = candidate["asset"]
-    objects = candidate["objects"]
-    media_id = candidate["mediaId"]
     media_type = candidate["mediaType"]
     width, height = int(row["pixel_width"] or 0), int(row["pixel_height"] or 0)
     duration = float(row["duration"] or 0) if media_type == "video" else None
     if width <= 0 or height <= 0 or (media_type == "video" and (duration is None or duration <= 0)):
         raise CatalogPromotionError("asset is missing catalog dimensions or video duration")
+    if str(candidate.get("collection") or "unknown") == "unknown":
+        resolution = candidate.get("collectionResolution") or {}
+        reason = str(
+            (resolution.get("response") or {}).get("reason")
+            or "no confident supported country result"
+        )
+        raise CatalogPromotionError(
+            "collection unresolved after approved metadata: " + reason
+        )
+    return width, height, duration
+
+
+def _apply_candidate_to_catalog(
+    catalog: sqlite3.Connection,
+    candidate: dict[str, Any],
+    previous_media_ids: list[str],
+    now: str,
+) -> dict[str, Any]:
+    """Upsert one validated candidate inside an open staged SQLite transaction."""
+    row = candidate["asset"]
+    objects = candidate["objects"]
+    media_id = candidate["mediaId"]
+    media_type = candidate["mediaType"]
+    width, height, duration = _validate_candidate_metadata(candidate)
+    collection = catalog.execute(
+        "SELECT collection_id, title FROM collections WHERE slug = ?",
+        (candidate["collection"],),
+    ).fetchone()
+    if collection is None:
+        raise CatalogPromotionError(f"catalog collection is missing: {candidate['collection']}")
+    media_type_id = _catalog_id(catalog, "media_types", "media_type_id", "code", media_type)
+    camera_origin_id = _catalog_id(catalog, "source_origins", "source_origin_id", "code", "camera")
+    asset_type_id = {
+        code: _catalog_id(catalog, "asset_types", "asset_type_id", "code", code)
+        for code in ("full", "still_900", "still_1800", "short_5s_720p", "jpeg_1mp", "jpeg_3mp", "jpeg_6mp")
+    }
+    formats = {
+        code: _catalog_id(catalog, "formats", "format_id", "extension", code)
+        for code in ("jpg", "mp4", "mov", "tif", "png", "heic")
+    }
+    private_key = str(objects["private"].get("key") or "")
+    full_extension = _extension(private_key, _extension(row["filename"]))
+    full_format = formats.get(full_extension, formats["jpg"])
+    source_file_id = _ensure_source_file(catalog, str(row["filename"] or "native-upload"), full_extension)
+    keywords = _read_json(row["keywords_json"], [])
+    if not isinstance(keywords, list):
+        keywords = []
+    keyword_ids = _ensure_keyword_ids(catalog, keywords)
+    title = str(
+        row["title"] or row["photos_title"] or Path(str(row["filename"] or media_id)).stem or media_id
+    ).strip() or media_id
+    description = str(row["caption"] or "") or None
+    captured_at = str(row["captured_at"] or "") or None
+    location = str(row["location_label"] or collection["title"] or candidate["collection"]).strip()
+    existing = catalog.execute(
+        """
+        SELECT collection_id, sort_index, media_type_id, title, description, keyword_ids,
+               source_origin_id, captured_at, source_file_id, location
+        FROM media_items WHERE media_id = ?
+        """,
+        (media_id,),
+    ).fetchone()
+    replacement_sort_index = None
+    removed_previous = False
+    for previous_media_id in previous_media_ids:
+        previous = catalog.execute(
+            "SELECT sort_index FROM media_items WHERE media_id = ?",
+            (previous_media_id,),
+        ).fetchone()
+        if previous is not None:
+            removed_previous = True
+            if replacement_sort_index is None:
+                replacement_sort_index = int(previous["sort_index"])
+        catalog.execute(
+            "DELETE FROM media_items WHERE media_id = ?",
+            (previous_media_id,),
+        )
+    sort_index = (
+        int(existing["sort_index"])
+        if existing
+        else replacement_sort_index
+        if replacement_sort_index is not None
+        else int(
+            catalog.execute(
+                "SELECT COALESCE(MAX(sort_index), -1) + 1 FROM media_items WHERE collection_id = ?",
+                (collection["collection_id"],),
+            ).fetchone()[0]
+        )
+    )
+    gallery_dims = _scale_to_max(width, height, 900)
+    detail_dims = _scale_to_max(width, height, 1800)
+    asset_rows = [
+        (media_id, asset_type_id["full"], width, height, duration, int(objects["private"].get("bytes") or 0), full_format),
+        (media_id, asset_type_id["still_900"], *gallery_dims, None, int(objects["gallery"].get("bytes") or 0), formats["jpg"]),
+    ]
+    if media_type == "photo":
+        asset_rows.extend([
+            (media_id, asset_type_id["still_1800"], *detail_dims, None, int(objects["detail"].get("bytes") or 0), formats["jpg"]),
+            (media_id, asset_type_id["jpeg_1mp"], *_scale_to_megapixels(width, height, 1), None, None, formats["jpg"]),
+            (media_id, asset_type_id["jpeg_3mp"], *_scale_to_megapixels(width, height, 3), None, None, formats["jpg"]),
+            (media_id, asset_type_id["jpeg_6mp"], *_scale_to_megapixels(width, height, 6), None, None, formats["jpg"]),
+        ])
+    else:
+        asset_rows.append(
+            (media_id, asset_type_id["short_5s_720p"], *_scale_to_max(width, height, 720), 5.0, int(objects["short"].get("bytes") or 0), formats["mp4"])
+        )
+
+    unchanged = False
+    if existing is not None and not removed_previous:
+        same_item = (
+            int(existing["collection_id"]) == int(collection["collection_id"])
+            and int(existing["sort_index"]) == sort_index
+            and int(existing["media_type_id"]) == media_type_id
+            and existing["title"] == title
+            and existing["description"] == description
+            and existing["keyword_ids"] == (keyword_ids or None)
+            and int(existing["source_origin_id"]) == camera_origin_id
+            and existing["captured_at"] == captured_at
+            and int(existing["source_file_id"]) == source_file_id
+            and existing["location"] == location
+        )
+        if same_item:
+            current_assets = [
+                tuple(item)
+                for item in catalog.execute(
+                    """
+                    SELECT media_id, asset_type_id, width, height, duration_seconds, bytes, format_id
+                    FROM media_assets WHERE media_id = ?
+                    ORDER BY asset_type_id
+                    """,
+                    (media_id,),
+                ).fetchall()
+            ]
+            expected_assets = sorted(asset_rows, key=lambda item: item[1])
+            unchanged = current_assets == expected_assets
+
+    if not unchanged:
+        catalog.execute(
+            """
+            INSERT INTO media_items (
+              media_id, collection_id, sort_index, media_type_id, camera_id, lens_id, title,
+              description, keyword_ids, source_origin_id, captured_at, exposure, focal_length,
+              source_file_id, location, gps_latitude, gps_longitude, created_at, updated_at, caption_color
+            ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, NULL, ?, ?, NULL)
+            ON CONFLICT(media_id) DO UPDATE SET
+              collection_id = excluded.collection_id, sort_index = excluded.sort_index,
+              media_type_id = excluded.media_type_id, title = excluded.title,
+              description = excluded.description, keyword_ids = excluded.keyword_ids,
+              source_origin_id = excluded.source_origin_id, captured_at = excluded.captured_at,
+              source_file_id = excluded.source_file_id, location = excluded.location,
+              updated_at = excluded.updated_at
+            """,
+            (
+                media_id,
+                collection["collection_id"],
+                sort_index,
+                media_type_id,
+                title,
+                description,
+                keyword_ids or None,
+                camera_origin_id,
+                captured_at,
+                source_file_id,
+                location,
+                now,
+                now,
+            ),
+        )
+        catalog.executemany(
+            """
+            INSERT INTO media_assets(media_id, asset_type_id, width, height, duration_seconds, bytes, format_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(media_id, asset_type_id) DO UPDATE SET
+              width = excluded.width, height = excluded.height,
+              duration_seconds = excluded.duration_seconds, bytes = excluded.bytes,
+              format_id = excluded.format_id
+            """,
+            asset_rows,
+        )
+    return {
+        "mediaId": media_id,
+        "registered": existing is None,
+    }
+
+
+def _write_catalog_batch(repo_root: Path, candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Apply one or more validated candidates to one staged SQLite and store one projection."""
+    if not candidates:
+        return []
+    path = repo_root / PUBLIC_CATALOG_PATH
+    for candidate in candidates:
+        _validate_candidate_metadata(candidate)
     now = now_iso()
     with _CATALOG_LOCK:
         owner = connect(repo_root)
@@ -838,19 +1043,27 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
             raise CatalogPromotionError(
                 "Owner public catalog projection is not initialized; import the reviewed projection under PBE-173"
             )
-        previous_media_ids = [
-            str(item["media_id"])
-            for item in owner.execute(
-                f"""
-                SELECT DISTINCT media_id
-                FROM public_catalog_publications
-                WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
-                {"AND source_version_hash IN (SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id=?)" if candidate.get("fixtureEditionID") else ""}
-                ORDER BY updated_at DESC, media_id
-                """,
-                (str(row["asset_id"]),media_id,candidate["fixtureEditionID"]) if candidate.get("fixtureEditionID") else (str(row["asset_id"]), media_id),
-            ).fetchall()
-        ]
+        previous_by_index: list[list[str]] = []
+        for candidate in candidates:
+            row = candidate["asset"]
+            media_id = candidate["mediaId"]
+            previous_by_index.append(
+                [
+                    str(item["media_id"])
+                    for item in owner.execute(
+                        f"""
+                        SELECT DISTINCT media_id
+                        FROM public_catalog_publications
+                        WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
+                        {"AND source_version_hash IN (SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id=?)" if candidate.get("fixtureEditionID") else ""}
+                        ORDER BY updated_at DESC, media_id
+                        """,
+                        (str(row["asset_id"]), media_id, candidate["fixtureEditionID"])
+                        if candidate.get("fixtureEditionID")
+                        else (str(row["asset_id"]), media_id),
+                    ).fetchall()
+                ]
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         staged_path = Path(staged_name)
@@ -863,103 +1076,10 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
         catalog.execute("PRAGMA foreign_keys = ON")
         try:
             catalog.execute("BEGIN IMMEDIATE")
-            if str(candidate.get("collection") or "unknown") == "unknown":
-                resolution = candidate.get("collectionResolution") or {}
-                reason = str(
-                    (resolution.get("response") or {}).get("reason")
-                    or "no confident supported country result"
-                )
-                raise CatalogPromotionError(
-                    "collection unresolved after approved metadata: " + reason
-                )
-            collection = catalog.execute(
-                "SELECT collection_id, title FROM collections WHERE slug = ?",
-                (candidate["collection"],),
-            ).fetchone()
-            if collection is None:
-                raise CatalogPromotionError(f"catalog collection is missing: {candidate['collection']}")
-            media_type_id = _catalog_id(catalog, "media_types", "media_type_id", "code", media_type)
-            camera_origin_id = _catalog_id(catalog, "source_origins", "source_origin_id", "code", "camera")
-            asset_type_id = {code: _catalog_id(catalog, "asset_types", "asset_type_id", "code", code) for code in ("full", "still_900", "still_1800", "short_5s_720p", "jpeg_1mp", "jpeg_3mp", "jpeg_6mp")}
-            formats = {code: _catalog_id(catalog, "formats", "format_id", "extension", code) for code in ("jpg", "mp4", "mov", "tif", "png", "heic")}
-            private_key = str(objects["private"].get("key") or "")
-            full_extension = _extension(private_key, _extension(row["filename"]))
-            full_format = formats.get(full_extension, formats["jpg"])
-            source_file_id = _ensure_source_file(catalog, str(row["filename"] or "native-upload"), full_extension)
-            keywords = _read_json(row["keywords_json"], [])
-            if not isinstance(keywords, list):
-                keywords = []
-            keyword_ids = _ensure_keyword_ids(catalog, keywords)
-            title = str(row["title"] or row["photos_title"] or Path(str(row["filename"] or media_id)).stem or media_id).strip() or media_id
-            location = str(row["location_label"] or collection["title"] or candidate["collection"]).strip()
-            existing = catalog.execute("SELECT sort_index FROM media_items WHERE media_id = ?", (media_id,)).fetchone()
-            replacement_sort_index = None
-            for previous_media_id in previous_media_ids:
-                previous = catalog.execute(
-                    "SELECT sort_index FROM media_items WHERE media_id = ?",
-                    (previous_media_id,),
-                ).fetchone()
-                if previous is not None and replacement_sort_index is None:
-                    replacement_sort_index = int(previous["sort_index"])
-                catalog.execute(
-                    "DELETE FROM media_items WHERE media_id = ?",
-                    (previous_media_id,),
-                )
-            sort_index = (
-                int(existing["sort_index"])
-                if existing
-                else replacement_sort_index
-                if replacement_sort_index is not None
-                else int(
-                    catalog.execute(
-                        "SELECT COALESCE(MAX(sort_index), -1) + 1 FROM media_items WHERE collection_id = ?",
-                        (collection["collection_id"],),
-                    ).fetchone()[0]
-                )
-            )
-            catalog.execute(
-                """
-                INSERT INTO media_items (
-                  media_id, collection_id, sort_index, media_type_id, camera_id, lens_id, title,
-                  description, keyword_ids, source_origin_id, captured_at, exposure, focal_length,
-                  source_file_id, location, gps_latitude, gps_longitude, created_at, updated_at, caption_color
-                ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, NULL, ?, ?, NULL)
-                ON CONFLICT(media_id) DO UPDATE SET
-                  collection_id = excluded.collection_id, sort_index = excluded.sort_index,
-                  media_type_id = excluded.media_type_id, title = excluded.title,
-                  description = excluded.description, keyword_ids = excluded.keyword_ids,
-                  source_origin_id = excluded.source_origin_id, captured_at = excluded.captured_at,
-                  source_file_id = excluded.source_file_id, location = excluded.location,
-                  updated_at = excluded.updated_at
-                """,
-                (media_id, collection["collection_id"], sort_index, media_type_id, title, str(row["caption"] or "") or None, keyword_ids or None, camera_origin_id, str(row["captured_at"] or "") or None, source_file_id, location, now, now),
-            )
-            gallery_dims = _scale_to_max(width, height, 900)
-            detail_dims = _scale_to_max(width, height, 1800)
-            rows = [
-                (media_id, asset_type_id["full"], width, height, duration, int(objects["private"].get("bytes") or 0), full_format),
-                (media_id, asset_type_id["still_900"], *gallery_dims, None, int(objects["gallery"].get("bytes") or 0), formats["jpg"]),
+            registrations = [
+                _apply_candidate_to_catalog(catalog, candidate, previous_by_index[index], now)
+                for index, candidate in enumerate(candidates)
             ]
-            if media_type == "photo":
-                rows.extend([
-                    (media_id, asset_type_id["still_1800"], *detail_dims, None, int(objects["detail"].get("bytes") or 0), formats["jpg"]),
-                    (media_id, asset_type_id["jpeg_1mp"], *_scale_to_megapixels(width, height, 1), None, None, formats["jpg"]),
-                    (media_id, asset_type_id["jpeg_3mp"], *_scale_to_megapixels(width, height, 3), None, None, formats["jpg"]),
-                    (media_id, asset_type_id["jpeg_6mp"], *_scale_to_megapixels(width, height, 6), None, None, formats["jpg"]),
-                ])
-            else:
-                rows.append((media_id, asset_type_id["short_5s_720p"], *_scale_to_max(width, height, 720), 5.0, int(objects["short"].get("bytes") or 0), formats["mp4"]))
-            catalog.executemany(
-                """
-                INSERT INTO media_assets(media_id, asset_type_id, width, height, duration_seconds, bytes, format_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(media_id, asset_type_id) DO UPDATE SET
-                  width = excluded.width, height = excluded.height,
-                  duration_seconds = excluded.duration_seconds, bytes = excluded.bytes,
-                  format_id = excluded.format_id
-                """,
-                rows,
-            )
             integrity = catalog.execute("PRAGMA integrity_check").fetchone()[0]
             if integrity != "ok":
                 raise CatalogPromotionError(f"catalog integrity_check failed: {integrity}")
@@ -991,13 +1111,15 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
             except Exception:
                 projected_path.unlink(missing_ok=True)
                 raise
-            return {
-                "mediaId": media_id,
-                "registered": existing is None,
-                "catalogPath": str(path),
-                "projectionRevision": projection["revision"],
-                "projectionSha256": projection["sha256"],
-            }
+            return [
+                {
+                    **registration,
+                    "catalogPath": str(path),
+                    "projectionRevision": projection["revision"],
+                    "projectionSha256": projection["sha256"],
+                }
+                for registration in registrations
+            ]
         except Exception:
             if catalog is not None and catalog.in_transaction:
                 catalog.rollback()
@@ -1012,6 +1134,116 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
                 pass
             owner.close()
             staged_path.unlink(missing_ok=True)
+
+
+def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]:
+    return _write_catalog_batch(repo_root, [candidate])[0]
+
+
+def promote_verified_assets_batch(
+    repo_root: Path,
+    items: Iterable[dict[str, Any]],
+    *,
+    fixture_id: str | None = None,
+    collection_resolver: Callable[[str], dict[str, Any]] | None = None,
+    abort_on_validation_error: bool = False,
+) -> dict[str, Any]:
+    """Promote one batch of verified assets in a single atomic catalog projection."""
+    outcomes: dict[str, dict[str, Any]] = {}
+    errors: dict[str, str] = {}
+    ready: list[tuple[str, str, dict[str, Any]]] = []
+    for item in items:
+        asset_id = str(item.get("asset_id") or item.get("assetId") or "")
+        source_version_hash = str(
+            item.get("source_version_hash") or item.get("sourceVersionHash") or ""
+        )
+        candidate = item.get("candidate")
+        if candidate is None:
+            results = [dict(entry) for entry in item.get("upload_results") or []]
+            with connect(repo_root) as conn:
+                candidate = catalog_candidate(
+                    repo_root,
+                    conn,
+                    asset_id,
+                    results,
+                    source_version_hash=source_version_hash,
+                    collection_resolver=collection_resolver,
+                    fixture_id=fixture_id,
+                )
+        if not candidate.get("eligible"):
+            outcomes[asset_id] = {
+                "state": "not-applicable",
+                "reason": candidate.get("reason", "not-eligible"),
+                "error": candidate.get("error", ""),
+            }
+            continue
+        media_id = str(candidate["mediaId"])
+        try:
+            _validate_candidate_metadata(candidate)
+        except Exception as error:
+            _update_catalog_audit(
+                repo_root,
+                asset_id=asset_id,
+                source_version_hash=source_version_hash,
+                media_id=media_id,
+                state="failed",
+                error_text=str(error),
+            )
+            errors[asset_id] = str(error)
+            continue
+        ready.append((asset_id, source_version_hash, candidate))
+
+    if not ready or (abort_on_validation_error and errors):
+        return {"outcomes": outcomes, "errors": errors}
+
+    try:
+        registrations = _write_catalog_batch(repo_root, [entry[2] for entry in ready])
+        checksum = _catalog_sha256(repo_root / PUBLIC_CATALOG_PATH)
+        for (asset_id, source_version_hash, candidate), registration in zip(ready, registrations):
+            media_id = str(candidate["mediaId"])
+            _update_catalog_audit(
+                repo_root,
+                asset_id=asset_id,
+                source_version_hash=source_version_hash,
+                media_id=media_id,
+                state="local",
+                catalog_sha256=checksum,
+                verified_at=now_iso(),
+            )
+            if not fixture_id:
+                with connect(repo_root) as conn:
+                    conn.execute(
+                        """
+                        UPDATE asset_delivery_state
+                        SET delivery_state = 'live', source_version_hash = ?,
+                            last_error = '', updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        (source_version_hash, now_iso(), asset_id),
+                    )
+                    conn.commit()
+            outcomes[asset_id] = {
+                "state": "local",
+                "mediaId": media_id,
+                "fixtureIds": candidate["fixtureIds"],
+                "collection": candidate["collection"],
+                "collectionResolution": candidate.get("collectionResolution") or {},
+                **registration,
+                "catalogSha256": checksum,
+            }
+    except Exception as error:
+        message = str(error)
+        for asset_id, source_version_hash, candidate in ready:
+            _update_catalog_audit(
+                repo_root,
+                asset_id=asset_id,
+                source_version_hash=source_version_hash,
+                media_id=str(candidate["mediaId"]),
+                state="failed",
+                error_text=message,
+            )
+            errors[asset_id] = message
+    return {"outcomes": outcomes, "errors": errors}
 
 
 def promote_verified_asset(

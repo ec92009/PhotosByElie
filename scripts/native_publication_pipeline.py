@@ -21,6 +21,7 @@ from fixture_policy import (
 from native_catalog_promotion import (
     catalog_candidate,
     promote_verified_asset,
+    promote_verified_assets_batch,
     record_catalog_pending,
     retired_storefront_media_types,
 )
@@ -718,6 +719,7 @@ def publish_verified_asset(
     fixture_id: str | None = None,
     revision_hash: str | None = None,
     collection_resolver: Callable[[str], dict[str, Any]] | None = None,
+    promote_catalog: bool = True,
 ) -> dict[str, Any]:
     """Atomically make one verified object set live in every effective fixture."""
     results = _verified_results(upload_results)
@@ -988,7 +990,7 @@ def publish_verified_asset(
         "reason": catalog_plan.get("reason", "not-eligible"),
         "error": catalog_plan.get("error", ""),
     }
-    if catalog_plan.get("eligible"):
+    if catalog_plan.get("eligible") and promote_catalog:
         catalog_result = promote_verified_asset(
             repo_root,
             asset_id,
@@ -997,6 +999,14 @@ def publish_verified_asset(
             collection_resolver=collection_resolver,
             **({"fixture_id": fixture_id} if scoped else {}),
         )
+    elif catalog_plan.get("eligible"):
+        catalog_result = {
+            "state": "pending",
+            "mediaId": str(catalog_plan["mediaId"]),
+            "fixtureIds": catalog_plan["fixtureIds"],
+            "collection": catalog_plan["collection"],
+            "collectionResolution": catalog_plan.get("collectionResolution") or {},
+        }
     return {
         "ok": True,
         "assetId": asset_id,
@@ -1011,6 +1021,8 @@ def publish_verified_asset(
         ],
         "catalogState": str(catalog_result.get("state") or "not-applicable"),
         "publicCatalog": catalog_result,
+        "catalogCandidate": catalog_plan if catalog_plan.get("eligible") else None,
+        "verifiedResults": results,
         "publishedAt": timestamp,
     }
 
@@ -1180,7 +1192,13 @@ def run_upload_batch(
 
     def worker(asset_id: str) -> tuple[str, dict[str, Any] | None, str]:
         try:
-            result = publish_verified_asset(repo_root, asset_id, upload(asset_id), **({"fixture_id":fixture_id,"revision_hash":revisions[asset_id]} if scoped else {}))
+            result = publish_verified_asset(
+                repo_root,
+                asset_id,
+                upload(asset_id),
+                promote_catalog=False,
+                **({"fixture_id": fixture_id, "revision_hash": revisions[asset_id]} if scoped else {}),
+            )
             return asset_id, result, ""
         except Exception as error:  # noqa: BLE001 - failures are isolated per asset.
             return asset_id, None, str(error)
@@ -1209,6 +1227,7 @@ def run_upload_batch(
 
     pending_ids = iter(asset_ids)
     futures: dict[Future[tuple[str, dict[str, Any] | None, str]], str] = {}
+    pending_promotions: dict[str, dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         while len(futures) < concurrency and not cancellation_requested():
             try:
@@ -1220,6 +1239,13 @@ def run_upload_batch(
             for future in completed:
                 futures.pop(future, None)
                 asset_id, result, error_text = future.result()
+                if result and result.get("published", True) and result.get("catalogCandidate"):
+                    pending_promotions[asset_id] = {
+                        "asset_id": asset_id,
+                        "source_version_hash": str(result.get("sourceVersionHash") or ""),
+                        "upload_results": result.get("verifiedResults") or [],
+                        "candidate": result["catalogCandidate"],
+                    }
                 timestamp = now_iso()
                 with connect(repo_root) as conn:
                     if not result:
@@ -1317,6 +1343,132 @@ def run_upload_batch(
                     submit(executor, futures, next(pending_ids))
                 except StopIteration:
                     break
+    with connect(repo_root) as conn:
+        from public_publication_state import get as get_public_run
+        is_public_run = get_public_run(conn, run_id) is not None
+        pre_summary = conn.execute(
+            "SELECT failed_count, remaining_count, cancel_requested FROM asset_upload_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        should_promote = (
+            not int(pre_summary["cancel_requested"] or 0)
+            and int(pre_summary["failed_count"] or 0) == 0
+            and int(pre_summary["remaining_count"] or 0) == 0
+            if is_public_run
+            else True
+        )
+        if should_promote and is_public_run and scoped:
+            # Include any items verified in an earlier interrupted attempt of
+            # this same run whose catalog projection is still pending/failed.
+            from fixture_edition_uploads import recovery_receipts
+            prior_rows = conn.execute(
+                """
+                SELECT item.asset_id, item.source_version_hash
+                FROM asset_upload_run_items AS item
+                LEFT JOIN public_catalog_publications AS catalog
+                  ON catalog.asset_id = item.asset_id
+                 AND catalog.source_version_hash = item.source_version_hash
+                WHERE item.run_id = ?
+                  AND item.status = 'verified'
+                  AND COALESCE(catalog.state, 'pending') NOT IN ('local', 'live')
+                ORDER BY item.asset_id
+                """,
+                (run_id,),
+            ).fetchall()
+            for prior_row in prior_rows:
+                prior_asset_id = str(prior_row["asset_id"])
+                prior_rev = str(prior_row["source_version_hash"])
+                if prior_asset_id in pending_promotions:
+                    continue
+                receipts = recovery_receipts(repo_root, conn, fixture_id, prior_asset_id, prior_rev)
+                if receipts:
+                    pending_promotions[prior_asset_id] = {
+                        "asset_id": prior_asset_id,
+                        "source_version_hash": prior_rev,
+                        "upload_results": receipts,
+                    }
+
+    if should_promote and pending_promotions:
+        ordered_items = [pending_promotions[key] for key in sorted(pending_promotions)]
+        batch_result = promote_verified_assets_batch(
+            repo_root,
+            ordered_items,
+            fixture_id=fixture_id if scoped else None,
+            abort_on_validation_error=is_public_run,
+        )
+        if batch_result["errors"]:
+            timestamp = now_iso()
+            with connect(repo_root) as conn:
+                for failed_asset_id, promotion_error in batch_result["errors"].items():
+                    failed_rev = pending_promotions[failed_asset_id]["source_version_hash"]
+                    conn.execute(
+                        """
+                        UPDATE asset_upload_run_items
+                        SET status = 'failed', error_text = ?, completed_at = ?, updated_at = ?
+                        WHERE run_id = ? AND asset_id = ?
+                        """,
+                        (promotion_error, timestamp, timestamp, run_id, failed_asset_id),
+                    )
+                    if scoped:
+                        conn.execute(
+                            """
+                            UPDATE fixture_edition_delivery
+                            SET last_error = ?, updated_at = ?,
+                                delivery_state = CASE WHEN delivery_state = 'live' THEN 'live' ELSE 'failed' END
+                            WHERE fixture_id = ? AND asset_id = ? AND revision_hash = ?
+                            """,
+                            (promotion_error, timestamp, fixture_id, failed_asset_id, failed_rev),
+                        )
+                    elif not preserve_live_delivery_on_failure:
+                        conn.execute(
+                            """
+                            UPDATE asset_delivery_state
+                            SET delivery_state = 'failed', last_error = ?, updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            (promotion_error, timestamp, failed_asset_id),
+                        )
+                    else:
+                        conn.execute(
+                            """
+                            UPDATE asset_delivery_state
+                            SET last_error = ?, updated_at = ?
+                            WHERE asset_id = ? AND delivery_state = 'live'
+                            """,
+                            (promotion_error, timestamp, failed_asset_id),
+                        )
+                recomputed = conn.execute(
+                    """
+                    SELECT count(*) total,
+                           sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
+                           sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) live,
+                           sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) failed
+                    FROM asset_upload_run_items WHERE run_id = ?
+                    """,
+                    (run_id,),
+                ).fetchone()
+                total = int(recomputed["total"] or 0)
+                processed = int(recomputed["processed"] or 0)
+                conn.execute(
+                    """
+                    UPDATE asset_upload_runs
+                    SET processed_count = ?, live_count = ?, failed_count = ?,
+                        remaining_count = ?, updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (
+                        processed,
+                        int(recomputed["live"] or 0),
+                        int(recomputed["failed"] or 0),
+                        max(0, total - processed),
+                        timestamp,
+                        run_id,
+                    ),
+                )
+                conn.commit()
+            if progress:
+                progress(upload_run_status(repo_root, run_id))
+
     completed_at = now_iso()
     with connect(repo_root) as conn:
         summary = conn.execute(

@@ -282,3 +282,91 @@ class PublicPublicationRunTests(unittest.TestCase):
         with connect(self.root) as conn:
             self.assertEqual(get(conn,self.run)['status'],'running')
             self.assertEqual(conn.execute('SELECT status FROM asset_upload_runs WHERE run_id=?',(self.run,)).fetchone()[0],'completed')
+
+    def test_multi_photo_batch_promotes_once_under_enrolled_catalog_authority(self):
+        import catalog_authority_client_test as authority_fixture
+        import fixture_editions as editions
+        import owner_catalog_projection as projection
+        from fixture_pipeline import set_fixture_asset_state
+        from native_asset_publication import reset_upload_run_for_retry
+        from sidecar_state_db import upsert_assets
+
+        owner_db = (self.root / 'assets/owner-actions/Owner.sqlite').resolve()
+        remote = authority_fixture.FakeAuthority()
+        client = remote.client()
+        with connect(self.root) as conn:
+            before = projection.projection_snapshot(conn, ensure_schema=False)
+        remote.public_sha = before['sha256']
+        projection.enroll_catalog_authority(owner_db, authority_client=client)
+        remote.calls.clear()
+
+        ids = ['batch-a', 'batch-b', 'batch-c']
+        upsert_assets(self.root, [
+            dict(localIdentifier=asset, filename=asset + '.jpg', mediaType='photo', pixelWidth=3000, pixelHeight=2000)
+            for asset in ids
+        ])
+        set_fixture_asset_state(self.root, self.fixture, ids, 'picked')
+        revisions = {}
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET location_label='Spain'")
+            for asset in ids:
+                conn.execute(
+                    "INSERT INTO asset_source_versions (version_id,asset_id,metadata_fingerprint,rendered_fingerprint,source_exists,state,created_at) VALUES (?,?, '', '',1,'candidate','2026-01-01')",
+                    (asset + '-source', asset),
+                )
+                edition = editions.seed_edition(
+                    conn, self.fixture, asset, source_version_id=asset + '-source',
+                    title='Spain ' + asset, keywords=['Spain'], country='Spain',
+                )
+                edition = editions.approve_edition(conn, self.fixture, asset, expected_revision=editions.revision_hash(edition))
+                revisions[asset] = edition['approved_revision_hash']
+            conn.commit()
+
+        run_id = create_upload_run(self.root, ids, fixture_id=self.fixture)['runId']
+        claim_upload_run_start(self.root, run_id)
+
+        def receipts_for(asset):
+            with connect(self.root) as conn:
+                keys = object_keys(
+                    dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?', (asset,)).fetchone()),
+                    self.fixture,
+                    revisions[asset],
+                    effective_fixture_policy(self.root, self.fixture, conn=conn)['effective'],
+                )
+            return [
+                dict(k, status='uploaded', objectKind=k['kind'], checksumSha256=self.sha,
+                     remoteChecksumSha256=self.sha, remoteVerified=True, bytes=len(self.preview))
+                for k in keys
+            ]
+
+        fail_third = True
+
+        def upload(asset):
+            if asset == 'batch-c' and fail_third:
+                raise RuntimeError('transient export failure')
+            return receipts_for(asset)
+
+        with patch.object(projection, '_authority_client', return_value=client):
+            first = run_upload_batch(self.root, run_id, upload)
+            self.assertEqual(first['failed'], 1)
+            finished_first = finish_publication(self.root, run_id, client=self.cloud, register=self.register, deploy=self.deploy, verify=self.verify)
+            self.assertEqual(finished_first['status'], 'failed')
+            # Partial upload failure in a public publication run must not advance catalog authority to pending.
+            self.assertEqual([call for call in remote.calls if call[0] == 'POST'], [])
+            with connect(self.root) as conn:
+                self.assertEqual(projection.projection_snapshot(conn, ensure_schema=False)['revision'], before['revision'])
+                self.assertEqual(projection._authority_enrollment(conn)['state'], 'verified')
+
+            fail_third = False
+            claim_upload_run_start(self.root, run_id, retry_failed=True)
+            reset_upload_run_for_retry(self.root, run_id)
+            second = run_upload_batch(self.root, run_id, upload)
+            self.assertEqual(second['failed'], 0, second)
+            self.assertEqual(sorted(item['catalog_state'] for item in second['items']), ['local', 'local', 'local'])
+            prepares = [body for method, body in remote.calls if method == 'POST' and body.get('phase') == 'prepare']
+            self.assertEqual(len(prepares), 1, remote.calls)
+            with connect(self.root) as conn:
+                after = projection.projection_snapshot(conn, ensure_schema=False)
+                self.assertEqual(after['revision'], before['revision'] + 1)
+                self.assertEqual(projection._authority_enrollment(conn)['state'], 'pending')
+                self.assertEqual(after['mediaCount'], before['mediaCount'] + 3)

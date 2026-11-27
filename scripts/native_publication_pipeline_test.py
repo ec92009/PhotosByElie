@@ -173,6 +173,53 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(catalog.read_bytes(), original_bytes)
         self.assertEqual(list(catalog.parent.glob(".photosbyelie.sqlite.*")), [])
 
+    def test_batch_upload_promotes_multiple_assets_in_one_enrolled_projection(self):
+        import catalog_authority_client_test as authority_fixture
+        import owner_catalog_projection as projection
+
+        record_photos_sync_snapshot(self.root, [
+            {"assetId": "asset-1", "title": "Batch One", "keywords": ["Spain"], "renderedFingerprint": "r1"},
+            {"assetId": "asset-2", "title": "Batch Two", "keywords": ["France"], "renderedFingerprint": "r2"},
+        ])
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET pixel_width=2400, pixel_height=1600, location_label='Spain' WHERE asset_id='asset-1'")
+            conn.execute("UPDATE sidecar_assets SET pixel_width=2400, pixel_height=1600, location_label='France' WHERE asset_id='asset-2'")
+            conn.commit()
+            before = projection.projection_snapshot(conn, ensure_schema=False)
+
+        owner_db = (self.root / "assets/owner-actions/Owner.sqlite").resolve()
+        remote = authority_fixture.FakeAuthority()
+        client = remote.client()
+        remote.public_sha = before["sha256"]
+        projection.enroll_catalog_authority(owner_db, authority_client=client)
+        remote.calls.clear()
+
+        run = create_upload_run(self.root, ["asset-1", "asset-2"], limit=50, concurrency=2)
+        with patch.object(projection, "_authority_client", return_value=client):
+            result = run_upload_batch(self.root, run["runId"], lambda aid: verified_public_set(f"batch-{aid}"))
+        self.assertEqual(result["status"], "completed", result)
+        self.assertEqual(result["failed"], 0)
+        self.assertEqual([item["catalog_state"] for item in result["items"]], ["local", "local"])
+        prepares = [body for method, body in remote.calls if method == "POST" and body.get("phase") == "prepare"]
+        self.assertEqual(len(prepares), 1, remote.calls)
+        with connect(self.root) as conn:
+            after = projection.projection_snapshot(conn, ensure_schema=False)
+            self.assertEqual(after["revision"], before["revision"] + 1)
+            self.assertEqual(after["mediaCount"], before["mediaCount"] + 2)
+
+        # While authority is still pending, a second batch preserves the exact authority error without masking it.
+        run2 = create_upload_run(self.root, ["asset-1"], limit=50, concurrency=1)
+        with connect(self.root) as conn:
+            conn.execute("UPDATE asset_delivery_state SET delivery_state='needs-upload' WHERE asset_id='asset-1'")
+            conn.execute("UPDATE sidecar_decisions SET title='Batch One Updated' WHERE asset_id='asset-1'")
+            conn.commit()
+        run2 = create_upload_run(self.root, ["asset-1"], limit=50, concurrency=1)
+        with patch.object(projection, "_authority_client", return_value=client):
+            blocked = run_upload_batch(self.root, run2["runId"], lambda aid: verified_public_set(f"batch-{aid}-v2"))
+        self.assertEqual(blocked["status"], "completed-with-errors")
+        self.assertEqual(blocked["failed"], 1)
+        self.assertIn("pending projection requires verification", blocked["items"][0]["error_text"])
+
     def test_metadata_change_preserves_approval_and_appearance_returns_to_review(self):
         baseline = [
             {

@@ -29,6 +29,12 @@ const deferred = () => {
   const promise = new Promise((done) => { resolve = done; });
   return { promise, resolve };
 };
+const awaitOrBootstrapFailure = (promise, ready) => Promise.race([
+  promise,
+  ready.then((error) => {
+    throw error || new Error("Bootstrap settled before reaching the expected lifecycle stage.");
+  }),
+]);
 
 // Exercise the generated browser entry point, keeping network scheduling observable.
 const startBootstrap = ({
@@ -236,12 +242,27 @@ test("revocation returned during an in-flight batch is omitted without admitting
   const result = startBootstrap({ photos: defaultPhotos.slice(0, 2), onVisibility: async ({ batch }) => {
     called.resolve(); await gate.promise; return { visibleMediaIds: batch.filter((id) => id !== "media-0001") };
   } });
-  await called.promise;
+  await awaitOrBootstrapFailure(called.promise, result.ready);
   result.page.photosByElieData.context = { photos: [defaultPhotos[1]] };
   gate.resolve();
   assert.equal(await result.ready, null);
   assert.deepEqual(Array.from(result.page.photosByElieData.spain.photos, (photo) => photo.id), ["media-0000"]);
   assert.equal(result.page.photosByElieData.context.photos.length, 0);
+});
+
+test("checksum mismatch fails bounded lifecycle wait immediately instead of hanging", async () => {
+  const stale = Buffer.from(catalogBytes); stale[stale.length - 1] ^= 0xff;
+  const called = deferred();
+  const result = startBootstrap({
+    catalog: stale,
+    photos: defaultPhotos.slice(0, 2),
+    onVisibility: async ({ batch }) => { called.resolve(); return { visibleMediaIds: batch }; },
+  });
+  await assert.rejects(
+    awaitOrBootstrapFailure(called.promise, result.ready),
+    /lifecycle-authorized public catalog/,
+  );
+  assert.equal(result.stats.lifecycleCalls, 0);
 });
 
 test("detail authorizes one known identity; unknown detail never requests authority", async () => {

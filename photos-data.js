@@ -1,6 +1,6 @@
 // Generated bootstrap: loads the plain SQLite catalog.
 (() => {
-  const catalogGeneration = Object.freeze({"schemaVersion":1,"path":"./assets/catalog/photosbyelie.sqlite","bytes":5283840,"sha256":"d4946b3c7f24dc2c8875844a83cbe2c284ebde92b560849610dcc90e1ff0453f","pricing":{"path":"./assets/catalog/product-pricing.json","bytes":30726,"sha256":"4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f"}});
+  const catalogGeneration = Object.freeze({"schemaVersion":1,"path":"./assets/catalog/photosbyelie.sqlite","bytes":5332992,"sha256":"50e34a0483d9a403002e01261f8ae47c471c0f3781a01521bbf4d28d692d2da4","pricing":{"path":"./assets/catalog/product-pricing.json","bytes":30726,"sha256":"4ffa3c68fc2666a5d8fb4bb317777ca0040fdc0979c572b2754006254460897f"}});
   Object.freeze(catalogGeneration.pricing);
   window.photosByElieCatalogGeneration = catalogGeneration;
   // Capture once: currentScript is null after an asynchronous boundary.

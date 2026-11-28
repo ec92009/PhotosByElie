@@ -222,17 +222,33 @@ def reusable_expo_same_source_receipts(conn, fixture_id, asset_id, revision, pol
     if not source_version_id:
         return None
     has_pub_items = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='public_publication_items'").fetchone() is not None
-    if has_pub_items:
-        already_registered = conn.execute("""SELECT 1 FROM public_publication_items i
-            JOIN public_publication_runs r ON r.run_id=i.run_id
-            WHERE r.fixture_id=? AND i.asset_id=? AND i.source_version_hash=? AND i.registration_json<>''
-            LIMIT 1""", (fixture_id, asset_id, revision)).fetchone()
-        if already_registered:
-            return None
     asset_row = conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?', (asset_id,)).fetchone()
     if asset_row is None:
         return None
     asset = dict(asset_row)
+    if has_pub_items:
+        already_registered = conn.execute("""SELECT i.registration_json FROM public_publication_items i
+            JOIN public_publication_runs r ON r.run_id=i.run_id
+            WHERE r.fixture_id=? AND i.asset_id=? AND i.source_version_hash=? AND i.registration_json<>''
+            ORDER BY i.updated_at DESC LIMIT 1""", (fixture_id, asset_id, revision)).fetchone()
+        if already_registered:
+            # Keep this revision's own edition keys when D1 registered that exact
+            # edition media_id; when another run registered a reused same-source
+            # pre-edition/prior-edition media_id, continue below so overlapping runs
+            # reuse those exact registered receipts instead of re-exporting.
+            reg_data = json.loads(already_registered['registration_json'] or '{}')
+            reg_items = reg_data.get('items') if isinstance(reg_data, dict) else []
+            reg_mid = str((reg_items[0] or {}).get('canonicalMediaId') or '') if reg_items else ''
+            expected_ed_mid = ''
+            try:
+                ed_keys = object_keys(asset, fixture_id, revision, policy)
+                pub_key = next((k['key'] for k in ed_keys if k['key'].startswith('expo/') and k['key'].endswith('_900.jpg')), '')
+                if pub_key:
+                    expected_ed_mid = pub_key[len('expo/'):-len('_900.jpg')]
+            except ValueError:
+                pass
+            if not reg_mid or reg_mid == expected_ed_mid:
+                return None
     # Priority 1: a prior Expo edition with the exact same source_version_id
     # that already holds a registered cloud D1 identity.
     if has_pub_items:

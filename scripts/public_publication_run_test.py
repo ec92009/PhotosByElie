@@ -491,6 +491,14 @@ class PublicPublicationRunTests(unittest.TestCase):
             title = catalog.execute('SELECT title FROM media_items WHERE media_id=?', (legacy_media_id,)).fetchone()[0]
             self.assertEqual(title, 'Updated Expo Title')
 
+        # An overlapping run pinned to the exact same (fixture, asset, revision)
+        # after the first run already registered the reused legacy media_id must
+        # still recover those exact legacy receipts instead of re-exporting.
+        with connect(self.root) as conn:
+            overlapping = recovery_receipts(self.root, conn, self.fixture, asset_id, revision)
+        self.assertTrue(overlapping)
+        self.assertIn(f'expo/{legacy_media_id}_900.jpg', {r['key'] for r in overlapping})
+
     def test_registered_expo_edition_reuses_same_media_id_across_metadata_edits(self):
         import sqlite3
         import fixture_editions as editions

@@ -3,7 +3,7 @@
   "publicPreviewKeyScheme": "expo/<photo-id>_900.jpg and expo/<photo-id>_1800.jpg for photos or expo/<photo-id>_short_5s_720p.mp4 for videos",
   "privateMasterKeyScheme": "masters/<photo-id>.<original-format>",
   "privateRenderKeyScheme": "renders/<photo-id>_<1|3|6>mp.jpg",
-  "photosCount": 6411,
+  "photosCount": 6408,
   "photos": {
     "20160714-1357-07255-pano-735b2de8ed": {
       "id": "20160714-1357-07255-pano-735b2de8ed",
@@ -184590,35 +184590,6 @@
         }
       }
     },
-    "6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56": {
-      "id": "6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56",
-      "collectionKey": "portugal",
-      "collectionTitle": "Portugal",
-      "sourcePath": "Apple Photos Sidecar Uploads/20180517 213528.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/20180517 213528.jpg",
-        "type": "JPG",
-        "bytes": 7786745
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56_900.jpg",
-        "detailKey": "expo/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56_6mp.jpg",
-          "jpg-3mp": "renders/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56_3mp.jpg",
-          "jpg-1mp": "renders/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e-ed3d485c8f5c5e0edd0dfbd56_1mp.jpg"
-        }
-      }
-    },
     "6a4b0884-b256-4119-934a-be934aaedf1b-001-arpbojsl0xgkroj6eyzhmzwrf29c-d8f31f16f0-eef4e7bf6e9b1bb876d536444": {
       "id": "6a4b0884-b256-4119-934a-be934aaedf1b-001-arpbojsl0xgkroj6eyzhmzwrf29c-d8f31f16f0-eef4e7bf6e9b1bb876d536444",
       "collectionKey": "portugal",
@@ -184674,35 +184645,6 @@
           "jpg-6mp": "renders/6a8a7e71-e5fc-41b3-a5d9-8dee7c3a9556-001-aynfhjpj5js1h4g06aei-vsuvqca-7de1fe16ab-e430a32442acbf96ce037f359_6mp.jpg",
           "jpg-3mp": "renders/6a8a7e71-e5fc-41b3-a5d9-8dee7c3a9556-001-aynfhjpj5js1h4g06aei-vsuvqca-7de1fe16ab-e430a32442acbf96ce037f359_3mp.jpg",
           "jpg-1mp": "renders/6a8a7e71-e5fc-41b3-a5d9-8dee7c3a9556-001-aynfhjpj5js1h4g06aei-vsuvqca-7de1fe16ab-e430a32442acbf96ce037f359_1mp.jpg"
-        }
-      }
-    },
-    "6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7": {
-      "id": "6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7",
-      "collectionKey": "portugal",
-      "collectionTitle": "Portugal",
-      "sourcePath": "Apple Photos Sidecar Uploads/20180517 212720-2.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/20180517 212720-2.jpg",
-        "type": "JPG",
-        "bytes": 15585029
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7_900.jpg",
-        "detailKey": "expo/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7_6mp.jpg",
-          "jpg-3mp": "renders/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7_3mp.jpg",
-          "jpg-1mp": "renders/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9-e1b5dc81c909a0f7edbb2b3f7_1mp.jpg"
         }
       }
     },
@@ -185138,35 +185080,6 @@
           "jpg-6mp": "renders/87d61ad1-4495-4ce9-8744-84ca47e210f3-001-adxu9wg8u1-ybhyq10j5scq0qe4p-43b0f94de4-e7eff9f8a4f76ddb7ba35530c_6mp.jpg",
           "jpg-3mp": "renders/87d61ad1-4495-4ce9-8744-84ca47e210f3-001-adxu9wg8u1-ybhyq10j5scq0qe4p-43b0f94de4-e7eff9f8a4f76ddb7ba35530c_3mp.jpg",
           "jpg-1mp": "renders/87d61ad1-4495-4ce9-8744-84ca47e210f3-001-adxu9wg8u1-ybhyq10j5scq0qe4p-43b0f94de4-e7eff9f8a4f76ddb7ba35530c_1mp.jpg"
-        }
-      }
-    },
-    "lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3": {
-      "id": "lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3",
-      "collectionKey": "portugal",
-      "collectionTitle": "Portugal",
-      "sourcePath": "Apple Photos Sidecar Uploads/20180518 141202-2.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/20180518 141202-2.jpg",
-        "type": "JPG",
-        "bytes": 17001576
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3_900.jpg",
-        "detailKey": "expo/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3_6mp.jpg",
-          "jpg-3mp": "renders/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3_3mp.jpg",
-          "jpg-1mp": "renders/lkvwvmavhx1t70mkk69defo-f4244d76d2-ede3869261060f6066c317cd3_1mp.jpg"
         }
       }
     },

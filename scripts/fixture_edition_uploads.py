@@ -183,10 +183,120 @@ def catalog_recovery_rows(root, conn, fixture_id):
     return rows
 
 
+def _verified_receipts_for_version(conn, fixture_id, asset_id, version_hash, planned_keys, *, verification_method):
+    if not planned_keys:
+        return []
+    results = []
+    for key in planned_keys:
+        receipt = conn.execute("""SELECT r.checksum_sha256,r.verification_json,o.bytes
+            FROM fixture_delivery_receipts r JOIN r2_objects o
+            ON o.object_key=r.object_key AND o.bucket=? AND o.lifecycle_state='current' AND o.photo_id=r.asset_id
+            WHERE r.fixture_id=? AND r.asset_id=? AND r.version_hash=?
+              AND r.destination='r2' AND r.status='verified' AND r.object_key=?""",
+            (key['bucket'], fixture_id, asset_id, version_hash, key['key'])).fetchone()
+        if not receipt:
+            return []
+        proof = json.loads(receipt['verification_json'] or '{}')
+        checksum = receipt['checksum_sha256']
+        if not checksum or proof.get('bucket') != key['bucket'] or not proof.get('remoteVerified') or proof.get('remoteChecksumSha256') != checksum:
+            return []
+        results.append(dict(key, status='uploaded', objectKind=key['kind'], checksumSha256=checksum,
+                            remoteChecksumSha256=checksum, remoteVerified=True, bytes=receipt['bytes'],
+                            verificationMethod=verification_method))
+    return results
+
+
+def reusable_expo_same_source_receipts(conn, fixture_id, asset_id, revision, policy):
+    """Reuse verified current Expo R2 objects for the exact same source version.
+
+    Preserves cloud D1 1-to-1 canonical_asset_id identity and avoids duplicate
+    uploads or SQLite rows when Expo metadata/approvals advance on unchanged
+    image pixels. Non-Expo fixtures never share Expo object keys.
+    """
+    from sidecar_state_db import _planned_r2_keys
+    from fixture_policy import policy_allows_r2_result
+    if not is_expo_fixture(conn, fixture_id):
+        return None
+    edition = validate_upload(conn, fixture_id, asset_id, revision)
+    source_version_id = str(edition.get('source_version_id') or '')
+    if not source_version_id:
+        return None
+    has_pub_items = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='public_publication_items'").fetchone() is not None
+    if has_pub_items:
+        already_registered = conn.execute("""SELECT 1 FROM public_publication_items i
+            JOIN public_publication_runs r ON r.run_id=i.run_id
+            WHERE r.fixture_id=? AND i.asset_id=? AND i.source_version_hash=? AND i.registration_json<>''
+            LIMIT 1""", (fixture_id, asset_id, revision)).fetchone()
+        if already_registered:
+            return None
+    asset_row = conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?', (asset_id,)).fetchone()
+    if asset_row is None:
+        return None
+    asset = dict(asset_row)
+    # Priority 1: a prior Expo edition with the exact same source_version_id
+    # that already holds a registered cloud D1 identity.
+    if has_pub_items:
+        prior_registered = conn.execute("""SELECT DISTINCT i.source_version_hash AS rev
+            FROM public_publication_items i
+            JOIN public_publication_runs r ON r.run_id=i.run_id
+            JOIN fixture_edition_versions v
+              ON v.fixture_id=r.fixture_id AND v.asset_id=i.asset_id AND v.revision_hash=i.source_version_hash
+            WHERE r.fixture_id=? AND i.asset_id=? AND v.source_version_id=?
+              AND i.source_version_hash<>? AND i.registration_json<>''
+            ORDER BY i.updated_at DESC""", (fixture_id, asset_id, source_version_id, revision)).fetchall()
+        for candidate in prior_registered:
+            prior_rev = str(candidate['rev'] or '')
+            if not prior_rev:
+                continue
+            try:
+                planned = object_keys(asset, fixture_id, prior_rev, policy)
+            except ValueError:
+                continue
+            receipts = _verified_receipts_for_version(
+                conn, fixture_id, asset_id, prior_rev, planned,
+                verification_method='existing-expo-edition-receipt',
+            )
+            if receipts:
+                return {'receiptVersionHash': prior_rev, 'receipts': receipts}
+    # Priority 2: verified pre-edition Expo R2 objects for the exact same source_version_id.
+    candidate_media_ids = [
+        str(row['media_id'])
+        for row in conn.execute("""SELECT DISTINCT media_id FROM public_catalog_publications
+            WHERE asset_id=? AND source_version_hash=? AND media_id<>''
+            ORDER BY updated_at DESC, media_id""", (asset_id, source_version_id)).fetchall()
+    ]
+    for row in conn.execute("""SELECT object_key FROM fixture_delivery_receipts
+        WHERE fixture_id=? AND asset_id=? AND version_hash=? AND destination='r2' AND status='verified'
+          AND object_key LIKE 'expo/%_900.jpg'
+        ORDER BY updated_at DESC, object_key""", (fixture_id, asset_id, source_version_id)).fetchall():
+        key = str(row['object_key'] or '')
+        if key.startswith('expo/') and key.endswith('_900.jpg'):
+            mid = key[len('expo/'):-len('_900.jpg')]
+            if mid and mid not in candidate_media_ids:
+                candidate_media_ids.append(mid)
+    for legacy_media_id in candidate_media_ids:
+        try:
+            _, raw_keys = _planned_r2_keys(asset, media_id=legacy_media_id)
+        except ValueError:
+            continue
+        planned = [k for k in raw_keys if policy_allows_r2_result(policy, k)]
+        receipts = _verified_receipts_for_version(
+            conn, fixture_id, asset_id, source_version_id, planned,
+            verification_method='existing-expo-preedition-receipt',
+        )
+        if receipts:
+            return {'receiptVersionHash': source_version_id, 'mediaId': legacy_media_id, 'receipts': receipts}
+    return None
+
+
 def recovery_receipts(root, conn, fixture_id, asset_id, revision):
     """Recover only this edition's exact current, checksum-verified object set."""
     from fixture_policy import effective_fixture_policy
     validate_upload(conn, fixture_id, asset_id, revision)
+    policy = effective_fixture_policy(root, fixture_id, conn=conn)['effective']
+    reusable = reusable_expo_same_source_receipts(conn, fixture_id, asset_id, revision, policy)
+    if reusable:
+        return reusable['receipts']
     delivery = conn.execute('SELECT * FROM fixture_edition_delivery WHERE fixture_id=? AND asset_id=? AND revision_hash=?',
                             (fixture_id, asset_id, revision)).fetchone()
     if not delivery:
@@ -197,22 +307,7 @@ def recovery_receipts(root, conn, fixture_id, asset_id, revision):
     if receipt_version != revision:
         return []
     asset = dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?', (asset_id,)).fetchone())
-    policy = effective_fixture_policy(root, fixture_id, conn=conn)['effective']
-    results = []
-    for key in object_keys(asset, fixture_id, revision, policy):
-        receipt = conn.execute("""SELECT r.checksum_sha256,r.verification_json,o.bytes
-            FROM fixture_delivery_receipts r JOIN r2_objects o
-            ON o.object_key=r.object_key AND o.bucket=? AND o.lifecycle_state='current' AND o.photo_id=r.asset_id
-            WHERE r.fixture_id=? AND r.asset_id=? AND r.version_hash=?
-              AND r.destination='r2' AND r.status='verified' AND r.object_key=?""",
-            (key['bucket'], fixture_id, asset_id, revision, key['key'])).fetchone()
-        if not receipt:
-            return []
-        proof = json.loads(receipt['verification_json'])
-        checksum = receipt['checksum_sha256']
-        if not checksum or proof.get('bucket') != key['bucket'] or not proof.get('remoteVerified') or proof.get('remoteChecksumSha256') != checksum:
-            return []
-        results.append(dict(key, status='uploaded', objectKind=key['kind'], checksumSha256=checksum,
-                            remoteChecksumSha256=checksum, remoteVerified=True, bytes=receipt['bytes'],
-                            verificationMethod='existing-fixture-edition-receipt'))
-    return results
+    return _verified_receipts_for_version(
+        conn, fixture_id, asset_id, revision, object_keys(asset, fixture_id, revision, policy),
+        verification_method='existing-fixture-edition-receipt',
+    )

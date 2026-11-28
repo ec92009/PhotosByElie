@@ -281,23 +281,59 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
             (run_id,),
         ).fetchall()
         asset_ids = [str(row["asset_id"]) for row in retryable]
+        reconcilable_ids: list[str] = []
+        if scoped and not catalog_recovery and run["fixture_id"]:
+            from fixture_editions import is_expo_fixture
+            from fixture_edition_uploads import reusable_expo_same_source_receipts
+            from fixture_policy import effective_fixture_policy
+            from public_publication_state import get as get_public_run
+            public_run = get_public_run(conn, run_id)
+            if public_run and is_expo_fixture(conn, str(run["fixture_id"])):
+                policy = effective_fixture_policy(repo_root, str(run["fixture_id"]), conn=conn)["effective"]
+                verified_unregistered = conn.execute(
+                    """
+                    SELECT item.asset_id, item.source_version_hash
+                    FROM asset_upload_run_items AS item
+                    JOIN public_publication_items AS ppi
+                      ON ppi.run_id = item.run_id AND ppi.asset_id = item.asset_id
+                    LEFT JOIN fixture_edition_delivery AS ed
+                      ON ed.fixture_id = ? AND ed.asset_id = item.asset_id
+                     AND ed.revision_hash = item.source_version_hash
+                    WHERE item.run_id = ? AND item.status = 'verified'
+                      AND ppi.registration_json = ''
+                      AND COALESCE(ed.receipt_version_hash, '') = ''
+                    """,
+                    (run["fixture_id"], run_id),
+                ).fetchall()
+                for cand in verified_unregistered:
+                    cand_asset = str(cand["asset_id"])
+                    cand_rev = str(cand["source_version_hash"])
+                    if cand_asset in asset_ids:
+                        continue
+                    try:
+                        if reusable_expo_same_source_receipts(conn, str(run["fixture_id"]), cand_asset, cand_rev, policy):
+                            reconcilable_ids.append(cand_asset)
+                    except ValueError:
+                        continue
+        if reconcilable_ids:
+            asset_ids.extend(reconcilable_ids)
         if asset_ids:
             source_reset = (
                 "source_version_hash = source_version_hash"
                 if catalog_recovery or scoped
                 else "source_version_hash = ''"
             )
+            placeholders = ",".join("?" for _ in asset_ids)
             conn.execute(
                 f"""
                 UPDATE asset_upload_run_items
                 SET status = 'queued', {source_reset},
                     object_keys_json = '[]', error_text = '',
                     started_at = NULL, completed_at = NULL, updated_at = ?
-                WHERE run_id = ? AND status IN ('failed', 'uploading')
+                WHERE run_id = ? AND asset_id IN ({placeholders})
                 """,
-                (timestamp, run_id),
+                (timestamp, run_id, *asset_ids),
             )
-            placeholders = ",".join("?" for _ in asset_ids)
             if scoped:
                 conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='needs-upload',last_error='',updated_at=?
                     WHERE fixture_id=? AND delivery_state IN ('failed','uploading') AND EXISTS (

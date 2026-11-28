@@ -148,3 +148,45 @@ class PublicAccessVerificationTests(unittest.TestCase):
             calls+=1
             result=self.observe(items);result['items'][0]['revision']=calls;return result
         self.assertEqual(self.verify(observer=changed)['failed'],1)
+
+    def test_fetch_preview_and_catalog_send_explicit_verifier_user_agent(self):
+        from unittest.mock import patch
+
+        seen = []
+
+        class FakeResponse:
+            def __init__(self, url, content_type, body):
+                self.status = 200
+                self.url = url
+                self._body = body
+                self.headers = self
+                self._content_type = content_type
+
+            def get_content_type(self):
+                return self._content_type
+
+            def read(self, _limit=-1):
+                return self._body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        def fake_urlopen(request, timeout=None):
+            seen.append((request.full_url, dict(request.header_items()), timeout))
+            if request.full_url == access.CATALOG_URL:
+                return FakeResponse(request.full_url, 'application/octet-stream', self.catalog)
+            return FakeResponse(request.full_url, 'image/jpeg', self.preview)
+
+        with patch.object(access, 'urlopen', side_effect=fake_urlopen):
+            self.assertEqual(access.fetch_preview('expo/sample-photo_900.jpg'), self.preview)
+            self.assertEqual(access.fetch_catalog(), self.catalog)
+
+        self.assertEqual(len(seen), 2)
+        for _url, headers, _timeout in seen:
+            lower = {k.lower(): v for k, v in headers.items()}
+            self.assertEqual(lower.get('cache-control'), 'no-cache')
+            self.assertEqual(lower.get('user-agent'), access.VERIFIER_USER_AGENT)
+            self.assertNotIn('python-urllib', lower.get('user-agent', '').lower())

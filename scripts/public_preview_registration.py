@@ -30,8 +30,15 @@ def current_input(root, run_id, asset_id):
         validate_upload(conn,run['fixture_id'],asset_id,item['source_version_hash'])
         row = conn.execute('SELECT * FROM public_registration_inputs WHERE fixture_id=? AND asset_id=? AND approval_revision_hash=?',
                            (run['fixture_id'],asset_id,item['source_version_hash'])).fetchone()
-        if not row or row['source_version_hash'] != item['source_version_hash']:
+        if not row or row['approval_revision_hash'] != item['source_version_hash']:
             raise ValueError('Exact current uploaded preview and local catalog evidence is missing.')
+        if row['source_version_hash'] not in {item['source_version_hash'], row['source_version_id']}:
+            same_source = conn.execute(
+                'SELECT 1 FROM fixture_edition_versions WHERE fixture_id=? AND asset_id=? AND revision_hash=? AND source_version_id=?',
+                (run['fixture_id'], asset_id, row['source_version_hash'], row['source_version_id']),
+            ).fetchone()
+            if not same_source:
+                raise ValueError('Exact current uploaded preview and local catalog evidence is missing.')
         row, item = dict(row), dict(item)
         expected, previews = _expected(row,require_deployed=False)
         fingerprint = json.loads(row['input_json'])

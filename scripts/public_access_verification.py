@@ -19,6 +19,7 @@ PREVIEW_BASE = "https://download.photos-by-elie.com/media/"
 SCHEMA = "photosbyelie.publicPreviewObservation.v1"
 MAX_BATCH = 20
 MAX_PREVIEW_BYTES = 12 * 1024 * 1024
+VERIFIER_USER_AGENT = "PhotosByElie Backstage public access verifier"
 
 
 def ensure_schema(conn):
@@ -147,7 +148,7 @@ def _expected(row, *, require_deployed=True):
 def fetch_preview(key):
     if not re.fullmatch(r'expo/[a-zA-Z0-9._-]+_(900|1800)\.jpg', key):
         raise ValueError('Unsupported public preview key.')
-    request = Request(PREVIEW_BASE + key, headers={'Cache-Control': 'no-cache'})
+    request = Request(PREVIEW_BASE + key, headers={'Cache-Control': 'no-cache', 'User-Agent': VERIFIER_USER_AGENT})
     with urlopen(request, timeout=12) as response:
         if response.status != 200 or response.url != PREVIEW_BASE + key or response.headers.get_content_type() != 'image/jpeg':
             raise ValueError('Public preview is not an accessible JPEG at its exact URL.')
@@ -158,7 +159,8 @@ def fetch_preview(key):
 
 
 def fetch_catalog():
-    with urlopen(Request(CATALOG_URL, headers={'Cache-Control': 'no-cache'}), timeout=20) as response:
+    request = Request(CATALOG_URL, headers={'Cache-Control': 'no-cache', 'User-Agent': VERIFIER_USER_AGENT})
+    with urlopen(request, timeout=20) as response:
         if response.status != 200 or response.url != CATALOG_URL:
             raise ValueError('The exact public catalog URL is unavailable.')
         body = response.read(16 * 1024 * 1024 + 1)

@@ -844,13 +844,21 @@ def publish_verified_asset(
             ]
             for fixture_id, policy in fixture_policies.items()
         }
+        receipt_version_hash = ""
+        effective_version_hash = version_hash
         if scoped:
-            from fixture_edition_uploads import object_keys
+            from fixture_edition_uploads import object_keys, reusable_expo_same_source_receipts
             asset = dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?',(asset_id,)).fetchone())
             expected = {(k['bucket'],k['key']) for k in object_keys(asset,fixture_id,revision_hash,fixture_policies[fixture_id])}
             received = {(r['bucket'],r['key']) for r in results}
             if expected != received:
-                raise ValueError("Uploaded receipts do not match this fixture edition's exact destinations.")
+                reusable = reusable_expo_same_source_receipts(conn, fixture_id, asset_id, revision_hash, fixture_policies[fixture_id])
+                reusable_keys = {(k['bucket'], k['key']) for k in reusable['receipts']} if reusable else set()
+                if reusable and reusable_keys == received:
+                    receipt_version_hash = str(reusable['receiptVersionHash'])
+                    effective_version_hash = receipt_version_hash
+                else:
+                    raise ValueError("Uploaded receipts do not match this fixture edition's exact destinations.")
         publishable_fixture_ids = [
             fixture_id
             for fixture_id in fixture_ids
@@ -912,7 +920,7 @@ def publish_verified_asset(
                 ON CONFLICT(asset_id, fixture_id, source_version_hash) DO UPDATE SET
                   state = 'live', withdrawn_at = NULL, updated_at = excluded.updated_at
                 """,
-                (asset_id, fixture_id, version_hash, timestamp, timestamp),
+                (asset_id, fixture_id, effective_version_hash, timestamp, timestamp),
             )
             for result in fixture_results[fixture_id]:
                 record_delivery_receipt(
@@ -920,7 +928,7 @@ def publish_verified_asset(
                     fixture_id=fixture_id,
                     asset_id=asset_id,
                     destination="r2",
-                    version_hash=version_hash,
+                    version_hash=effective_version_hash,
                     status="verified",
                     object_key=str(result["key"]),
                     checksum_sha256=str(result["checksumSha256"]),
@@ -938,8 +946,13 @@ def publish_verified_asset(
                     conn=conn,
                 )
         if scoped:
-            conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='live',receipt_version_hash='',last_error='',updated_at=?
-                WHERE fixture_id=? AND asset_id=? AND revision_hash=?""",(timestamp,fixture_id,asset_id,revision_hash))
+            conn.execute("""UPDATE fixture_edition_delivery SET delivery_state='live',receipt_version_hash=?,last_error='',updated_at=?
+                WHERE fixture_id=? AND asset_id=? AND revision_hash=?""",(receipt_version_hash,timestamp,fixture_id,asset_id,revision_hash))
+            if receipt_version_hash and conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='public_publication_items'").fetchone():
+                conn.execute("""UPDATE public_publication_items SET input_json='',updated_at=?
+                    WHERE asset_id=? AND source_version_hash=? AND envelope_json='' AND registration_json=''
+                      AND run_id IN (SELECT run_id FROM public_publication_runs WHERE fixture_id=?)""",
+                    (timestamp, asset_id, revision_hash, fixture_id))
         else:
             conn.execute(
                 """
@@ -980,7 +993,7 @@ def publish_verified_asset(
             record_catalog_pending(
                 conn,
                 asset_id=asset_id,
-                source_version_hash=version_hash,
+                source_version_hash=effective_version_hash,
                 media_id=str(catalog_plan["mediaId"]),
                 timestamp=timestamp,
             )
@@ -997,6 +1010,7 @@ def publish_verified_asset(
             version_hash,
             results,
             collection_resolver=collection_resolver,
+            receipt_version_hash=effective_version_hash,
             **({"fixture_id": fixture_id} if scoped else {}),
         )
     elif catalog_plan.get("eligible"):
@@ -1011,6 +1025,7 @@ def publish_verified_asset(
         "ok": True,
         "assetId": asset_id,
         "sourceVersionHash": version_hash,
+        "receiptVersionHash": effective_version_hash,
         "fixtureIds": publishable_fixture_ids,
         "skippedFixtureIds": sorted(set(fixture_ids) - set(publishable_fixture_ids)),
         "fixturePolicies": fixture_policies,
@@ -1243,6 +1258,9 @@ def run_upload_batch(
                     pending_promotions[asset_id] = {
                         "asset_id": asset_id,
                         "source_version_hash": str(result.get("sourceVersionHash") or ""),
+                        "receipt_version_hash": str(
+                            result.get("receiptVersionHash") or result.get("sourceVersionHash") or ""
+                        ),
                         "upload_results": result.get("verifiedResults") or [],
                         "candidate": result["catalogCandidate"],
                     }
@@ -1363,21 +1381,27 @@ def run_upload_batch(
             from fixture_edition_uploads import recovery_receipts
             prior_rows = conn.execute(
                 """
-                SELECT item.asset_id, item.source_version_hash
+                SELECT item.asset_id, item.source_version_hash,
+                       COALESCE(NULLIF(ed.receipt_version_hash, ''), item.source_version_hash) AS receipt_version_hash
                 FROM asset_upload_run_items AS item
+                LEFT JOIN fixture_edition_delivery AS ed
+                  ON ed.fixture_id = ?
+                 AND ed.asset_id = item.asset_id
+                 AND ed.revision_hash = item.source_version_hash
                 LEFT JOIN public_catalog_publications AS catalog
                   ON catalog.asset_id = item.asset_id
-                 AND catalog.source_version_hash = item.source_version_hash
+                 AND catalog.source_version_hash = COALESCE(NULLIF(ed.receipt_version_hash, ''), item.source_version_hash)
                 WHERE item.run_id = ?
                   AND item.status = 'verified'
                   AND COALESCE(catalog.state, 'pending') NOT IN ('local', 'live')
                 ORDER BY item.asset_id
                 """,
-                (run_id,),
+                (fixture_id, run_id),
             ).fetchall()
             for prior_row in prior_rows:
                 prior_asset_id = str(prior_row["asset_id"])
                 prior_rev = str(prior_row["source_version_hash"])
+                prior_receipt_rev = str(prior_row["receipt_version_hash"] or prior_rev)
                 if prior_asset_id in pending_promotions:
                     continue
                 receipts = recovery_receipts(repo_root, conn, fixture_id, prior_asset_id, prior_rev)
@@ -1385,6 +1409,7 @@ def run_upload_batch(
                     pending_promotions[prior_asset_id] = {
                         "asset_id": prior_asset_id,
                         "source_version_hash": prior_rev,
+                        "receipt_version_hash": prior_receipt_rev,
                         "upload_results": receipts,
                     }
 
@@ -1528,19 +1553,39 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         ).fetchone()
         if not row:
             raise ValueError("upload run does not exist")
-        items = conn.execute(
-            """
-            SELECT item.asset_id, item.source_version_hash, item.status, item.error_text,
-                   item.updated_at,
-                   COALESCE(catalog.state, 'not-applicable') AS catalog_state
-            FROM asset_upload_run_items AS item
-            LEFT JOIN public_catalog_publications AS catalog
-              ON catalog.asset_id = item.asset_id
-             AND catalog.source_version_hash = item.source_version_hash
-            WHERE item.run_id = ? ORDER BY item.asset_id
-            """,
-            (run_id,),
-        ).fetchall()
+        scoped_status = editions_enabled(conn)
+        if scoped_status:
+            items = conn.execute(
+                """
+                SELECT item.asset_id, item.source_version_hash, item.status, item.error_text,
+                       item.updated_at,
+                       COALESCE(catalog.state, 'not-applicable') AS catalog_state
+                FROM asset_upload_run_items AS item
+                LEFT JOIN fixture_edition_delivery AS ed
+                  ON ed.fixture_id = ?
+                 AND ed.asset_id = item.asset_id
+                 AND ed.revision_hash = item.source_version_hash
+                LEFT JOIN public_catalog_publications AS catalog
+                  ON catalog.asset_id = item.asset_id
+                 AND catalog.source_version_hash = COALESCE(NULLIF(ed.receipt_version_hash, ''), item.source_version_hash)
+                WHERE item.run_id = ? ORDER BY item.asset_id
+                """,
+                (row['fixture_id'] if 'fixture_id' in row.keys() else '', run_id),
+            ).fetchall()
+        else:
+            items = conn.execute(
+                """
+                SELECT item.asset_id, item.source_version_hash, item.status, item.error_text,
+                       item.updated_at,
+                       COALESCE(catalog.state, 'not-applicable') AS catalog_state
+                FROM asset_upload_run_items AS item
+                LEFT JOIN public_catalog_publications AS catalog
+                  ON catalog.asset_id = item.asset_id
+                 AND catalog.source_version_hash = item.source_version_hash
+                WHERE item.run_id = ? ORDER BY item.asset_id
+                """,
+                (run_id,),
+            ).fetchall()
         has_public_observations = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='view' AND name='public_access_current'"
         ).fetchone() is not None
@@ -1548,7 +1593,7 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         for item in items:
             value = dict(item)
             verified = conn.execute("""SELECT expires_at FROM public_access_current
-                WHERE fixture_id=? AND asset_id=? AND source_version_hash=?""",
+                WHERE fixture_id=? AND asset_id=? AND approval_revision_hash=?""",
                 (row['fixture_id'] if 'fixture_id' in row.keys() else '',item['asset_id'],item['source_version_hash'])).fetchone() if has_public_observations else None
             value['public_access_expires_at'] = verified['expires_at'] if verified else ''
             observed_items.append(value)

@@ -370,3 +370,160 @@ class PublicPublicationRunTests(unittest.TestCase):
                 self.assertEqual(after['revision'], before['revision'] + 1)
                 self.assertEqual(projection._authority_enrollment(conn)['state'], 'pending')
                 self.assertEqual(after['mediaCount'], before['mediaCount'] + 3)
+
+    def test_preedition_expo_asset_reuses_legacy_identity_and_retires_unregistered_duplicate(self):
+        import sqlite3
+        import fixture_editions as editions
+        from fixture_edition_uploads import recovery_receipts
+        from fixture_pipeline import record_delivery_receipt, set_fixture_asset_state
+        from native_asset_publication import reset_upload_run_for_retry
+        from native_publication_pipeline import publish_verified_asset
+        from sidecar_state_db import _planned_r2_keys, upsert_assets
+
+        asset_id = 'legacy-expo-1'
+        source_version_id = 'srcv-legacy-expo-1'
+        legacy_media_id = 'legacy-expo-1-abc1234567'
+        upsert_assets(self.root, [
+            dict(localIdentifier=asset_id, filename='legacy-expo-1.jpg', mediaType='photo',
+                 pixelWidth=3000, pixelHeight=2000, title='Original Legacy Title')
+        ])
+        set_fixture_asset_state(self.root, self.fixture, [asset_id], 'picked')
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET location_label='Spain' WHERE asset_id=?", (asset_id,))
+            conn.execute(
+                "INSERT INTO asset_source_versions (version_id,asset_id,metadata_fingerprint,rendered_fingerprint,source_exists,state,created_at) VALUES (?,?, '', '',1,'live','2026-01-01')",
+                (source_version_id, asset_id),
+            )
+            asset_row = dict(conn.execute('SELECT * FROM sidecar_assets WHERE asset_id=?', (asset_id,)).fetchone())
+            _, legacy_keys = _planned_r2_keys(asset_row, media_id=legacy_media_id)
+            now_ts = access._now()
+            for key in legacy_keys:
+                conn.execute(
+                    """INSERT INTO r2_objects (bucket,object_key,photo_id,object_kind,lifecycle_state,first_seen_at,last_seen_at,last_checked_at,source,bytes,updated_at)
+                       VALUES (?,?,?,?,'current',?,?,?,'legacy',?,?)""",
+                    (key['bucket'], key['key'], asset_id, key['kind'], now_ts, now_ts, now_ts, len(self.preview), now_ts),
+                )
+                record_delivery_receipt(
+                    self.root, fixture_id=self.fixture, asset_id=asset_id, destination='r2',
+                    version_hash=source_version_id, status='verified', object_key=key['key'],
+                    checksum_sha256=self.sha,
+                    visibility_policy='public' if key['bucket'].endswith('public') else 'private',
+                    verification={'bucket': key['bucket'], 'bytes': len(self.preview), 'remoteVerified': True, 'remoteChecksumSha256': self.sha},
+                    conn=conn,
+                )
+            conn.execute(
+                """INSERT INTO asset_publications (asset_id,fixture_id,source_version_hash,state,published_at,updated_at)
+                   VALUES (?,?,?,'live',?,?)""",
+                (asset_id, self.fixture, source_version_id, now_ts, now_ts),
+            )
+            conn.execute(
+                """INSERT INTO public_catalog_publications (asset_id,source_version_hash,media_id,state,public_url,catalog_sha256,error_text,created_at,verified_at,updated_at)
+                   VALUES (?,?,?,'live',?,?, '', ?, ?, ?)""",
+                (asset_id, source_version_id, legacy_media_id, access.CATALOG_URL, hashlib.sha256(self.catalog).hexdigest(), now_ts, now_ts, now_ts),
+            )
+            edition = editions.seed_edition(
+                conn, self.fixture, asset_id, source_version_id=source_version_id,
+                title='Updated Expo Title', keywords=['Spain'], country='Spain',
+            )
+            edition = editions.approve_edition(conn, self.fixture, asset_id, expected_revision=editions.revision_hash(edition))
+            revision = edition['approved_revision_hash']
+            conn.commit()
+
+        # Simulate a prior conflicting run where an unregistered -e<24hex> row was written to SQLite
+        # and registration failed with a 409 D1 conflict on canonical_asset_id.
+        run_id = create_upload_run(self.root, [asset_id], fixture_id=self.fixture)['runId']
+        claim_upload_run_start(self.root, run_id)
+        with connect(self.root) as conn:
+            policy = effective_fixture_policy(self.root, self.fixture, conn=conn)['effective']
+            edition_keys = object_keys(asset_row, self.fixture, revision, policy)
+            edition_media_id = edition_keys[1]['key'].removeprefix('expo/').removesuffix('_900.jpg')
+        edition_receipts = [
+            dict(k, status='uploaded', objectKind=k['kind'], checksumSha256=self.sha,
+                 remoteChecksumSha256=self.sha, remoteVerified=True, bytes=len(self.preview))
+            for k in edition_keys
+        ]
+        run_upload_batch(self.root, run_id, lambda _: edition_receipts)
+
+        class StrictPreEditionCloud(Cloud):
+            def observe(self, items):
+                from datetime import datetime, timedelta, timezone
+                now = datetime.now(timezone.utc)
+                item = items[0]
+                if item['canonicalMediaId'] == legacy_media_id:
+                    return dict(schema=access.SCHEMA, readOnly=True, checkedAt=now.isoformat(),
+                                expiresAt=(now + timedelta(minutes=5)).isoformat(),
+                                items=[dict(item, allowed=True, revision=0, receiptId='legacy-d1', reason='allowed')])
+                return dict(schema=access.SCHEMA, readOnly=True, checkedAt=now.isoformat(),
+                            expiresAt=(now + timedelta(minutes=5)).isoformat(),
+                            items=[dict(item, allowed=False, revision=None, receiptId='', reason='identity-missing')])
+
+            def prepare(self, repair_id, items):
+                raise RuntimeError('An identity, projection or barrier already exists. Verify or reconcile it; never register another identity.')
+
+        strict_cloud = StrictPreEditionCloud()
+        first = finish_publication(
+            self.root, run_id, client=strict_cloud,
+            register=lambda r, rid, aid, cl: register_item(r, rid, aid, cl, fetch=lambda *_: {'bytes': len(self.preview), 'sha256': self.sha}),
+            deploy=self.deploy, verify=self.verify,
+        )
+        self.assertEqual((first['status'], first['publicationPhase']), ('failed', 'registration'), first)
+
+        # Retry reconciles the unregistered conflict item onto its verified legacy receipt,
+        # retires the unregistered -e<24hex> row from SQLite, and completes with 0 D1 writes.
+        claim_upload_run_start(self.root, run_id, retry_failed=True)
+        reset = reset_upload_run_for_retry(self.root, run_id)
+        self.assertEqual(reset['resetCount'], 1)
+        def recovered_upload(aid):
+            with connect(self.root) as conn:
+                return recovery_receipts(self.root, conn, self.fixture, aid, revision)
+        second_upload = run_upload_batch(self.root, run_id, recovered_upload)
+        self.assertEqual(second_upload['failed'], 0, second_upload)
+        finished = finish_publication(
+            self.root, run_id, client=strict_cloud,
+            register=lambda r, rid, aid, cl: register_item(r, rid, aid, cl, fetch=lambda *_: {'bytes': len(self.preview), 'sha256': self.sha}),
+            deploy=self.deploy, verify=self.verify,
+        )
+        self.assertEqual((finished['status'], finished['live'], finished['registered'], finished['publicVerified']), ('completed', 1, 1, 1), finished)
+        self.assertEqual(strict_cloud.applies, 0)
+        with sqlite3.connect(self.root / 'assets/catalog/photosbyelie.sqlite') as catalog:
+            mids = [r[0] for r in catalog.execute('SELECT media_id FROM media_items WHERE media_id IN (?,?)', (legacy_media_id, edition_media_id)).fetchall()]
+            self.assertEqual(mids, [legacy_media_id])
+            title = catalog.execute('SELECT title FROM media_items WHERE media_id=?', (legacy_media_id,)).fetchone()[0]
+            self.assertEqual(title, 'Updated Expo Title')
+
+    def test_registered_expo_edition_reuses_same_media_id_across_metadata_edits(self):
+        import sqlite3
+        import fixture_editions as editions
+        from fixture_edition_uploads import recovery_receipts
+
+        # Complete initial run for 'photo' so D1 registers its first edition media_id.
+        first = self.finish()
+        self.assertEqual(first['status'], 'completed', first)
+        with connect(self.root) as conn:
+            first_media_id = conn.execute(
+                'SELECT media_id FROM public_catalog_publications WHERE asset_id=? AND source_version_hash=?',
+                ('photo', self.revision),
+            ).fetchone()[0]
+
+        # Edit title (same source_version_id), re-approve, and publish in a new run.
+        second_edition = self.base.approve(self.fixture, 'Spain Renamed')
+        second_rev = second_edition['approved_revision_hash']
+        self.assertNotEqual(second_rev, self.revision)
+        run2 = create_upload_run(self.root, ['photo'], fixture_id=self.fixture)['runId']
+        claim_upload_run_start(self.root, run2)
+        def recovered_upload(aid):
+            with connect(self.root) as conn:
+                receipts = recovery_receipts(self.root, conn, self.fixture, aid, second_rev)
+            self.assertTrue(receipts)
+            return receipts
+        upload2 = run_upload_batch(self.root, run2, recovered_upload)
+        self.assertEqual(upload2['failed'], 0, upload2)
+        finished2 = finish_publication(
+            self.root, run2, client=self.cloud,
+            register=self.register, deploy=self.deploy, verify=self.verify,
+        )
+        self.assertEqual(finished2['status'], 'completed', finished2)
+        self.assertEqual(self.cloud.applies, 1)  # Reused first D1 identity; never registered a second!
+        with sqlite3.connect(self.root / 'assets/catalog/photosbyelie.sqlite') as catalog:
+            row = catalog.execute('SELECT title FROM media_items WHERE media_id=?', (first_media_id,)).fetchone()
+            self.assertEqual(row[0], 'Spain Renamed')

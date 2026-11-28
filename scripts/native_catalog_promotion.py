@@ -1044,26 +1044,78 @@ def _write_catalog_batch(repo_root: Path, candidates: list[dict[str, Any]]) -> l
                 "Owner public catalog projection is not initialized; import the reviewed projection under PBE-173"
             )
         previous_by_index: list[list[str]] = []
+        has_pub_items = owner.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='public_publication_items'"
+        ).fetchone() is not None
         for candidate in candidates:
             row = candidate["asset"]
             media_id = candidate["mediaId"]
-            previous_by_index.append(
-                [
-                    str(item["media_id"])
-                    for item in owner.execute(
+            fixture_edition_id = candidate.get("fixtureEditionID")
+            if fixture_edition_id:
+                from fixture_editions import is_expo_fixture
+                if is_expo_fixture(owner, str(fixture_edition_id)):
+                    # Retire superseded Expo edition and pre-edition rows for this
+                    # asset while preserving other fixtures' rows and any row that
+                    # already holds a registered cloud D1 identity.
+                    registered_guard = (
+                        """
+                        AND NOT EXISTS (
+                          SELECT 1 FROM public_publication_items AS ppi
+                          WHERE ppi.asset_id = public_catalog_publications.asset_id
+                            AND ppi.registration_json <> ''
+                            AND json_extract(ppi.registration_json, '$.items[0].canonicalMediaId') = public_catalog_publications.media_id
+                        )
+                        """
+                        if has_pub_items
+                        else ""
+                    )
+                    prev_rows = owner.execute(
                         f"""
                         SELECT DISTINCT media_id
                         FROM public_catalog_publications
                         WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
-                        {"AND source_version_hash IN (SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id=?)" if candidate.get("fixtureEditionID") else ""}
+                          AND (
+                            source_version_hash IN (
+                              SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id = ?
+                            )
+                            OR source_version_hash LIKE 'srcv-%'
+                          )
+                          AND media_id NOT IN (
+                            SELECT p2.media_id FROM public_catalog_publications AS p2
+                            WHERE p2.asset_id = public_catalog_publications.asset_id
+                              AND p2.source_version_hash IN (
+                                SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id <> ?
+                              )
+                          )
+                          {registered_guard}
                         ORDER BY updated_at DESC, media_id
                         """,
-                        (str(row["asset_id"]), media_id, candidate["fixtureEditionID"])
-                        if candidate.get("fixtureEditionID")
-                        else (str(row["asset_id"]), media_id),
+                        (str(row["asset_id"]), media_id, fixture_edition_id, fixture_edition_id),
                     ).fetchall()
-                ]
-            )
+                else:
+                    prev_rows = owner.execute(
+                        """
+                        SELECT DISTINCT media_id
+                        FROM public_catalog_publications
+                        WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
+                          AND source_version_hash IN (
+                            SELECT revision_hash FROM fixture_edition_versions WHERE fixture_id = ?
+                          )
+                        ORDER BY updated_at DESC, media_id
+                        """,
+                        (str(row["asset_id"]), media_id, fixture_edition_id),
+                    ).fetchall()
+            else:
+                prev_rows = owner.execute(
+                    """
+                    SELECT DISTINCT media_id
+                    FROM public_catalog_publications
+                    WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
+                    ORDER BY updated_at DESC, media_id
+                    """,
+                    (str(row["asset_id"]), media_id),
+                ).fetchall()
+            previous_by_index.append([str(item["media_id"]) for item in prev_rows])
         path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         staged_path = Path(staged_name)
@@ -1151,11 +1203,14 @@ def promote_verified_assets_batch(
     """Promote one batch of verified assets in a single atomic catalog projection."""
     outcomes: dict[str, dict[str, Any]] = {}
     errors: dict[str, str] = {}
-    ready: list[tuple[str, str, dict[str, Any]]] = []
+    ready: list[tuple[str, str, str, dict[str, Any]]] = []
     for item in items:
         asset_id = str(item.get("asset_id") or item.get("assetId") or "")
         source_version_hash = str(
             item.get("source_version_hash") or item.get("sourceVersionHash") or ""
+        )
+        receipt_version_hash = str(
+            item.get("receipt_version_hash") or item.get("receiptVersionHash") or source_version_hash
         )
         candidate = item.get("candidate")
         if candidate is None:
@@ -1184,27 +1239,27 @@ def promote_verified_assets_batch(
             _update_catalog_audit(
                 repo_root,
                 asset_id=asset_id,
-                source_version_hash=source_version_hash,
+                source_version_hash=receipt_version_hash,
                 media_id=media_id,
                 state="failed",
                 error_text=str(error),
             )
             errors[asset_id] = str(error)
             continue
-        ready.append((asset_id, source_version_hash, candidate))
+        ready.append((asset_id, source_version_hash, receipt_version_hash, candidate))
 
     if not ready or (abort_on_validation_error and errors):
         return {"outcomes": outcomes, "errors": errors}
 
     try:
-        registrations = _write_catalog_batch(repo_root, [entry[2] for entry in ready])
+        registrations = _write_catalog_batch(repo_root, [entry[3] for entry in ready])
         checksum = _catalog_sha256(repo_root / PUBLIC_CATALOG_PATH)
-        for (asset_id, source_version_hash, candidate), registration in zip(ready, registrations):
+        for (asset_id, source_version_hash, receipt_version_hash, candidate), registration in zip(ready, registrations):
             media_id = str(candidate["mediaId"])
             _update_catalog_audit(
                 repo_root,
                 asset_id=asset_id,
-                source_version_hash=source_version_hash,
+                source_version_hash=receipt_version_hash,
                 media_id=media_id,
                 state="local",
                 catalog_sha256=checksum,
@@ -1233,11 +1288,11 @@ def promote_verified_assets_batch(
             }
     except Exception as error:
         message = str(error)
-        for asset_id, source_version_hash, candidate in ready:
+        for asset_id, _source_version_hash, receipt_version_hash, candidate in ready:
             _update_catalog_audit(
                 repo_root,
                 asset_id=asset_id,
-                source_version_hash=source_version_hash,
+                source_version_hash=receipt_version_hash,
                 media_id=str(candidate["mediaId"]),
                 state="failed",
                 error_text=message,
@@ -1253,9 +1308,11 @@ def promote_verified_asset(
     upload_results: Iterable[dict[str, Any]],
     *,
     fixture_id: str | None = None,
+    receipt_version_hash: str | None = None,
     collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Write one verified asset to the local catalog and audit the handoff."""
+    audit_version_hash = str(receipt_version_hash or source_version_hash)
     results = [dict(item) for item in upload_results]
     with connect(repo_root) as conn:
         candidate = catalog_candidate(
@@ -1276,7 +1333,7 @@ def promote_verified_asset(
         _update_catalog_audit(
             repo_root,
             asset_id=asset_id,
-            source_version_hash=source_version_hash,
+            source_version_hash=audit_version_hash,
             media_id=media_id,
             state="local",
             catalog_sha256=checksum,
@@ -1307,7 +1364,7 @@ def promote_verified_asset(
         _update_catalog_audit(
             repo_root,
             asset_id=asset_id,
-            source_version_hash=source_version_hash,
+            source_version_hash=audit_version_hash,
             media_id=media_id,
             state="failed",
             error_text=str(error),
